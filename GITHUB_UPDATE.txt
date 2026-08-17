@@ -1,19 +1,22 @@
-DRIVEPRO BETA V37 – iPhone
+DRIVEPRO BETA V38 – Mobile Design
 
-Die alte Ansicht auf dem Screenshot kommt von der alten Mobile-CSS-Version.
-V37 überschreibt diese alte 70px-Seitenleiste komplett:
-- echte untere App-Navigation
-- Inhalt über volle iPhone-Breite
-- keine Desktop-Seitenleiste
-- Dashboard als mobile Karten
-- touchfreundliche Dialoge und Unterschrift
-- Service-Worker-Cache auf v37 erhöht
+Die mobile Ansicht wurde als eigene, hochwertige App-Oberfläche gestaltet.
+Designvorlage ist die Windows-Version, aber die Elemente wurden für iPhone
+neu angeordnet statt nur verkleinert.
 
-Für GitHub:
-1. index.html, sw.js und manifest.json ersetzen.
-2. Icons können bleiben; sie müssen nicht neu hochgeladen werden.
-3. Commit changes.
-4. Auf dem iPhone Safari die Seite mit ?v=37 öffnen:
-   https://semtex361.github.io/driveprobeta/?v=37
-5. Wenn DrivePro als Home-Bildschirm-App installiert ist, die alte Verknüpfung
-   vor dem Test löschen und danach erneut „Zum Home-Bildschirm“ verwenden.
+Enthalten:
+- Blau/Weiß mit stärkerer visueller Hierarchie
+- große, abgerundete Karten
+- modernes Dashboard
+- hochwertigere Schülerkarten
+- kompakte, klare Fahrstundenkarten
+- moderne Touch-Navigation unten
+- weichere Schatten, Glas-Effekt und Abstände
+- mobile Eingabefelder und Dialoge
+- Unterschrift für Finger/Apple Pencil
+- Kalender und Listen touchfreundlich
+
+GitHub:
+index.html, sw.js und manifest.json ersetzen.
+Danach mit ?v=38 testen:
+https://semtex361.github.io/driveprobeta/?v=38
