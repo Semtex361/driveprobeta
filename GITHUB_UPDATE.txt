@@ -1,16 +1,16 @@
-DRIVEPRO BETA V39
+DRIVEPRO BETA V40 – Side Menu Fix
 
-Mobile-Navigation:
-- Die untere Taskbar wurde entfernt.
-- Navigation sitzt links außerhalb des Bildschirms.
-- Von der linken Bildschirmkante nach rechts wischen öffnet sie.
-- Beim Öffnen erscheint eine dezente Abdunklung des Inhalts.
-- Nach Auswahl eines Menüpunktes schließt die Leiste automatisch.
-- Nach links wischen schließt sie wieder.
-- Ein kleiner blauer Griff an der linken Kante zeigt, dass die Navigation herausgezogen werden kann.
+V39 hatte einen Fehler: Die Abdunklungs-/Blur-Ebene war dauerhaft sichtbar und
+hat dadurch den Hauptbildschirm blockiert.
+
+V40:
+- Overlay standardmäßig vollständig deaktiviert.
+- Overlay erscheint ausschließlich, wenn das Seitenmenü geöffnet ist.
+- Hauptbildschirm ist wieder normal sichtbar und anklickbar.
+- Swipe-Navigation bleibt erhalten.
 - Desktop bleibt unverändert.
 
 GitHub:
 index.html, sw.js und manifest.json ersetzen.
-Testadresse:
-https://semtex361.github.io/driveprobeta/?v=39
+Test:
+https://semtex361.github.io/driveprobeta/?v=40

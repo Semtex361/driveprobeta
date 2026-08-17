@@ -571,12 +571,13 @@ body{overflow-x:hidden}
     width:28px!important;text-align:center!important;font-size:20px!important;
   }
   .mobileMenuShade{
-    display:block!important;position:fixed!important;inset:0!important;
+    display:none!important;position:fixed!important;inset:0!important;
     background:rgba(11,35,64,.28)!important;
     backdrop-filter:blur(2px)!important;
     z-index:10000!important;
     opacity:1!important;
   }
+  body.mobileMenuOpen .mobileMenuShade{display:block!important}
   body.mobileMenuOpen{overflow:hidden!important}
   .mobileSwipeHint{
     position:fixed!important;left:0!important;top:50%!important;
@@ -793,13 +794,13 @@ if ('serviceWorker' in navigator) {
     const s=side(); if(!s)return;
     s.classList.add('mobile-open');
     document.body.classList.add('mobileMenuOpen');
-    const o=document.getElementById('mobileMenuShade'); if(o)o.style.display='block';
+    const o=document.getElementById('mobileMenuShade'); if(o)o.style.display='';
   };
   window.closeMobileMenu=function(){
     const s=side(); if(!s)return;
     s.classList.remove('mobile-open');
     document.body.classList.remove('mobileMenuOpen');
-    const o=document.getElementById('mobileMenuShade'); if(o)o.style.display='none';
+    const o=document.getElementById('mobileMenuShade'); if(o)o.style.display='';
   };
   document.addEventListener('touchstart',e=>{
     if(window.innerWidth>700)return;
