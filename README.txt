@@ -1,12 +1,14 @@
-DRIVEPRO – VERSION 35
+DRIVEPRO BETA – VERSION 36
 
-Unterschrift:
-- Jede gespeicherte Fahrstunde hat jetzt eine eigene Unterschrift.
-- Beim Öffnen einer Fahrstunde erscheint ein eigenes Unterschriftenfeld.
-- Unterschrift kann mit der Maus, Touchscreen oder Stift gezeichnet werden.
-- „Löschen“ löscht nur die Unterschrift dieser Fahrstunde.
-- „Unterschrift speichern“ speichert sie direkt bei genau dieser Fahrstunde.
-- Eine bereits gespeicherte Unterschrift wird beim erneuten Öffnen wieder angezeigt.
-- Neue Fahrstunden erhalten automatisch ein eigenes Signaturfeld.
+Mobile/iPhone redesign:
+- responsive layout for iPhone
+- bottom navigation instead of desktop sidebar
+- sticky compact top bar
+- single-column dashboard cards
+- mobile-friendly student cards
+- touch-friendly buttons and controls
+- modal dialogs optimized for the phone screen
+- signature area optimized for touch/stylus
+- no horizontal overflow on normal mobile screens
 
-Alle Funktionen aus V34 bleiben erhalten.
+Desktop layout remains intact.
