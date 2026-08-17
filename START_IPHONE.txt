@@ -1,0 +1,22 @@
+DRIVEPRO BETA – iPhone
+
+Die HTML-Datei ist jetzt als PWA vorbereitet.
+
+WICHTIG:
+Eine HTML-Datei aus der Windows-ZIP kann nicht einfach wie eine normale iPhone-App
+installiert werden. Für „Zum Home-Bildschirm“ braucht DrivePro Beta eine HTTPS-Adresse.
+
+Empfohlener Weg:
+1. Lade den kompletten Inhalt dieses Ordners auf einen Webhost, z.B. GitHub Pages.
+2. Öffne die HTTPS-Adresse in Safari auf dem iPhone.
+3. Safari: Teilen → „Zum Home-Bildschirm“.
+4. Name: DrivePro Beta.
+5. Danach startet DrivePro Beta wie eine eigene App.
+
+Die Dateien manifest.json, sw.js und die beiden Icons sind bereits enthalten.
+
+Für die nächste Entwicklungsphase ist wichtig:
+- Die Anwendung ist aktuell eine PWA/Web-App, noch keine native iOS-App.
+- Die Daten werden aktuell lokal im Browser gespeichert.
+- Wenn du die Daten später zwischen PC und iPhone synchron haben willst, brauchen wir eine gemeinsame Datenbank/Cloud-Synchronisierung.
+- GPS-Routenaufzeichnung wird für die iPhone-Version später als echte Gerätefunktion ergänzt.
