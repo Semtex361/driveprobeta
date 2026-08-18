@@ -1074,6 +1074,12 @@ body{overflow-x:hidden}
 [data-theme="dark"] .studentCard small{
  color:#64778c!important;
 }
+/* V65 – complete administration polish */
+.studentActionBar{display:flex;justify-content:flex-end;gap:9px;margin-bottom:15px}.studentInfoGrid{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:15px}.infoCardTitle{font-weight:850;color:#173b69;margin-bottom:14px}.infoList{display:grid;grid-template-columns:1fr 1fr;gap:12px}.infoList span{display:flex;flex-direction:column;gap:3px;color:#718096;font-size:12px}.infoList b{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#8a98ab}.infoList a{color:#1769d2;text-decoration:none;font-weight:700}.studentNotesCard{margin-top:15px}.studentNotesCard p{white-space:pre-wrap;color:#60748b;line-height:1.6;margin:5px 0 0}.formSectionLabel{font-size:10px;text-transform:uppercase;letter-spacing:1px;font-weight:900;color:#1769d2;border-bottom:1px solid #e5edf5;padding-bottom:7px;margin-top:18px}.studentFilters{display:flex;gap:9px;align-items:center}.studentFilters input{width:250px}.studentFilters select{width:145px}.globalSearchWrap{display:flex;align-items:center;gap:7px;background:#f6f9fd;border:1px solid #dce7f2;border-radius:12px;padding:0 10px;width:min(360px,36vw);margin-left:auto;margin-right:16px}.globalSearchWrap span{color:#7d91a7;font-size:18px}.globalSearchWrap input{border:0!important;background:transparent!important;box-shadow:none!important;padding:9px 3px!important}.statsHero{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}.statsGrid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}.statBarRow{padding:10px 0}.statBarRow>div:first-child{display:flex;justify-content:space-between;gap:15px;font-size:12px}.statBarRow .progress{margin-top:7px}.rankRow{display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:10px}.rankRow:hover{background:#f7faff}.rank{width:28px;height:28px;border-radius:9px;background:#eaf3ff;color:#1769d2;display:grid;place-items:center;font-weight:850}.rankRow small{display:block;color:#8191a5;margin-top:2px;font-size:10px}.statStudent{padding:9px 0}.statStudentHead{display:flex;justify-content:space-between;font-size:12px}.statStudentHead span{color:#1769d2;font-weight:850}.vehicleList{border-top:1px solid #edf2f7}.vehicleRow{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #edf2f7}.vehicleGlyph{width:38px;height:38px;border-radius:11px;background:#eaf3ff;display:grid;place-items:center}.vehicleRow small{display:block;color:#8191a5;margin-top:2px}.iconBtn{padding:8px 11px!important}
+[data-theme="dark"] .globalSearchWrap{background:#101d2c!important;border-color:#2b425a!important}.globalSearchWrap input{color:var(--text)!important}.infoCardTitle{color:#173b69}.infoList span{color:#718096}.infoList b{color:#8a98ab}.studentNotesCard p{color:#60748b}.formSectionLabel{color:#1769d2}.studentInfoGrid .card,.studentNotesCard{background:#fff}.rankRow:hover{background:#f7faff}.vehicleGlyph{background:#eaf3ff}
+[data-theme="dark"] .studentInfoGrid .card,[data-theme="dark"] .studentNotesCard{background:#142235!important;border-color:#2b425a!important}.data-theme-dark .infoCardTitle,[data-theme="dark"] .infoCardTitle{color:#edf5ff!important}.data-theme-dark .infoList span,[data-theme="dark"] .infoList span{color:#9cafc3!important}.data-theme-dark .infoList b,[data-theme="dark"] .infoList b{color:#8197ad!important}.data-theme-dark .studentNotesCard p,[data-theme="dark"] .studentNotesCard p{color:#9cafc3!important}.data-theme-dark .formSectionLabel,[data-theme="dark"] .formSectionLabel{color:#65aaf6!important;border-color:#2a4058!important}.data-theme-dark .studentFilters select,.data-theme-dark .studentFilters input,[data-theme="dark"] .studentFilters select,[data-theme="dark"] .studentFilters input{background:#0e1a29!important;color:#e8f1fb!important}.data-theme-dark .rankRow:hover,[data-theme="dark"] .rankRow:hover{background:#192f46!important}.data-theme-dark .rank,[data-theme="dark"] .rank{background:#193653;color:#7bbaff}.data-theme-dark .statStudentHead span,[data-theme="dark"] .statStudentHead span{color:#7bbaff}.data-theme-dark .vehicleList,.data-theme-dark .vehicleRow,[data-theme="dark"] .vehicleList,[data-theme="dark"] .vehicleRow{border-color:#2a4058}.data-theme-dark .vehicleRow small,[data-theme="dark"] .vehicleRow small{color:#91a5ba}.data-theme-dark .vehicleGlyph,[data-theme="dark"] .vehicleGlyph{background:#193653}
+@media(max-width:1000px){.statsHero{grid-template-columns:repeat(2,1fr)}.studentFilters{flex-wrap:wrap}.globalSearchWrap{width:260px}}@media(max-width:800px){.studentInfoGrid,.statsGrid{grid-template-columns:1fr}.studentActionBar{justify-content:stretch}.studentActionBar button{flex:1}.globalSearchWrap{display:none}}@media(max-width:600px){.statsHero{grid-template-columns:1fr 1fr}.infoList{grid-template-columns:1fr}.studentFilters{width:100%}.studentFilters input,.studentFilters select{width:100%}.studentToolbar{align-items:flex-start;flex-direction:column}.vehicleRow{flex-wrap:wrap}.vehicleRow .grow{min-width:calc(100% - 55px)}}
+</style></head><body><h1>DrivePro · Ausbildungsakte</h1><div style="color:#718096;margin-bottom:20px">Fahrschüler</div><h2>${esc(s.firstName+' '+s.lastName)}</h2><div class="meta"><div><b>Klasse</b>${esc(s.license)}</div><div><b>Ausbildungsbeginn</b>${fmtDate(s.start)}</div><div><b>Geburtsdatum</b>${s.birthDate?fmtDate(s.birthDate):'—'}</div><div><b>Telefon</b>${esc(s.phone||'—')}</div><div><b>E-Mail</b>${esc(s.email||'—')}</div><div><b>Sehhilfe</b>${s.visionAid?'Ja':'Nein'}</div><div><b>Theorie</b>${s.theoryPassed?'Bestanden':'Offen'}${s.theoryDate?' · '+fmtDate(s.theoryDate):''}</div><div><b>Praktische Prüfung</b>${s.practiceDate?fmtDate(s.practiceDate):'—'}</div></div><h2>Ausbildungsfortschritt · ${pct(s)}%</h2><div class="progress"><i></i></div><h2>Fahrstunden</h2><table><thead><tr><th>Datum</th><th>Zeitraum</th><th>Art</th><th>Dauer</th><th>Fahrzeug</th><th>KM</th><th>Sign.</th></tr></thead><tbody>${rows||'<tr><td colspan="7">Keine Fahrstunden dokumentiert.</td></tr>'}</tbody></table><h2>Notizen</h2><div class="note">${esc(s.notes||'Keine Notizen hinterlegt.')}</div><div class="footer">Erstellt mit DrivePro Beta · ${new Date().toLocaleDateString('de-DE')}</div><script>window.onload=()=>setTimeout(()=>window.print(),300)</script></body></html>
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -1082,7 +1088,7 @@ body{overflow-x:hidden}
 <meta name="apple-mobile-web-app-title" content="DrivePro Beta">
 <link rel="apple-touch-icon" href="icon-192.png">
 </head>
-<body data-drivepro-version="V50"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body data-drivepro-version="V65"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 <div class="app">
 <aside class="side">
   <div class="brand">
@@ -1107,7 +1113,7 @@ body{overflow-x:hidden}
   <div class="sidefoot">Windows-Testversion<br>Fahrstunden je Fahrschüler<br>Lokale Speicherung</div>
 </aside>
 <main class="main">
-<header class="top"><h1 id="pageTitle">Dashboard</h1><button class="primary" onclick="openStudentForm()">+ Fahrschüler</button></header>
+<header class="top"><h1 id="pageTitle">Dashboard</h1><div class="globalSearchWrap"><span>⌕</span><input id="globalSearch" placeholder="Fahrschüler suchen…" oninput="globalSearch(this.value)" onkeydown="if(event.key==='Enter')globalSearch(this.value,true)"></div><button class="primary" onclick="openStudentForm()">+ Fahrschüler</button></header>
 <div class="content" id="content"></div>
 </main>
 </div>
@@ -1116,6 +1122,13 @@ body{overflow-x:hidden}
 <script>
 const KEY='fahrschul_tracker_windows_v5';
 const SETTINGS_KEY='drivepro_settings_v1';
+const VEHICLES_KEY='drivepro_vehicles_v1';
+const DEFAULT_VEHICLES=[{id:'default-car',name:'Fahrschulfahrzeug',plate:'',active:true}];
+let vehicles=DEFAULT_VEHICLES;
+try{vehicles=JSON.parse(localStorage.getItem(VEHICLES_KEY)||'null')||DEFAULT_VEHICLES}catch(e){vehicles=DEFAULT_VEHICLES}
+function saveVehicles(){localStorage.setItem(VEHICLES_KEY,JSON.stringify(vehicles))}
+function ensureStudentFields(s){if(!s)return s;s.lessons=s.lessons||[];s.areas=s.areas||DEFAULT_AREAS.map(name=>({name,level:'Offen',note:''}));s.phone=s.phone||'';s.email=s.email||'';s.birthDate=s.birthDate||'';s.theoryDate=s.theoryDate||'';s.practiceDate=s.practiceDate||'';s.notes=s.notes||'';return s}
+students.forEach(ensureStudentFields);
 const DEFAULT_SETTINGS={
  theme:'light',
  schoolName:'DrivePro Fahrschulverwaltung',
@@ -1188,41 +1201,70 @@ function upcomingLesson(s,l){
 }
 function studentRow(s){return `<div class="student" style="padding:12px 0;border-bottom:1px solid var(--line)"><div class="avatar">${esc((s.firstName[0]||'')+(s.lastName[0]||''))}</div><div class="grow"><b>${esc(s.firstName+' '+s.lastName)}</b><div class="studentMeta"><span>Klasse ${esc(s.license)}</span><span>${(s.lessons||[]).length} Fahrstunden</span><span>${s.visionAid?'👓 Sehhilfe':'👁 Keine Sehhilfe'}</span><span>${s.theoryPassed?'✓ Theorie bestanden':'○ Theorie offen'}</span></div><div class="progress"><i style="width:${pct(s)}%"></i></div></div><div class="studentActions"><button class="secondary" onclick="openStudent('${s.id}')">Öffnen</button><button class="primary smallBtn" onclick="openStudentForm('${s.id}')">Bearbeiten</button></div></div>`}
 function studentsPage(){
-document.getElementById('content').innerHTML=`<div class="toolbar"><div class="muted">Alle Fahrschüler verwalten</div><input id="studentSearch" placeholder="Suchen…" oninput="filterStudents()"></div><div id="studentList" class="students">${students.map(studentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Noch keine Fahrschüler.</div>'}</div>`;
+document.getElementById('content').innerHTML=`<div class="toolbar studentToolbar"><div><div class="eyebrow">VERWALTUNG</div><div class="muted">Alle Fahrschüler verwalten</div></div><div class="studentFilters"><input id="studentSearch" placeholder="🔎 Name oder Klasse suchen…" oninput="filterStudents()"><select id="studentLicenseFilter" onchange="filterStudents()"><option value="">Alle Klassen</option><option>B</option><option>B78</option><option>B197</option></select><select id="studentProgressFilter" onchange="filterStudents()"><option value="">Alle Fortschritte</option><option value="open">Ausbildung offen</option><option value="done">Nahezu abgeschlossen</option></select></div></div><div id="studentList" class="students">${students.map(studentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Noch keine Fahrschüler.</div>'}</div>`;
 }
-function filterStudents(){let q=(document.getElementById('studentSearch')?.value||'').toLowerCase();let list=students.filter(s=>(s.firstName+' '+s.lastName+' '+s.license).toLowerCase().includes(q));document.getElementById('studentList').innerHTML=list.map(studentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Keine Treffer.</div>'}
-function openStudentForm(studentId=''){let s=studentId?getStudent(studentId):null;openModal(`<h2>${s?'Fahrschüler bearbeiten':'Neuer Fahrschüler'}</h2><div class="row"><div class="field"><label>Vorname</label><input id="sf" value="${esc(s?.firstName||'')}"></div><div class="field"><label>Nachname</label><input id="sl" value="${esc(s?.lastName||'')}"></div></div><div class="row"><div class="field"><label>Klasse</label><select id="sc">${['B','B78','B197'].map(x=>`<option ${x===(s?.license||'B')?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Ausbildungsbeginn</label><input id="sd" type="date" value="${s?.start||new Date().toISOString().slice(0,10)}"></div></div><div class="studentChecks"><label><input type="checkbox" id="sv" ${s?.visionAid===true?'checked':''}> Sehhilfe</label><label><input type="checkbox" id="st" ${s?.theoryPassed===true?'checked':''}> Theorie bestanden</label></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveStudent('${studentId}')">Speichern</button></div>`)}
-function saveStudent(sid){const f=document.getElementById('sf').value.trim(),l=document.getElementById('sl').value.trim();if(!f||!l){alert('Bitte Vor- und Nachnamen eingeben.');return}if(sid){const s=getStudent(sid);Object.assign(s,{firstName:f,lastName:l,license:document.getElementById('sc').value,start:document.getElementById('sd').value,visionAid:document.getElementById('sv').checked,theoryPassed:document.getElementById('st').checked})}else{students.push({id:id(),firstName:f,lastName:l,license:document.getElementById('sc').value,start:document.getElementById('sd').value,visionAid:document.getElementById('sv').checked,theoryPassed:document.getElementById('st').checked,areas:DEFAULT_AREAS.map(name=>({name,level:'Offen',note:''})),lessons:[],signature:null})}save();closeModal();render()}
+function filterStudents(){let q=(document.getElementById('studentSearch')?.value||'').toLowerCase(),lic=document.getElementById('studentLicenseFilter')?.value||'',prog=document.getElementById('studentProgressFilter')?.value||'';let list=students.filter(s=>(s.firstName+' '+s.lastName+' '+s.license+' '+(s.phone||'')+' '+(s.email||'')).toLowerCase().includes(q)&&(!lic||s.license===lic)&&(!prog||(prog==='open'&&pct(s)<90)||(prog==='done'&&pct(s)>=90)));document.getElementById('studentList').innerHTML=list.map(studentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Keine Treffer.</div>'}
+function openStudentForm(studentId=''){
+ const s=studentId?ensureStudentFields(getStudent(studentId)):null;
+ openModal(`<h2>${s?'Fahrschüler bearbeiten':'Neuer Fahrschüler'}</h2>
+ <div class="formSectionLabel">Persönliche Daten</div>
+ <div class="row"><div class="field"><label>Vorname</label><input id="sf" value="${esc(s?.firstName||'')}"></div><div class="field"><label>Nachname</label><input id="sl" value="${esc(s?.lastName||'')}"></div></div>
+ <div class="row"><div class="field"><label>Geburtsdatum</label><input id="sbirth" type="date" value="${s?.birthDate||''}"></div><div class="field"><label>Telefon</label><input id="sphone" type="tel" value="${esc(s?.phone||'')}"></div></div>
+ <div class="field"><label>E-Mail</label><input id="semail" type="email" value="${esc(s?.email||'')}"></div>
+ <div class="formSectionLabel">Ausbildung</div>
+ <div class="row"><div class="field"><label>Klasse</label><select id="sc">${['B','B78','B197'].map(x=>`<option ${x===(s?.license||'B')?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Ausbildungsbeginn</label><input id="sd" type="date" value="${s?.start||new Date().toISOString().slice(0,10)}"></div></div>
+ <div class="row"><div class="field"><label>Theorieprüfung</label><input id="stheorydate" type="date" value="${s?.theoryDate||''}"></div><div class="field"><label>Praktische Prüfung</label><input id="spractice" type="date" value="${s?.practiceDate||''}"></div></div>
+ <div class="studentChecks"><label><input type="checkbox" id="sv" ${s?.visionAid===true?'checked':''}> Sehhilfe</label><label><input type="checkbox" id="st" ${s?.theoryPassed===true?'checked':''}> Theorie bestanden</label></div>
+ <div class="field"><label>Notizen</label><textarea id="snotes" rows="4" placeholder="Wichtige Hinweise zum Fahrschüler…">${esc(s?.notes||'')}</textarea></div>
+ <div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveStudent('${studentId}')">Speichern</button></div>`);
+}
+function saveStudent(sid){
+ const f=document.getElementById('sf').value.trim(),l=document.getElementById('sl').value.trim();
+ if(!f||!l){alert('Bitte Vor- und Nachnamen eingeben.');return}
+ const data={firstName:f,lastName:l,license:document.getElementById('sc').value,start:document.getElementById('sd').value,visionAid:document.getElementById('sv').checked,theoryPassed:document.getElementById('st').checked,birthDate:document.getElementById('sbirth').value,phone:document.getElementById('sphone').value.trim(),email:document.getElementById('semail').value.trim(),theoryDate:document.getElementById('stheorydate').value,practiceDate:document.getElementById('spractice').value,notes:document.getElementById('snotes').value.trim()};
+ if(sid)Object.assign(ensureStudentFields(getStudent(sid)),data);
+ else students.push({id:id(),...data,areas:DEFAULT_AREAS.map(name=>({name,level:'Offen',note:''})),lessons:[],signature:null});
+ save();closeModal();render();
+}
 function openStudent(sid){const s=getStudent(sid);state.studentId=sid;openModal(`<div class="profileHeader"><div><h2>${esc(s.firstName+' '+s.lastName)}</h2></div><button class="secondary" onclick="closeModal();openStudentForm('${sid}')">✎ Bearbeiten</button></div><div class="tabs"><button class="sel" onclick="studentTab('overview','${sid}',this)">Übersicht</button><button onclick="studentTab('diagram','${sid}',this)">Ausbildungsdiagramm</button><button onclick="studentTab('lessons','${sid}',this)">Fahrstunden</button><button onclick="studentTab('signature','${sid}',this)">Unterschrift</button></div><div id="studentBody">${studentOverview(s)}</div>`)}
 function studentTab(tab,sid,btn){document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');const s=getStudent(sid),body=document.getElementById('studentBody');if(tab==='overview')body.innerHTML=studentOverview(s);if(tab==='diagram')body.innerHTML=diagram(s);if(tab==='lessons')body.innerHTML=studentLessons(s);if(tab==='signature')body.innerHTML=signature(s)}
 function studentOverview(s){
- const specialTypes=[
-  {key:'Überlandfahrt',label:'Überlandfahrt',minutes:225,icon:'🌄'},
-  {key:'Autobahnfahrt',label:'Autobahnfahrt',minutes:180,icon:'🛣️'},
-  {key:'Beleuchtungsfahrt',label:'Beleuchtungsfahrt',minutes:135,icon:'🌙'}
- ];
+ ensureStudentFields(s);
+ const specialTypes=[{key:'Überlandfahrt',label:'Überlandfahrt',minutes:appSettings.durations['Überlandfahrt']||225,icon:'🌄'},{key:'Autobahnfahrt',label:'Autobahnfahrt',minutes:appSettings.durations['Autobahnfahrt']||180,icon:'🛣️'},{key:'Beleuchtungsfahrt',label:'Beleuchtungsfahrt',minutes:appSettings.durations['Beleuchtungsfahrt']||135,icon:'🌙'}];
  const sp=s.lessons.filter(l=>specialTypes.some(x=>x.key===l.special));
- return `<div class="cards">
-   <div class="card"><div class="muted">Persönlicher Ausbildungsstand</div><div class="stat">${pct(s)}%</div><div class="progress"><i style="width:${pct(s)}%"></i></div><div class="small" style="margin-top:8px;color:var(--primary)">Fortschritt von ${esc(s.firstName+' '+s.lastName)}</div></div>
-   <div class="card"><div class="muted">Fahrstunden</div><div class="stat">${s.lessons.length}</div><div class="small" style="margin-top:8px">dokumentierte Fahrstunden</div></div>
-   <div class="card"><div class="muted">Sonderfahrten</div><div class="stat">${specialTypes.filter(x=>sp.some(l=>l.special===x.key)).length}/3</div><div class="small" style="margin-top:8px">abgeschlossen</div></div>
+ const next=s.lessons.filter(l=>l.date>=new Date().toISOString().slice(0,10)).sort((a,b)=>(a.date+' '+a.startTime).localeCompare(b.date+' '+b.startTime))[0];
+ return `<div class="studentActionBar"><button class="secondary" onclick="printStudentReport('${s.id}')">🖨 Ausbildungsakte / PDF</button><button class="secondary" onclick="openStudentForm('${s.id}')">✎ Daten bearbeiten</button></div>
+ <div class="cards">
+  <div class="card"><div class="muted">Ausbildungsstand</div><div class="stat">${pct(s)}%</div><div class="progress"><i style="width:${pct(s)}%"></i></div><div class="small" style="margin-top:8px;color:var(--primary)">Fortschritt</div></div>
+  <div class="card"><div class="muted">Fahrstunden</div><div class="stat">${s.lessons.length}</div><div class="small" style="margin-top:8px">${s.lessons.reduce((a,l)=>a+Number(l.duration||0),0)} Gesamtminuten</div></div>
+  <div class="card"><div class="muted">Sonderfahrten</div><div class="stat">${specialTypes.filter(x=>sp.some(l=>l.special===x.key)).length}/3</div><div class="small" style="margin-top:8px">abgeschlossen</div></div>
+  <div class="card"><div class="muted">Nächste Fahrstunde</div><div class="stat" style="font-size:20px">${next?fmtDate(next.date):'—'}</div><div class="small" style="margin-top:8px">${next?fmtTime(next.startTime)+' · '+esc(next.special||'Übungsfahrt'):'Keine geplant'}</div></div>
+ </div>
+ <div class="studentInfoGrid">
+  <div class="card"><div class="infoCardTitle">👤 Persönliche Daten</div><div class="infoList"><span><b>Geburtsdatum</b>${s.birthDate?fmtDate(s.birthDate):'Nicht angegeben'}</span><span><b>Telefon</b>${s.phone?`<a href="tel:${esc(s.phone)}">${esc(s.phone)}</a>`:'Nicht angegeben'}</span><span><b>E-Mail</b>${s.email?`<a href="mailto:${esc(s.email)}">${esc(s.email)}</a>`:'Nicht angegeben'}</span></div></div>
+  <div class="card"><div class="infoCardTitle">🪪 Ausbildung</div><div class="infoList"><span><b>Klasse</b>${esc(s.license)}</span><span><b>Beginn</b>${fmtDate(s.start)}</span><span><b>Theorie</b>${s.theoryPassed?'✓ Bestanden':'○ Offen'}${s.theoryDate?' · '+fmtDate(s.theoryDate):''}</span><span><b>Praktische Prüfung</b>${s.practiceDate?fmtDate(s.practiceDate):'Noch nicht geplant'}</span><span><b>Sehhilfe</b>${s.visionAid?'Ja':'Nein'}</span></div></div>
  </div>
  <div class="section-title" style="margin-top:24px"><div><h3>Fehlende Aufgaben</h3><span class="muted">Noch nicht als „Sicher“ dokumentierte Lerninhalte</span></div></div>
- <div class="card missingTasksCard" style="padding:18px;margin-bottom:20px">
-   ${s.areas.filter(a=>a.level!=='Sicher').map(a=>`<span class="tag taskTag">${a.level==='Übung'?'🟠':'⚪'} ${esc(a.name)}</span>`).join('')||'<span class="doneMessage">✓ Alle Ausbildungsinhalte sind als sicher dokumentiert.</span>'}
- </div>
+ <div class="card missingTasksCard" style="padding:18px;margin-bottom:20px">${s.areas.filter(a=>a.level!=='Sicher').map(a=>`<span class="tag taskTag">${a.level==='Übung'?'🟠':'⚪'} ${esc(a.name)}</span>`).join('')||'<span class="doneMessage">✓ Alle Ausbildungsinhalte sind als sicher dokumentiert.</span>'}</div>
  <div class="section-title"><div><h3>Sonderfahrten</h3><span class="muted">Jeweils eine zusammenhängende Sonderfahrt</span></div></div>
- <div class="specialGrid">
- ${specialTypes.map(x=>{const done=sp.some(l=>l.special===x.key);return `<div class="specialCard"><div class="specialIcon">${x.icon}</div><div class="grow"><b>${x.label}</b><div class="muted">${done?'✓ Erfasst':'Noch offen'} · ${x.minutes} Minuten gesamt</div><div class="progress"><i style="width:${done?100:0}%"></i></div></div><strong>${done?'1/1':'0/1'}</strong></div>`}).join('')}
- </div>
- <div class="studentFacts"><span><b>Klasse</b> ${esc(s.license)}</span><span><b>Ausbildungsbeginn</b> ${fmtDate(s.start)}</span><span><b>Sehhilfe</b> ${s.visionAid?'Ja':'Nein'}</span><span><b>Theorie</b> ${s.theoryPassed?'Bestanden':'Noch nicht bestanden'}</span></div>`;
+ <div class="specialGrid">${specialTypes.map(x=>{const done=sp.some(l=>l.special===x.key);return `<div class="specialCard"><div class="specialIcon">${x.icon}</div><div class="grow"><b>${x.label}</b><div class="muted">${done?'✓ Erfasst':'Noch offen'} · ${x.minutes} Minuten gesamt</div><div class="progress"><i style="width:${done?100:0}%"></i></div></div><strong>${done?'1/1':'0/1'}</strong></div>`}).join('')}</div>
+ <div class="card studentNotesCard"><div class="infoCardTitle">📝 Notizen</div><p>${esc(s.notes||'Keine Notizen hinterlegt.')}</p></div>`;
 }
 function diagram(s){return `<h3>Ausbildungsdiagramm</h3><p class="muted">Änderungen bleiben beim Schüler gespeichert. Der Bereich bleibt geöffnet.</p>${s.areas.map((a,i)=>`<div class="area"><b>${esc(a.name)}</b><select onchange="setArea('${s.id}',${i},this.value)">${['Offen','Übung','Sicher'].map(x=>`<option ${x===a.level?'selected':''}>${x}</option>`).join('')}</select><input value="${esc(a.note)}" placeholder="Notiz…" onchange="setAreaNote('${s.id}',${i},this.value)"></div>`).join('')}`}
 function setArea(sid,i,v){const s=getStudent(sid);s.areas[i].level=v;save();const active=document.querySelector('.tabs .sel');studentTab('diagram',sid,active)}
 function setAreaNote(sid,i,v){const s=getStudent(sid);s.areas[i].note=v;save()}
 function studentLessons(s){return `<div style="display:flex;justify-content:space-between;align-items:center"><h3>Gespeicherte Fahrstunden</h3><button class="primary" onclick="openLessonForm('${s.id}')">+ Fahrstunde</button></div>${s.lessons.slice().sort((a,b)=>(b.date+' '+b.startTime).localeCompare(a.date+' '+a.startTime)).map(l=>lessonRow(s,l,true)).join('')||'<div class="empty">Noch keine Fahrstunden.</div>'}`}
-function lessonRow(s,l,clickable=false){return `<div class="lesson ${clickable?'clickable':''}" ${clickable?`onclick="openLessonDetail('${s.id}','${l.id}')"`:''}><b>${fmtDate(l.date)} · ${fmtTime(l.startTime)}${l.endTime?'–'+l.endTime:''} · ${l.duration} Min.</b><div class="muted">${esc(l.special||'Übungsfahrt')} · ${esc(s.firstName+' '+s.lastName)}${l.km?' · '+l.km+' km':''}</div>${l.note?`<div class="small" style="margin-top:5px">${esc(l.note)}</div>`:''}</div>`}
-function openLessonForm(studentId='',lessonId=''){let s=studentId?getStudent(studentId):null,l=lessonId?s.lessons.find(x=>x.id===lessonId):null;openModal(`<h2>${l?'Fahrstunde bearbeiten':'Fahrstunde dokumentieren'}</h2><div class="row"><div class="field"><label>Fahrschüler</label><select id="ls">${students.map(x=>`<option value="${x.id}" ${x.id===(s?.id||'')?'selected':''}>${esc(x.firstName+' '+x.lastName)}</option>`).join('')}</select></div><div class="field"><label>Datum</label><input id="ld" type="date" value="${l?.date||new Date().toISOString().slice(0,10)}"></div></div><div class="row"><div class="field"><label>Beginn</label><input id="lt" type="time" value="${l?.startTime||'09:00'}"></div><div class="field"><label>Dauer (Minuten)</label><input id="lm" type="number" value="${l?.duration||appSettings.durations['Übungsfahrt']}"></div></div><div class="field"><label>Art</label><select id="lsp" onchange="setLessonDuration(this.value)">${['Übungsfahrt','B197 Fahrstunde','Überlandfahrt','Autobahnfahrt','Beleuchtungsfahrt'].map(x=>`<option ${x===(l?.special||'Übungsfahrt')?'selected':''}>${x}</option>`).join('')}</select></div></div><div class="field"><label>Bemerkung</label><textarea id="ln" rows="4">${esc(l?.note||'')}</textarea></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveLesson('${studentId}','${lessonId}')">${l?'Änderungen speichern':'Speichern'}</button></div>`)}
+function lessonRow(s,l,clickable=false){return `<div class="lesson ${clickable?'clickable':''}" ${clickable?`onclick="openLessonDetail('${s.id}','${l.id}')"`:''}><b>${fmtDate(l.date)} · ${fmtTime(l.startTime)}${l.endTime?'–'+l.endTime:''} · ${l.duration} Min.</b><div class="muted">${esc(l.special||'Übungsfahrt')} · ${esc(s.firstName+' '+s.lastName)}${l.km?' · '+l.km+' km':''}${l.vehicleId?' · '+esc(vehicles.find(v=>v.id===l.vehicleId)?.name||''):''}</div>${l.note?`<div class="small" style="margin-top:5px">${esc(l.note)}</div>`:''}</div>`}
+function openLessonForm(studentId='',lessonId=''){
+ let s=studentId?getStudent(studentId):null,l=lessonId?s.lessons.find(x=>x.id===lessonId):null;
+ const vehicleOptions=vehicles.filter(v=>v.active!==false).map(v=>`<option value="${v.id}" ${v.id===(l?.vehicleId||'')?'selected':''}>${esc(v.name)}${v.plate?' · '+esc(v.plate):''}</option>`).join('');
+ openModal(`<h2>${l?'Fahrstunde bearbeiten':'Fahrstunde dokumentieren'}</h2>
+ <div class="row"><div class="field"><label>Fahrschüler</label><select id="ls">${students.map(x=>`<option value="${x.id}" ${x.id===(s?.id||'')?'selected':''}>${esc(x.firstName+' '+x.lastName)}</option>`).join('')}</select></div><div class="field"><label>Datum</label><input id="ld" type="date" value="${l?.date||new Date().toISOString().slice(0,10)}"></div></div>
+ <div class="row"><div class="field"><label>Beginn</label><input id="lt" type="time" value="${l?.startTime||'09:00'}"></div><div class="field"><label>Dauer (Minuten)</label><input id="lm" type="number" value="${l?.duration||appSettings.durations['Übungsfahrt']}"></div></div>
+ <div class="row"><div class="field"><label>Art</label><select id="lsp" onchange="setLessonDuration(this.value)">${['Übungsfahrt','B197 Fahrstunde','Überlandfahrt','Autobahnfahrt','Beleuchtungsfahrt'].map(x=>`<option ${x===(l?.special||'Übungsfahrt')?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Fahrzeug</label><select id="lv">${vehicleOptions||'<option value="">Kein Fahrzeug angelegt</option>'}</select></div></div>
+ <div class="row"><div class="field"><label>Kilometer</label><input id="lkm" type="number" min="0" value="${l?.km||''}" placeholder="z. B. 24"></div><div class="field"><label>Bemerkung</label><input id="ln" value="${esc(l?.note||'')}" placeholder="Kurze Notiz…"></div></div>
+ <div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveLesson('${studentId}','${lessonId}')">${l?'Änderungen speichern':'Speichern'}</button></div>`);
+}
 function updateLessonDuration(){const sel=document.getElementById('lsp'),m=document.getElementById('lm');if(!sel||!m)return;const d=appSettings.durations;if(d[sel.value])m.value=d[sel.value];}
 function setLessonDuration(type){
  const m=document.getElementById('lm'); if(!m)return;
@@ -1252,7 +1294,7 @@ function findLessonConflict(data,ignoreId){
 }
 function saveLesson(oldStudentId,lessonId){
  const sid=document.getElementById('ls').value,s=getStudent(sid);
- const data={date:document.getElementById('ld').value,startTime:document.getElementById('lt').value,duration:Number(document.getElementById('lm').value)||0,special:document.getElementById('lsp').value,note:document.getElementById('ln').value};
+ const data={date:document.getElementById('ld').value,startTime:document.getElementById('lt').value,duration:Number(document.getElementById('lm').value)||0,special:document.getElementById('lsp').value,note:document.getElementById('ln').value.trim(),vehicleId:document.getElementById('lv')?.value||'',km:Number(document.getElementById('lkm')?.value)||0};
  const conflict=findLessonConflict(data,lessonId);
  if(conflict){
    const start=conflict.lesson.startTime||'--:--';
@@ -1285,7 +1327,7 @@ function openLessonDetail(sid,lid){
   <div class="card"><div class="muted">Fahrschüler</div><b>${esc(s.firstName+' '+s.lastName)}</b></div>
   <div class="card"><div class="muted">Datum / Uhrzeit</div><b>${fmtDate(l.date)} · ${fmtTime(l.startTime)}</b></div>
   <div class="card"><div class="muted">Dauer</div><b>${l.duration} Minuten</b></div>
-  <div class="card"><div class="muted">Fahrtart</div><b>${esc(l.special||'Übungsfahrt')}</b></div>
+  <div class="card"><div class="muted">Fahrtart</div><b>${esc(l.special||'Übungsfahrt')}</b></div><div class="card"><div class="muted">Fahrzeug</div><b>${esc((vehicles.find(v=>v.id===l.vehicleId)?.name)||'Nicht angegeben')}</b></div><div class="card"><div class="muted">Kilometer</div><b>${l.km?esc(l.km+' km'):'Nicht angegeben'}</b></div>
  </div>
  <div class="card" style="margin-top:12px"><div class="muted">Bemerkung</div><p>${esc(l.note||'Keine Bemerkung')}</p></div>
  <div class="routebox" style="margin-top:12px"><div>🗺️<br><b>Route</b><br><span class="small">GPS-Routenaufzeichnung kommt in der iPhone-Version.</span></div></div>
@@ -1365,6 +1407,11 @@ function settingsPage(){
       <div class="settingsHint">Die Sicherung enthält Fahrschüler, Fahrstunden, Unterschriften und Einstellungen dieses Geräts.</div>
     </section>
    </div>
+   <section class="card settingsCard vehicleSettingsCard">
+    <div class="settingsCardHead"><div class="settingsIcon">🚗</div><div><h3>Fahrzeuge</h3><p>Fahrzeuge für deine Fahrstunden verwalten.</p></div></div>
+    <div class="vehicleList">${vehicles.map(v=>`<div class="vehicleRow"><div class="vehicleGlyph">🚘</div><div class="grow"><b>${esc(v.name)}</b><small>${v.plate?esc(v.plate):'Kein Kennzeichen hinterlegt'} · ${v.active===false?'Inaktiv':'Aktiv'}</small></div><button class="secondary" onclick="editVehicle('${v.id}')">Bearbeiten</button><button class="danger iconBtn" onclick="deleteVehicle('${v.id}')">×</button></div>`).join('')}</div>
+    <button class="primary settingsAction" style="margin-top:12px" onclick="editVehicle('')">+ Fahrzeug hinzufügen</button>
+   </section>
    <section class="card settingsDanger">
     <div><h3>Daten zurücksetzen</h3><p>Entfernt alle Fahrschüler und Fahrstunden von diesem Gerät. Dieser Vorgang kann nicht rückgängig gemacht werden.</p></div>
     <button class="danger" onclick="resetDriveProData()">Alle Daten löschen</button>
@@ -1393,7 +1440,7 @@ function showSettingsSaved(){
  setTimeout(()=>{if(el)el.textContent='✓ Automatisch gespeichert'},1200);
 }
 function exportDriveProData(){
- const payload={version:1,exportedAt:new Date().toISOString(),students,settings:appSettings};
+ const payload={version:2,exportedAt:new Date().toISOString(),students,settings:appSettings,vehicles};
  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
  a.download='DrivePro-Sicherung-'+new Date().toISOString().slice(0,10)+'.json';a.click();
@@ -1407,18 +1454,39 @@ function importDriveProData(event){
    const data=JSON.parse(reader.result);
    if(!Array.isArray(data.students))throw new Error('Ungültige Sicherung');
    if(!confirm('Die aktuelle lokale Datenbank wird durch die Sicherung ersetzt. Fortfahren?'))return;
-   students=data.students;
-   if(data.settings)appSettings={...DEFAULT_SETTINGS,...data.settings,durations:{...DEFAULT_SETTINGS.durations,...(data.settings.durations||{})}};
+   students=data.students.map(ensureStudentFields);
+   if(data.settings)appSettings={...DEFAULT_SETTINGS,...data.settings,durations:{...DEFAULT_SETTINGS.durations,...(data.settings.durations||{})}};if(Array.isArray(data.vehicles))vehicles=data.vehicles;saveVehicles();
    save();saveSettings();applyTheme();render();
    alert('✓ Sicherung erfolgreich wiederhergestellt.');
   }catch(e){alert('Die Datei konnte nicht als DrivePro-Sicherung erkannt werden.')}
  };
  reader.readAsText(file);event.target.value='';
 }
+function editVehicle(vid=''){const v=vid?vehicles.find(x=>x.id===vid):null;openModal(`<h2>${v?'Fahrzeug bearbeiten':'Fahrzeug hinzufügen'}</h2><div class="field"><label>Bezeichnung</label><input id="vn" value="${esc(v?.name||'')}" placeholder="z. B. Mercedes A200"></div><div class="field"><label>Kennzeichen</label><input id="vp" value="${esc(v?.plate||'')}" placeholder="B-AB 1234"></div><div class="studentChecks"><label><input type="checkbox" id="va" ${v?.active!==false?'checked':''}> Aktiv</label></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveVehicle('${vid}')">Speichern</button></div>`)}
+function saveVehicle(vid){const name=document.getElementById('vn').value.trim();if(!name){alert('Bitte eine Fahrzeugbezeichnung eingeben.');return}const data={name,plate:document.getElementById('vp').value.trim(),active:document.getElementById('va').checked};if(vid)Object.assign(vehicles.find(v=>v.id===vid),data);else vehicles.push({id:id(),...data});saveVehicles();closeModal();settingsPage()}
+function deleteVehicle(vid){if(vid==='default-car'&&vehicles.length===1){alert('Das letzte Fahrzeug kann nicht gelöscht werden.');return}if(!confirm('Fahrzeug wirklich löschen? Bereits dokumentierte Fahrstunden bleiben erhalten.'))return;vehicles=vehicles.filter(v=>v.id!==vid);saveVehicles();settingsPage()}
 function resetDriveProData(){
  if(!confirm('Möchtest du wirklich ALLE Fahrschüler und Fahrstunden löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.'))return;
  if(!confirm('Letzte Sicherheitsabfrage: Wirklich alle Daten löschen?'))return;
  students=[];save();render();
+}
+function globalSearch(value,go=false){const q=String(value||'').trim().toLowerCase();if(!q){if(go)page('students');return}if(go){page('students');setTimeout(()=>{const el=document.getElementById('studentSearch');if(el){el.value=value;filterStudents();el.focus()}},30)}}
+function printStudentReport(sid){
+ const s=ensureStudentFields(getStudent(sid));if(!s)return;
+ const rows=s.lessons.slice().sort((a,b)=>(a.date+' '+a.startTime).localeCompare(b.date+' '+b.startTime)).map(l=>`<tr><td>${fmtDate(l.date)}</td><td>${fmtTime(l.startTime)} – ${endTime(l.startTime,l.duration)}</td><td>${esc(l.special||'Übungsfahrt')}</td><td>${l.duration} Min.</td><td>${esc(vehicles.find(v=>v.id===l.vehicleId)?.name||'—')}</td><td>${l.km?l.km+' km':'—'}</td><td>${l.signature?'✓':'—'}</td></tr>`).join('');
+ const w=window.open('','_blank','width=1000,height=800');
+ if(!w){alert('Das Druckfenster wurde blockiert. Bitte Pop-ups für DrivePro erlauben.');return}
+ const reportStyle=`body{font-family:Arial,sans-serif;color:#173b69;padding:35px}h1{margin:0 0 4px;font-size:27px}h2{margin-top:28px;font-size:18px;border-bottom:2px solid #2f80ed;padding-bottom:7px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 25px;background:#f4f8fd;padding:15px;border-radius:10px}.meta b{display:block;font-size:11px;color:#718096;text-transform:uppercase;margin-bottom:3px}table{width:100%;border-collapse:collapse;margin-top:12px;font-size:11px}th,td{text-align:left;padding:9px 7px;border-bottom:1px solid #dce5ef}th{font-size:9px;text-transform:uppercase;color:#718096}.progress{height:9px;background:#e5edf5;border-radius:20px;overflow:hidden}.progress i{display:block;height:100%;background:#2f80ed;width:${pct(s)}%}.note{white-space:pre-wrap;background:#f8fbff;padding:13px;border-radius:10px}.footer{margin-top:35px;color:#8a98ab;font-size:10px}`;
+ const html=`<!doctype html><html lang="de"><head><meta charset="utf-8"><title>DrivePro – ${esc(s.firstName+' '+s.lastName)}</title><style>${reportStyle}<\/style></head><body>
+ <h1>DrivePro · Ausbildungsakte</h1><div style="color:#718096;margin-bottom:20px">Fahrschüler</div>
+ <h2>${esc(s.firstName+' '+s.lastName)}</h2>
+ <div class="meta"><div><b>Klasse</b>${esc(s.license)}</div><div><b>Ausbildungsbeginn</b>${fmtDate(s.start)}</div><div><b>Geburtsdatum</b>${s.birthDate?fmtDate(s.birthDate):'—'}</div><div><b>Telefon</b>${esc(s.phone||'—')}</div><div><b>E-Mail</b>${esc(s.email||'—')}</div><div><b>Sehhilfe</b>${s.visionAid?'Ja':'Nein'}</div><div><b>Theorie</b>${s.theoryPassed?'Bestanden':'Offen'}${s.theoryDate?' · '+fmtDate(s.theoryDate):''}</div><div><b>Praktische Prüfung</b>${s.practiceDate?fmtDate(s.practiceDate):'—'}</div></div>
+ <h2>Ausbildungsfortschritt · ${pct(s)}%</h2><div class="progress"><i></i></div>
+ <h2>Fahrstunden</h2><table><thead><tr><th>Datum</th><th>Zeitraum</th><th>Art</th><th>Dauer</th><th>Fahrzeug</th><th>KM</th><th>Sign.</th></tr></thead><tbody>${rows||'<tr><td colspan="7">Keine Fahrstunden dokumentiert.</td></tr>'}</tbody></table>
+ <h2>Notizen</h2><div class="note">${esc(s.notes||'Keine Notizen hinterlegt.')}</div>
+ <div class="footer">Erstellt mit DrivePro Beta · ${new Date().toLocaleDateString('de-DE')}</div>
+ <script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`;
+ w.document.write(html);w.document.close();
 }
 function endTime(start,duration){
  const m=String(start||'').match(/^(\d{1,2}):(\d{2})$/);
@@ -1496,8 +1564,19 @@ function setCalendarView(view){
  if(view==='week' && !state.calendarWeekDate) state.calendarWeekDate=new Date().toISOString().slice(0,10);
  render();
 }
-function statsPage(){let mins=students.reduce((n,s)=>n+s.lessons.reduce((a,l)=>a+l.duration,0),0);document.getElementById('content').innerHTML=`<div class="cards"><div class="card"><div class="muted">Fahrschüler</div><div class="stat">${students.length}</div></div><div class="card"><div class="muted">Fahrstunden</div><div class="stat">${allLessons().length}</div></div><div class="card"><div class="muted">Gesamtminuten</div><div class="stat">${mins}</div></div><div class="card"><div class="muted">Termine heute</div><div class="stat">${allLessons().filter(x=>x.l.date===new Date().toISOString().slice(0,10)).length}</div><div class="small" style="margin-top:8px">Fahrstunden</div></div></div><div class="card" style="margin-top:16px"><h3>Ausbildungsstand</h3>${students.map(s=>`<div style="margin:15px 0"><div style="display:flex;justify-content:space-between"><b>${esc(s.firstName+' '+s.lastName)}</b><span>${pct(s)}%</span></div><div class="progress"><i style="width:${pct(s)}%"></i></div></div>`).join('')||'<div class="empty">Noch keine Daten.</div>'}</div>`}
-function showConflictOverlay(info){
+function statsPage(){
+ const all=allLessons(),mins=all.reduce((n,x)=>n+Number(x.l.duration||0),0),today=new Date().toISOString().slice(0,10),month=today.slice(0,7),monthLessons=all.filter(x=>x.l.date?.slice(0,7)===month),types={};
+ all.forEach(x=>types[x.l.special||'Übungsfahrt']=(types[x.l.special||'Übungsfahrt']||0)+1);
+ const top=students.slice().sort((a,b)=>b.lessons.length-a.lessons.length).slice(0,6),completed=students.filter(s=>pct(s)>=90).length;
+ document.getElementById('content').innerHTML=`<div class="statsHero">
+ <div class="heroCard blue"><div class="heroIcon">👥</div><div><div class="heroLabel">Fahrschüler</div><div class="heroValue">${students.length}</div><div class="heroHint">${completed} nahezu abgeschlossen</div></div></div>
+ <div class="heroCard green"><div class="heroIcon">🚗</div><div><div class="heroLabel">Fahrstunden</div><div class="heroValue">${all.length}</div><div class="heroHint">${monthLessons.length} diesen Monat</div></div></div>
+ <div class="heroCard purple"><div class="heroIcon">⏱</div><div><div class="heroLabel">Fahrzeit</div><div class="heroValue">${Math.floor(mins/60)} h</div><div class="heroHint">${mins%60} Minuten zusätzlich</div></div></div>
+ <div class="heroCard orange"><div class="heroIcon">📅</div><div><div class="heroLabel">Heute</div><div class="heroValue">${all.filter(x=>x.l.date===today).length}</div><div class="heroHint">geplante Fahrstunden</div></div></div></div>
+ <div class="statsGrid"><div class="card"><div class="section-title"><div><h3>Fahrten nach Art</h3><span class="muted">Gesamte dokumentierte Fahrstunden</span></div></div>${Object.entries(types).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="statBarRow"><div><b>${esc(k)}</b><span>${v}</span></div><div class="progress"><i style="width:${all.length?Math.round(v/all.length*100):0}%"></i></div></div>`).join('')||'<div class="empty">Noch keine Fahrstunden.</div>'}</div>
+ <div class="card"><div class="section-title"><div><h3>Aktivste Fahrschüler</h3><span class="muted">Nach Anzahl der Fahrstunden</span></div></div>${top.map((s,i)=>`<div class="rankRow" onclick="openStudent('${s.id}')"><span class="rank">${i+1}</span><div class="grow"><b>${esc(s.firstName+' '+s.lastName)}</b><small>${s.lessons.length} Fahrstunden · ${pct(s)}%</small></div><span class="arrow">›</span></div>`).join('')||'<div class="empty">Noch keine Daten.</div>'}</div></div>
+ <div class="card" style="margin-top:18px"><div class="section-title"><div><h3>Ausbildungsstand</h3><span class="muted">Fortschritt aller Fahrschüler</span></div></div>${students.map(s=>`<div class="statStudent"><div class="statStudentHead"><b>${esc(s.firstName+' '+s.lastName)}</b><span>${pct(s)}%</span></div><div class="progress"><i style="width:${pct(s)}%"></i></div></div>`).join('')||'<div class="empty">Noch keine Daten.</div>'}</div>`;
+}function showConflictOverlay(info){
  const old=document.getElementById('conflictOverlay');
  if(old) old.remove();
  const div=document.createElement('div');
