@@ -656,29 +656,42 @@ body{overflow-x:hidden}
  .dpWeekDay{min-height:360px}
 }
 
-/* V54 – DrivePro Konfliktfenster */
-.conflictModal{text-align:center;padding:8px 4px 2px}
-.conflictIcon{width:58px;height:58px;margin:0 auto 12px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:#fff3cd;font-size:28px;box-shadow:0 8px 20px rgba(150,110,20,.12)}
-.conflictModal h2{margin:5px 0 8px;color:#173b69}
-.conflictModal>p{margin:0 auto 16px;max-width:520px;color:#667991;line-height:1.55}
-.conflictCompare{display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left;margin:0 0 18px}
-.conflictItem{padding:12px;border-radius:13px;background:#f7faff;border:1px solid #dce8f4}
-.conflictItem span{display:block;font-size:10px;text-transform:uppercase;font-weight:800;color:#8191a5;margin-bottom:5px}
-.conflictItem b{display:block;color:#1769d2;font-size:15px}
-.conflictItem small{display:block;margin-top:5px;color:#687b92}
-.conflictModal .actions{justify-content:center}
-@media(max-width:600px){.conflictCompare{grid-template-columns:1fr}.conflictModal h2{font-size:20px}}
-
-.conflictOverlay{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(15,35,60,.48);backdrop-filter:blur(5px)}
-.conflictOverlay .conflictModal{width:min(620px,calc(100vw - 32px));background:#fff;border-radius:22px;padding:24px;box-shadow:0 24px 70px rgba(15,35,60,.28);text-align:center}
-.conflictIcon{width:58px;height:58px;margin:0 auto 12px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:#fff3cd;font-size:28px}
-.conflictModal h2{margin:5px 0 8px;color:#173b69}.conflictModal>p{margin:0 auto 16px;max-width:520px;color:#667991;line-height:1.55}
-.conflictCompare{display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left;margin:0 0 18px}
-.conflictItem{padding:12px;border-radius:13px;background:#f7faff;border:1px solid #dce8f4}
-.conflictItem span{display:block;font-size:10px;text-transform:uppercase;font-weight:800;color:#8191a5;margin-bottom:5px}
-.conflictItem b{display:block;color:#1769d2;font-size:15px}.conflictItem small{display:block;margin-top:5px;color:#687b92}
-.conflictOverlay .actions{justify-content:center}
-@media(max-width:600px){.conflictCompare{grid-template-columns:1fr}}
+/* V57 – centered, interactive conflict dialog */
+.conflictOverlay{
+ position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;
+ z-index:2147483000!important;display:flex!important;align-items:center!important;justify-content:center!important;
+ box-sizing:border-box!important;padding:20px!important;background:rgba(10,30,55,.48)!important;
+ backdrop-filter:blur(6px)!important;
+}
+.conflictOverlay .conflictModal{
+ position:relative!important;box-sizing:border-box!important;width:min(620px,calc(100vw - 32px))!important;
+ max-height:calc(100vh - 40px)!important;overflow:auto!important;margin:0!important;
+ background:#fff!important;border-radius:22px!important;padding:28px!important;
+ box-shadow:0 28px 80px rgba(15,35,60,.30)!important;text-align:center!important;
+}
+.conflictClose{
+ position:absolute!important;top:12px!important;right:14px!important;width:34px!important;height:34px!important;
+ border:0!important;border-radius:10px!important;background:#eef4fa!important;color:#52677e!important;
+ font-size:23px!important;line-height:1!important;cursor:pointer!important;
+}
+.conflictIcon{width:62px!important;height:62px!important;margin:2px auto 14px!important;border-radius:19px!important;
+ display:flex!important;align-items:center!important;justify-content:center!important;background:#fff3cd!important;font-size:29px!important}
+.conflictModal h2{margin:5px 0 9px!important;color:#173b69!important;font-size:23px!important}
+.conflictModal>p{margin:0 auto 18px!important;max-width:520px!important;color:#667991!important;line-height:1.55!important}
+.conflictCompare{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;text-align:left!important;margin:0 0 20px!important}
+.conflictItem{padding:14px!important;border-radius:14px!important;background:#f7faff!important;border:1px solid #dce8f4!important}
+.conflictItem span{display:block!important;font-size:10px!important;text-transform:uppercase!important;font-weight:800!important;color:#8191a5!important;margin-bottom:6px!important}
+.conflictItem b{display:block!important;color:#1769d2!important;font-size:15px!important}
+.conflictItem small{display:block!important;margin-top:6px!important;color:#687b92!important}
+.conflictActions{display:flex!important;justify-content:center!important;gap:10px!important}
+.conflictActions button{cursor:pointer!important;min-width:170px!important}
+@media(max-width:600px){
+ .conflictOverlay{padding:14px!important}
+ .conflictOverlay .conflictModal{width:calc(100vw - 28px)!important;padding:24px 18px!important;border-radius:19px!important}
+ .conflictCompare{grid-template-columns:1fr!important}
+ .conflictActions{flex-direction:column-reverse!important}
+ .conflictActions button{width:100%!important}
+}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -988,24 +1001,37 @@ function showConflictOverlay(info){
  const div=document.createElement('div');
  div.id='conflictOverlay';
  div.className='conflictOverlay';
- div.innerHTML=`<div class="conflictModal">
-  <div class="conflictIcon">⚠️</div>
-  <div class="eyebrow">KALENDERKONFLIKT</div>
-  <h2>Fahrstunden überschneiden sich</h2>
-  <p>Die neue Fahrstunde <b>${info.newTime}</b> überschneidet sich mit einer bereits eingetragenen Fahrstunde.</p>
-  <div class="conflictCompare">
-   <div class="conflictItem"><span>Neue Fahrstunde</span><b>${info.newTime}</b></div>
-   <div class="conflictItem"><span>Bereits eingetragen</span><b>${info.oldTime}</b><small>${info.name}</small></div>
-  </div>
-  <div class="actions"><button class="primary" type="button" onclick="chooseNewLessonTime()">Andere Uhrzeit wählen</button></div>
+ div.innerHTML=`<div class="conflictModal" role="dialog" aria-modal="true">
+   <button type="button" class="conflictClose" onclick="closeConflictOverlay()" aria-label="Schließen">×</button>
+   <div class="conflictIcon">⚠️</div>
+   <div class="eyebrow">KALENDERKONFLIKT</div>
+   <h2>Fahrstunden überschneiden sich</h2>
+   <p>Die neue Fahrstunde <b>${info.newTime}</b> überschneidet sich mit einer bereits eingetragenen Fahrstunde.</p>
+   <div class="conflictCompare">
+     <div class="conflictItem"><span>Neue Fahrstunde</span><b>${info.newTime}</b></div>
+     <div class="conflictItem"><span>Bereits eingetragen</span><b>${info.oldTime}</b><small>${info.name}</small></div>
+   </div>
+   <div class="conflictActions">
+     <button type="button" class="secondary" onclick="closeConflictOverlay()">Schließen</button>
+     <button type="button" class="primary" onclick="chooseNewLessonTime()">Andere Uhrzeit wählen</button>
+   </div>
  </div>`;
  document.body.appendChild(div);
 }
-function chooseNewLessonTime(){
+function closeConflictOverlay(){
  const overlay=document.getElementById('conflictOverlay');
  if(overlay) overlay.remove();
- const input=document.getElementById('lt');
- if(input){input.focus();input.select();try{input.showPicker()}catch(e){}}
+}
+function chooseNewLessonTime(){
+ closeConflictOverlay();
+ setTimeout(()=>{
+   const input=document.getElementById('lt');
+   if(input){
+     input.focus();
+     input.select();
+     try{input.showPicker()}catch(e){}
+   }
+ },80);
 }
 function openModal(content){document.getElementById('modalBody').innerHTML=content;document.getElementById('modal').classList.add('open');setTimeout(()=>initSignature(),20)}
 function closeModal(){document.getElementById('modal').classList.remove('open')}
