@@ -1,9 +1,10 @@
-V63 – DARK MODE TEXT FIX
+V64 – FAHRSCHÜLER-KARTEN DARKMODE
 
-Gezielt korrigiert:
-- Fahrschüler-Namen im Reiter „Fahrschüler“ sind im Darkmode jetzt hell und klar lesbar.
-- „Guten Tag“ / Begrüßung im Dashboard ist im Darkmode jetzt hell und klar lesbar.
-- Sekundäre Informationen bleiben dezent, aber lesbar.
+Im Darkmode bleiben die Fahrschüler-Karten bewusst weiß.
+- Fahrschülernamen wieder dunkelblau und gut lesbar.
+- Zusatzinformationen dunkelgrau.
+- Dashboard-Begrüßung bleibt hell/weiß.
+- Restlicher Darkmode bleibt unverändert.
 
 GitHub ersetzen:
 index.html
