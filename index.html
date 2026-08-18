@@ -1199,6 +1199,11 @@ body{overflow-x:hidden}
 /* V76 – Prüfungsfahrt */
 .dpTimelineEvent.lessonColorExam{background:#ffe8ec!important;border-left-color:#d63b55!important;color:#7c1f2e!important}
 [data-theme="dark"] .dpTimelineEvent.lessonColorExam{background:#4a2530!important;color:#ffe9ed!important}
+<style>
+/* V78 – Benachrichtigungen */
+#notificationButton{margin-top:4px}
+[data-theme="dark"] #notificationButton{color:#fff}
+</style>
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -1273,6 +1278,23 @@ const state={page:'dashboard',studentId:null,month:new Date(),calendarView:'week
 let students=[];
 try{students=JSON.parse(localStorage.getItem(KEY)||'[]')||[]}catch(e){students=[]}
 function save(){localStorage.setItem(KEY,JSON.stringify(students))}
+function notifyLessonChange(action,student,lesson){
+ if(!('Notification' in window)||Notification.permission!=='granted')return;
+ const title=action==='added'?'Fahrstunde hinzugefügt':action==='edited'?'Fahrstunde geändert':'Fahrstunde gelöscht';
+ const text=`${student.firstName} ${student.lastName} · ${fmtDate(lesson.date)} · ${lesson.startTime||'—'} – ${endTime(lesson.startTime,lesson.duration)} · ${lesson.special||'Übungsfahrt'}`;
+ try{navigator.serviceWorker?.ready.then(reg=>reg.showNotification(title,{body:text,icon:'./icon-192.png',badge:'./icon-192.png',tag:'drivepro-lesson-change'})).catch(()=>new Notification(title,{body:text,icon:'./icon-192.png'}))}catch(e){}
+}
+async function enableNotifications(){
+ if(!('Notification' in window)){alert('Dieser Browser unterstützt keine Benachrichtigungen.');return}
+ const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();
+ updateNotificationButton();
+ if(permission==='granted')alert('Benachrichtigungen sind jetzt aktiviert.');
+}
+function updateNotificationButton(){
+ const b=document.getElementById('notificationButton');if(!b)return;
+ b.textContent=Notification.permission==='granted'?'✓ Benachrichtigungen aktiviert':'🔔 Benachrichtigungen aktivieren';
+ b.disabled=Notification.permission==='granted';
+}
 function id(){return (crypto&&crypto.randomUUID)?crypto.randomUUID():'id-'+Date.now()+'-'+Math.random().toString(36).slice(2)}
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function getStudent(id){return students.find(s=>s.id===id)}
@@ -1396,6 +1418,7 @@ function saveLesson(oldStudentId,lessonId){
    return;
  
  }
+ let changedLesson,notificationAction;
  if(lessonId){
    let old=getStudent(oldStudentId).lessons.find(x=>x.id===lessonId);
    Object.assign(old,data);
@@ -1403,10 +1426,12 @@ function saveLesson(oldStudentId,lessonId){
      getStudent(oldStudentId).lessons=getStudent(oldStudentId).lessons.filter(x=>x.id!==lessonId);
      s.lessons.push(old);
    }
+   changedLesson=old;notificationAction='edited';
  }else{
-   s.lessons.push({id:id(),...data,signature:null});
+   changedLesson={id:id(),...data,signature:null};
+   s.lessons.push(changedLesson);notificationAction='added';
  }
- save();closeModal();render();
+ save();closeModal();render();notifyLessonChange(notificationAction,s,changedLesson);
 }
 function openLessonDetail(sid,lid){
  const s=getStudent(sid),l=s.lessons.find(x=>x.id===lid);
@@ -1427,7 +1452,7 @@ function openLessonDetail(sid,lid){
  <div class="actions"><button class="danger" onclick="deleteLesson('${sid}','${lid}')">Löschen</button><button class="secondary" onclick="closeModal();openLessonForm('${sid}','${lid}')">Bearbeiten</button></div>`);
  setTimeout(()=>initLessonSignature(sid,lid),30);
 }
-function deleteLesson(sid,lid){if(!confirm('Fahrstunde wirklich löschen?'))return;const s=getStudent(sid);s.lessons=s.lessons.filter(l=>l.id!==lid);save();closeModal();render()}
+function deleteLesson(sid,lid){if(!confirm('Fahrstunde wirklich löschen?'))return;const s=getStudent(sid),lesson=s.lessons.find(l=>l.id===lid);if(!lesson)return;s.lessons=s.lessons.filter(l=>l.id!==lid);save();closeModal();render();notifyLessonChange('deleted',s,lesson)}
 function initLessonSignature(sid,lid){
  const c=document.getElementById('lessonSignatureCanvas'); if(!c)return;
  const ctx=c.getContext('2d'); ctx.lineWidth=3; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#173b69';
@@ -1473,6 +1498,11 @@ function settingsPage(){
       </div>
     </section>
     <section class="card settingsCard">
+      <div class="settingsCardHead"><div class="settingsIcon">🔔</div><div><h3>Benachrichtigungen</h3><p>Meldungen bei hinzugefügten, bearbeiteten oder gelöschten Fahrstunden.</p></div></div>
+      <button id="notificationButton" type="button" class="primary settingsAction" onclick="enableNotifications()">🔔 Benachrichtigungen aktivieren</button>
+      <div class="settingsHint">Gilt aktuell für dieses Gerät und diesen Browser.</div>
+    </section>
+    <section class="card settingsCard">
       <div class="settingsCardHead"><div class="settingsIcon">🏫</div><div><h3>Fahrschule</h3><p>Diese Angaben werden lokal auf diesem Gerät gespeichert.</p></div></div>
       <div class="settingsFields">
        <div class="field"><label>Fahrschulname</label><input id="setSchoolName" value="${esc(appSettings.schoolName)}" onchange="updateSchoolSettings()"></div>
@@ -1501,6 +1531,7 @@ function settingsPage(){
    </section>
  </div>`;
 }
+ setTimeout(updateNotificationButton,0)
 function setTheme(theme){
  appSettings.theme=theme;saveSettings();applyTheme();settingsPage();
 }
@@ -1759,7 +1790,7 @@ function initTimelineDrag(){
        showConflictOverlay({newTime:`${data.startTime} – ${endTime(data.startTime,data.duration)}`,oldTime:`${conflict.lesson.startTime||'--:--'} – ${endTime(conflict.lesson.startTime,conflict.lesson.duration)}`,name:esc(conflict.student.firstName+' '+conflict.student.lastName)});
        return;
      }
-     lesson.date=data.date;lesson.startTime=data.startTime;save();state.calendarWeekDate=data.date;render();
+     lesson.date=data.date;lesson.startTime=data.startTime;save();state.calendarWeekDate=data.date;render();notifyLessonChange('edited',getStudent(d.sid),lesson);
    });
    el.addEventListener('pointercancel',()=>{if(drag){drag=null;el.classList.remove('dragging');el.style.transform=''}document.querySelector('.dpDragPreview')?.remove()});
  });

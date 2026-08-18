@@ -1,11 +1,14 @@
-V77 – PRÜFUNGSFAHRT IN EINSTELLUNGEN
+V78 – BENACHRICHTIGUNGEN
 
-Prüfungsfahrt ist jetzt auch unter Einstellungen → Fahrstundendauer vorhanden.
-Standardwert: 45 Minuten.
-Der Wert kann dort wie alle anderen Fahrtarten individuell geändert werden.
-Die Auswahl im Fahrstundenformular und die Kalenderfarbe aus V76 bleiben erhalten.
+Einstellungen → Benachrichtigungen:
+- Benachrichtigungen aktivieren
 
-GitHub ersetzen:
-index.html
-sw.js
-manifest.json
+Nach Browser-Erlaubnis:
+- Fahrstunde hinzugefügt → Meldung
+- Fahrstunde bearbeitet → Meldung
+- Fahrstunde gelöscht → Meldung
+- Fahrstunde per Drag & Drop verschoben → Änderungsmeldung
+
+Die Meldung enthält Fahrschüler, Datum, Uhrzeit und Fahrtart.
+
+Aktuell sind das Browser-/Geräte-Benachrichtigungen. Echte serverseitige Push-Nachrichten auf mehrere Geräte, auch bei geschlossener App, benötigen später das Login + Backend/Push-System.
