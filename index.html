@@ -1160,6 +1160,19 @@ body{overflow-x:hidden}
 .dpDragPreview b{display:block;font-size:10px;opacity:.8;margin-bottom:2px}.dpDragPreview strong{display:block;font-size:17px;line-height:1.2}.dpDragPreview small{display:block;margin-top:4px;opacity:.75;font-size:9px}
 .dpTimelineEvent.dragging{opacity:.78;cursor:grabbing;z-index:30!important}
 @media(max-width:700px){.dpDragPreview{min-width:190px;padding:9px 11px}.dpDragPreview strong{font-size:15px}}
+
+/* V72 – Drag-Vorschau immer über dem Kalender */
+.dpDragPreview{
+ position:fixed!important;
+ z-index:2147483647!important;
+ pointer-events:none!important;
+ transform:translate3d(0,0,0);
+ will-change:left,top;
+}
+.dpTimelineWrap,.dpTimelineGrid,.dpWeekDay,.dpTimelineBody{
+ overflow:visible;
+}
+.dpTimelineWrap{position:relative}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -1673,9 +1686,10 @@ function initTimelineDrag(){
 }
 function showDragPreview(target,duration,clientX,clientY){
  let p=document.querySelector('.dpDragPreview');
- if(!p){p=document.createElement('div');p.className='dpDragPreview';document.body.appendChild(p)}
+ if(!p){p=document.createElement('div');p.className='dpDragPreview';document.body.appendChild(p)}else if(p.parentElement!==document.body){document.body.appendChild(p)}
  const dayName=['So','Mo','Di','Mi','Do','Fr','Sa'][new Date(target.date+'T12:00:00').getDay()];
  p.innerHTML=`<b>${dayName}, ${fmtDate(target.date)}</b><strong>${target.startTime} – ${endTime(target.startTime,duration)}</strong><small>5-Minuten-Raster · loslassen zum Verschieben</small>`;
+ p.style.zIndex='2147483647';
  p.style.left=Math.min(window.innerWidth-250,Math.max(10,clientX+14))+'px';
  p.style.top=Math.min(window.innerHeight-92,Math.max(10,clientY+14))+'px';
 }

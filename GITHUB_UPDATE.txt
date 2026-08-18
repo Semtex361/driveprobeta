@@ -1,14 +1,10 @@
-V71 – PRÄZISES VERSCHIEBEN
+V72 – DRAG-VORSCHAU IMMER IM VORDERGRUND
 
-Drag & Drop der Fahrstunden verbessert:
-- Während des Ziehens erscheint eine Live-Info direkt am Mauszeiger/Finger.
-- Anzeige von Wochentag + Datum.
-- Anzeige der exakten neuen Zeit von-bis.
-- weiterhin 5-Minuten-Raster.
-- Vorschau aktualisiert sich während des Ziehens.
-- Die Fahrstunde wird erst beim Loslassen tatsächlich gespeichert.
-- Überschneidungsprüfung bleibt aktiv.
-- Klick ohne Ziehen öffnet weiterhin die Details.
+- Die Zeitvorschau beim Verschieben wird jetzt direkt an document.body gehängt.
+- Sehr hoher z-index verhindert, dass die Vorschau hinter den Wochentagen/Kalender-Spalten verschwindet.
+- Vorschau bleibt auch beim horizontalen Verschieben über die Tage sichtbar.
+- Keine Änderung an der Verschiebe- oder Speicherlogik.
+- Überschneidungsprüfung bleibt unverändert.
 
 GitHub ersetzen:
 index.html
