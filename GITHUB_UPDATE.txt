@@ -1,18 +1,27 @@
-V86 – LOGBUCH FILTER
+V88 – REPARATUR + FILTERFARBEN
 
-Neu:
-- Filter neben der Suche.
-- Filteroptionen:
-  Alle Änderungen
-  Hinzugefügt
-  Bearbeitet
-  Verschoben
-  Gelöscht
-- Suche und Filter funktionieren gleichzeitig.
-- Meldung bei keinen passenden Ergebnissen.
-- Darkmode und Responsive Layout angepasst.
+WICHTIG:
+V88 wurde bewusst neu von der funktionierenden V86 aufgebaut.
+Die fehlerhafte V87-Datei wurde NICHT als Basis verwendet.
+
+Behoben:
+- CSS/Quelltext kann nicht mehr versehentlich im sichtbaren Seiteninhalt erscheinen.
+- Filterfarben werden korrekt innerhalb des echten <style>-Blocks geladen.
+- Filterfarben:
+  Alle = neutral
+  Hinzugefügt = grün
+  Bearbeitet = blau
+  Verschoben = violett
+  Gelöscht = rot
+- Darkmode-Farben angepasst.
+- Filterfarbe wird beim Laden und beim Wechsel automatisch gesetzt.
+- Service-Worker-Cache auf V88 aktualisiert.
+- Versionsmarker auf V88 gesetzt.
 
 GitHub ersetzen:
 index.html
 sw.js
 manifest.json
+
+Danach einmal STRG+F5.
+Falls die alte PWA-Version weiter angezeigt wird: App/Website einmal komplett schließen und erneut öffnen.
