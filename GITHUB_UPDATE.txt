@@ -1,17 +1,16 @@
-DRIVEPRO BETA V42
+DRIVEPRO BETA V43
 
-Der Kalender ist jetzt technisch und optisch fest auf Wochenansicht gesetzt.
-Die alte Monatsansicht/Calgrid wird ausgeblendet.
+Kalender:
+- Es wird ausschließlich die AKTUELLE Kalenderwoche angezeigt.
+- Keine Vor-/Zurück-Pfeile.
+- Keine Monatsansicht.
+- Keine Möglichkeit, auf andere Wochen zu wechseln.
+- Die Woche läuft immer Montag bis Sonntag.
+- Der heutige Tag wird blau hervorgehoben.
+- Fahrstunden sind anklickbar.
+- Auf dem iPhone bleiben die 7 Tage horizontal scrollbar, falls der Bildschirm zu schmal ist.
 
-7 Spalten:
-Mo | Di | Mi | Do | Fr | Sa | So
-
-- Fahrstunden mit Uhrzeit, Schüler, Fahrtart und Dauer
-- Woche vor/zurück
-- Heute
-- anklickbare Fahrstunden
-- mobile horizontale Wochenansicht
-- Cache-Version 42
-
-GitHub: index.html, sw.js und manifest.json ersetzen.
-Test: https://semtex361.github.io/driveprobeta/?v=42
+GitHub:
+index.html, sw.js und manifest.json ersetzen.
+Test:
+https://semtex361.github.io/driveprobeta/?v=43
