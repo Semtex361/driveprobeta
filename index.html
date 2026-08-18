@@ -837,7 +837,7 @@ function saveLesson(oldStudentId,lessonId){
   <div class="conflictItem"><span>Neue Fahrstunde</span><b>${esc(data.startTime)} – ${esc(endTime(data.startTime,data.duration))}</b></div>
   <div class="conflictItem"><span>Bereits eingetragen</span><b>${esc(start)} – ${esc(end)}</b><small>${esc(name)}</small></div>
  </div>
- <div class="actions"><button class="primary" onclick="closeModal()">Andere Uhrzeit wählen</button></div>
+ <div class="actions"><button class="primary" onclick="closeModal();setTimeout(()=>{const el=document.getElementById('lt');if(el){el.focus();el.select();}},50)">Andere Uhrzeit wählen</button></div>
  </div>`);
  return;
  }

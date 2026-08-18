@@ -1,16 +1,10 @@
-DRIVEPRO BETA V53 – ÜBERSCHNEIDUNGSWARNUNG
+V55 – Überschneidungsfenster verbessert
 
-Beim Speichern wird geprüft, ob sich die neue/bearbeitete Fahrstunde mit einer
-anderen bereits gespeicherten Fahrstunde überschneidet.
-
-Die Prüfung gilt für alle Fahrschüler, da ein Fahrlehrer nicht gleichzeitig
-zwei Fahrstunden durchführen kann.
-
-Bei Überschneidung:
-- Warnmeldung zeigt beide Zeiträume.
-- Betroffener Fahrschüler wird genannt.
-- Die neue Fahrstunde wird NICHT gespeichert.
-- Die gerade bearbeitete Fahrstunde wird bei der Prüfung ignoriert.
+„Andere Uhrzeit wählen“:
+- Konfliktfenster schließt sich.
+- Das Startzeit-Feld der gerade bearbeiteten Fahrstunde wird automatisch fokussiert.
+- Der vorhandene Wert wird markiert, damit direkt eine neue Uhrzeit eingegeben werden kann.
+- Die Fahrstunde wird erst gespeichert, wenn die neue Zeit nicht mehr kollidiert.
 
 GitHub ersetzen:
 index.html
