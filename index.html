@@ -1126,6 +1126,27 @@ body{overflow-x:hidden}
 .studentCompleteBtn{background:linear-gradient(135deg,#36a866,#238b50)!important;color:#fff!important;font-weight:850!important;padding:10px 14px;border-radius:10px;box-shadow:0 6px 16px rgba(35,139,80,.18)}
 .studentCompleteBtn:hover{transform:translateY(-1px);filter:brightness(1.03)}
 @media(max-width:650px){.profileHeader{align-items:flex-start!important}.profileActions{width:100%}.profileActions button{flex:1}.studentCompleteBtn{min-width:100%}}
+
+/* V69 – Wochenkalender mit Tages-Timeline */
+.dpTimelineWrap{position:relative;overflow-x:auto;padding-bottom:4px}
+.dpTimelineGrid{display:grid;grid-template-columns:repeat(7,minmax(150px,1fr));gap:8px;min-width:980px}
+.dpTimelineBody{position:relative;background:#f9fbfd;overflow:hidden}
+.dpTimelineLine{position:absolute;left:0;right:0;height:1px;background:#e4ebf2;pointer-events:none}
+.dpTimelineLine span{position:absolute;left:5px;top:-8px;font-size:8px;font-weight:750;color:#91a0af;background:#f9fbfd;padding-right:4px}
+.dpTimelineEvent{position:absolute;left:32px;right:7px;width:auto!important;min-height:0!important;margin:0;border:0;border-left:3px solid #2f80ed!important;border-radius:9px;padding:6px 7px!important;z-index:3;text-align:left;overflow:hidden;background:#eaf3ff!important;box-shadow:0 3px 8px rgba(31,78,132,.08)}
+.dpTimelineEvent b{font-size:9px;line-height:1.2}.dpTimelineEvent strong{font-size:10px;line-height:1.2}.dpTimelineEvent small{font-size:8px;line-height:1.2}
+.dpTimelineEmpty{position:absolute;top:50%;left:35px;right:5px;text-align:center;color:#a5b1bd;font-size:9px;transform:translateY(-50%)}
+.dpCurrentTime{position:absolute;top:0;bottom:0;pointer-events:none;z-index:5;width:calc((100% - 8px)/7)}
+.dpCurrentTime span{position:absolute;left:0;right:0;height:2px;background:#ef5b5b;box-shadow:0 0 0 1px rgba(239,91,91,.08)}
+.dpCurrentTime span:before{content:'';position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:#ef5b5b}
+[data-theme="dark"] .dpTimelineBody{background:#0f1b29}
+[data-theme="dark"] .dpTimelineLine{background:#26394d}
+[data-theme="dark"] .dpTimelineLine span{background:#0f1b29;color:#8296aa}
+[data-theme="dark"] .dpTimelineEvent{background:#183451!important;color:#eaf3ff}
+@media(max-width:700px){
+ .dpTimelineGrid{min-width:1100px}
+ .dpTimelineEvent{left:31px;right:5px}
+}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -1541,16 +1562,37 @@ function calendarPage(){
  const monday=new Date(anchor);
  monday.setDate(anchor.getDate()-((anchor.getDay()+6)%7));
  const labels=['Mo','Di','Mi','Do','Fr','Sa','So'];
+ const timelineStart=6, timelineEnd=22, hourHeight=58;
+ const hours=Array.from({length:timelineEnd-timelineStart+1},(_,n)=>timelineStart+n);
  let cells='';
  for(let i=0;i<7;i++){
    const d=new Date(monday); d.setDate(monday.getDate()+i);
    const ds=fmt(d);
    const lessons=allLessons().filter(x=>x.l.date===ds).sort((a,b)=>(a.l.startTime||'').localeCompare(b.l.startTime||''));
+   const hourLines=hours.map(hr=>`<div class="dpTimelineLine" style="top:${(hr-timelineStart)*hourHeight}px"><span>${String(hr).padStart(2,'0')}:00</span></div>`).join('');
+   const events=lessons.map(x=>{
+     const [hh,mm]=String(x.l.startTime||'00:00').split(':').map(Number);
+     const startMin=hh*60+mm;
+     const top=Math.max(0,(startMin-timelineStart*60)/60*hourHeight);
+     const height=Math.max(42,(Number(x.l.duration)||60)/60*hourHeight-5);
+     return `<button type="button" class="dpWeekEvent dpTimelineEvent" style="top:${top}px;height:${height}px" onclick="openLessonDetail('${x.s.id}','${x.l.id}')">
+       <b>${esc(x.l.startTime||'')} – ${esc(endTime(x.l.startTime,x.l.duration))}</b>
+       <strong>${esc(x.s.firstName+' '+x.s.lastName)}</strong>
+       <small>${esc(x.l.special||'Übungsfahrt')}</small>
+     </button>`;
+   }).join('');
    cells+=`<div class="dpWeekDay ${ds===today?'today':''}">
      <div class="dpWeekHead"><span>${labels[i]}</span><b>${d.getDate()}</b></div>
-     <div class="dpWeekEvents">${lessons.length?lessons.map(x=>`<div class="dpWeekEvent" onclick="openLessonDetail('${x.s.id}','${x.l.id}')"><b>${esc(x.l.startTime||'')} – ${esc(endTime(x.l.startTime,x.l.duration))}</b><strong>${esc(x.s.firstName+' '+x.s.lastName)}</strong><small>${esc(x.l.special||'Übungsfahrt')}</small></div>`).join(''):'<div class="dpWeekEmpty">Keine Fahrstunde</div>'}</div>
+     <div class="dpTimelineBody" style="height:${(timelineEnd-timelineStart)*hourHeight}px">
+       ${hourLines}
+       ${events||'<div class="dpTimelineEmpty">Keine Fahrstunde</div>'}
+     </div>
    </div>`;
  }
+ const nowMinutes=now.getHours()*60+now.getMinutes();
+ const currentDayIndex=(now.getDay()+6)%7;
+ const currentTimeTop=(nowMinutes-timelineStart*60)/60*hourHeight;
+ const currentTimeHtml=(nowMinutes>=timelineStart*60&&nowMinutes<=timelineEnd*60)?`<div class="dpCurrentTime" style="left:calc(${currentDayIndex} * (100% / 7) + 8px);"><span style="top:${currentTimeTop}px"></span></div>`:'';
  const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);
  const range=`${monday.getDate()}. – ${sunday.getDate()}. ${sunday.toLocaleDateString('de-DE',{month:'long',year:'numeric'})}`;
  document.getElementById('content').innerHTML=`<div class="card dpCalendarCard">
@@ -1558,7 +1600,7 @@ function calendarPage(){
      <div><div class="eyebrow">KALENDER</div><h2>Aktuelle Woche</h2><p>${range}</p></div>
      <div class="dpCalendarSwitch"><button type="button" class="active" onclick="setCalendarView('week')">Woche</button><button type="button" onclick="setCalendarView('month')">Monat</button></div>
    </div>
-   <div class="dpWeekGrid">${cells}</div>
+   <div class="dpTimelineWrap"><div class="dpTimelineGrid">${cells}</div>${currentTimeHtml}</div>
  </div>`;
 }
 function setCalendarView(view){

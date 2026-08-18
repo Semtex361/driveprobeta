@@ -1,7 +1,15 @@
-V68 – FÜHRERSCHEIN ERHALTEN
-- Im Fahrschüler-Profil: „✓ Führerschein erhalten“
-- Klick öffnet einen druckfertigen Ausbildungsabschluss in einem neuen Fenster.
-- Browser öffnet automatisch den Druckdialog; dort „Als PDF speichern“ möglich.
-- Enthält Schülerdaten, Prüfungsdaten, Gesamtfahrzeit, Kilometer, Sonderfahrten, jede einzelne Fahrstunde chronologisch, Bemerkungen, Unterschriftsstatus und Ausbildungsdiagramm.
-- Keine vorhandenen Daten werden verändert.
-GitHub ersetzen: index.html, sw.js, manifest.json
+V69 – KALENDER WOCHENANSICHT MIT TIMELINE
+
+- Wochenansicht hat jetzt eine echte vertikale Zeitachse von 06:00 bis 22:00.
+- Jede Stunde ist als horizontale Linie sichtbar.
+- Fahrstunden werden anhand ihrer Startzeit und Dauer an der richtigen Position dargestellt.
+- Fahrstunden zeigen weiterhin von-bis, Fahrschüler und Fahrtart.
+- Die aktuelle Uhrzeit wird am aktuellen Wochentag als rote Linie angezeigt.
+- Klick auf eine Fahrstunde öffnet weiterhin die Fahrstundendetails.
+- Mobile Wochenansicht bleibt horizontal scrollbar.
+- Monatsansicht bleibt unverändert.
+
+GitHub ersetzen:
+index.html
+sw.js
+manifest.json
