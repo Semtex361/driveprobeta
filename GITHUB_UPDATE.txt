@@ -1,14 +1,15 @@
-V75 – RECHTSKLICK BUTTON FINAL REPARIERT
+V76 – PRÜFUNGSFAHRT
 
-Ursache des Problems:
-Das Kontextmenü wurde beim pointerdown des Buttons sofort entfernt, bevor der click-Handler die Fahrstundenmaske öffnen konnte.
+Neue Fahrtart:
+- Prüfungsfahrt
 
-Korrektur:
-- Außenklick schließt das Menü erst über click.
-- „Fahrstunde hinzufügen“ stoppt die Weitergabe des Events.
-- Die Fahrstundenmaske wird zuerst geöffnet und danach nur das Kontextmenü geschlossen.
-- Datum und Uhrzeit bleiben vorausgefüllt.
-- Keine Änderung an Drag & Drop oder Fahrtenfarben.
+Sie kann im normalen Fahrstundenformular ausgewählt werden.
+Sie ist auch über „Fahrstunde hinzufügen“ per Rechtsklick verfügbar.
+Sie wird im Kalender mit einer eigenen Farbe dargestellt:
+- Hellmodus: Rot/Rosa
+- Darkmode: dunkles Rot
+
+Bestehende Fahrten und Funktionen bleiben erhalten.
 
 GitHub ersetzen:
 index.html
