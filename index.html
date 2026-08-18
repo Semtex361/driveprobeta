@@ -617,6 +617,44 @@ body{overflow-x:hidden}
  .dpWeekDay{min-height:360px}
  .dpWeekTitle h2{font-size:18px}
 }
+
+/* DRIVEPRO V48 – real calendar mode switch */
+.dpCalendarCard{overflow:hidden!important}
+.dpCalendarHeader{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:4px 0 18px}
+.dpCalendarHeader h2{margin:3px 0;font-size:22px;color:#173b69}
+.dpCalendarHeader p{margin:0;color:#718096;font-size:12px}
+.dpCalendarSwitch{display:flex;gap:4px;padding:4px;background:#edf4fb;border:1px solid #d9e6f2;border-radius:13px}
+.dpCalendarSwitch button{border:0;background:transparent;padding:9px 14px;border-radius:10px;font-weight:800;color:#71839a;cursor:pointer}
+.dpCalendarSwitch button.active{background:#fff;color:#1769d2;box-shadow:0 3px 10px rgba(31,78,132,.09)}
+.dpMonthNames{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-bottom:7px}
+.dpMonthNames span{text-align:center;font-size:10px;font-weight:800;text-transform:uppercase;color:#7b8da3}
+.dpMonthGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}
+.dpMonthDay{position:relative;min-height:78px;border:1px solid #dce8f4;background:#fff;border-radius:13px;text-align:left;padding:10px;cursor:pointer;color:#173b69}
+.dpMonthDay.outside{opacity:.35}
+.dpMonthDay.today{border:2px solid #2f80ed}
+.dpMonthNumber{font-size:14px;font-weight:800}
+.dpMonthMarker{position:absolute;left:10px;bottom:10px;width:8px;height:8px;border-radius:50%;background:#2f80ed}
+.dpMonthCount{position:absolute;right:9px;bottom:7px;font-size:9px;font-weight:800;color:#1769d2}
+.dpWeekGrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.dpWeekDay{min-height:420px;background:#f7fbff;border:1px solid #dce8f4;border-radius:15px;overflow:hidden}
+.dpWeekDay.today{border:2px solid #2f80ed}
+.dpWeekHead{display:flex;justify-content:space-between;align-items:center;padding:11px 10px;background:#fff;border-bottom:1px solid #e1eaf3}
+.dpWeekHead span{font-size:10px;text-transform:uppercase;font-weight:800;color:#71839a}
+.dpWeekHead b{font-size:20px;color:#173b69}
+.dpWeekEvents{padding:8px;display:flex;flex-direction:column;gap:7px}
+.dpWeekEvent{padding:9px;border-radius:11px;background:#eaf3ff;border-left:3px solid #2f80ed;display:flex;flex-direction:column;gap:2px;cursor:pointer}
+.dpWeekEvent b{font-size:11px;color:#1769d2}.dpWeekEvent strong{font-size:11px}.dpWeekEvent small{font-size:9px;color:#6d8097}
+.dpWeekEmpty{text-align:center;color:#a0adba;font-size:9px;padding:18px 2px}
+@media(max-width:700px){
+ .dpCalendarHeader{flex-direction:column;align-items:stretch;gap:12px}
+ .dpCalendarSwitch{width:100%}
+ .dpCalendarSwitch button{flex:1}
+ .dpMonthGrid{gap:5px}.dpMonthDay{min-height:58px;padding:8px}
+ .dpMonthMarker{left:8px;bottom:7px;width:7px;height:7px}
+ .dpMonthCount{right:7px;bottom:5px}
+ .dpWeekGrid{grid-template-columns:repeat(7,minmax(145px,1fr));overflow-x:auto;padding-bottom:5px}
+ .dpWeekDay{min-height:360px}
+}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -658,7 +696,7 @@ body{overflow-x:hidden}
 <script>
 const KEY='fahrschul_tracker_windows_v5';
 const DEFAULT_AREAS=["Fahrzeugbedienung","Anfahren / Anhalten","Blickführung","Verkehrsbeobachtung","Geschwindigkeit","Abbiegen","Spurwechsel","Fahrstreifenwahl","Abstände","Verkehrszeichen / Ampeln","Kreuzungen","Kreisverkehr","Rückwärtsfahren","Einparken","Grundfahraufgaben","Landstraße","Autobahn","Nachtfahrt","Prüfungsreife"];
-const state={page:'dashboard',studentId:null,month:new Date()};
+const state={page:'dashboard',studentId:null,month:new Date(),calendarView:'week',calendarWeekDate:null};
 let students=[];
 try{students=JSON.parse(localStorage.getItem(KEY)||'[]')||[]}catch(e){students=[]}
 function save(){localStorage.setItem(KEY,JSON.stringify(students))}
@@ -797,28 +835,72 @@ function allLessons(){const a=[];students.forEach(s=>(s.lessons||[]).forEach(l=>
 function lessonsPage(){document.getElementById('content').innerHTML=`<div class="toolbar"><div class="muted">Alle gespeicherten Fahrstunden – zum Öffnen anklicken</div><button class="primary" onclick="openLessonForm()">+ Fahrstunde</button></div><div class="card">${allLessons().map(x=>lessonRow(x.s,x.l,true)).join('')||'<div class="empty">Noch keine Fahrstunden.</div>'}</div>`}
 function calendarPage(){
  const now=new Date();
- const monday=new Date(now);
- monday.setHours(12,0,0,0);
- monday.setDate(monday.getDate()-((monday.getDay()+6)%7));
+ const view=state.calendarView||'week';
+ const fmt=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+ const today=fmt(now);
+ let content='';
+
+ if(view==='month'){
+   const first=new Date(now.getFullYear(),now.getMonth(),1);
+   const offset=(first.getDay()+6)%7;
+   const last=new Date(now.getFullYear(),now.getMonth()+1,0);
+   const total=Math.ceil((offset+last.getDate())/7)*7;
+   const names=['Mo','Di','Mi','Do','Fr','Sa','So'];
+   let cells='';
+   for(let i=0;i<total;i++){
+     const d=new Date(first);
+     d.setDate(1-offset+i);
+     const ds=fmt(d);
+     const inMonth=d.getMonth()===now.getMonth();
+     const count=allLessons().filter(x=>x.l.date===ds).length;
+     cells+=`<button type="button" class="dpMonthDay ${inMonth?'':'outside'} ${ds===today?'today':''}" data-date="${ds}">
+       <span class="dpMonthNumber">${d.getDate()}</span>
+       ${count?`<span class="dpMonthMarker"></span><span class="dpMonthCount">${count}</span>`:''}
+     </button>`;
+   }
+   content=`<div class="dpMonthNames">${names.map(n=>`<span>${n}</span>`).join('')}</div><div class="dpMonthGrid">${cells}</div>`;
+   document.getElementById('content').innerHTML=`<div class="card dpCalendarCard">
+     <div class="dpCalendarHeader">
+       <div><div class="eyebrow">KALENDER</div><h2>${now.toLocaleDateString('de-DE',{month:'long',year:'numeric'})}</h2><p>Tippe auf einen Tag, um die Woche zu öffnen.</p></div>
+       <div class="dpCalendarSwitch"><button type="button" onclick="setCalendarView('week')">Woche</button><button type="button" class="active" onclick="setCalendarView('month')">Monat</button></div>
+     </div>${content}</div>`;
+   document.querySelectorAll('.dpMonthDay').forEach(btn=>btn.addEventListener('click',()=>{
+     state.calendarWeekDate=btn.dataset.date;
+     state.calendarView='week';
+     render();
+   }));
+   return;
+ }
+
+ const anchor=new Date(state.calendarWeekDate||now);
+ anchor.setHours(12,0,0,0);
+ const monday=new Date(anchor);
+ monday.setDate(anchor.getDate()-((anchor.getDay()+6)%7));
  const labels=['Mo','Di','Mi','Do','Fr','Sa','So'];
- const today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
- let daysHtml='';
+ let cells='';
  for(let i=0;i<7;i++){
-   const d=new Date(monday);
-   d.setDate(monday.getDate()+i);
-   const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+   const d=new Date(monday); d.setDate(monday.getDate()+i);
+   const ds=fmt(d);
    const lessons=allLessons().filter(x=>x.l.date===ds).sort((a,b)=>(a.l.startTime||'').localeCompare(b.l.startTime||''));
-   daysHtml+=`<div class="dpWeekDay ${ds===today?'today':''}">
+   cells+=`<div class="dpWeekDay ${ds===today?'today':''}">
      <div class="dpWeekHead"><span>${labels[i]}</span><b>${d.getDate()}</b></div>
      <div class="dpWeekEvents">${lessons.length?lessons.map(x=>`<div class="dpWeekEvent" onclick="openLessonDetail('${x.s.id}','${x.l.id}')"><b>${esc(x.l.startTime||'')}</b><strong>${esc(x.s.firstName+' '+x.s.lastName)}</strong><small>${esc(x.l.special||'Übungsfahrt')} · ${x.l.duration} Min.</small></div>`).join(''):'<div class="dpWeekEmpty">Keine Fahrstunde</div>'}</div>
    </div>`;
  }
  const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);
- const range=monday.getDate()+'. – '+sunday.getDate()+'. '+sunday.toLocaleDateString('de-DE',{month:'long',year:'numeric'});
- document.getElementById('content').innerHTML=`<div class="card dpWeekCard">
-   <div class="dpWeekTitle"><div class="eyebrow">KALENDER</div><h2>Aktuelle Woche</h2><p>${range}</p></div>
-   <div class="dpWeekGrid">${daysHtml}</div>
+ const range=`${monday.getDate()}. – ${sunday.getDate()}. ${sunday.toLocaleDateString('de-DE',{month:'long',year:'numeric'})}`;
+ document.getElementById('content').innerHTML=`<div class="card dpCalendarCard">
+   <div class="dpCalendarHeader">
+     <div><div class="eyebrow">KALENDER</div><h2>Aktuelle Woche</h2><p>${range}</p></div>
+     <div class="dpCalendarSwitch"><button type="button" class="active" onclick="setCalendarView('week')">Woche</button><button type="button" onclick="setCalendarView('month')">Monat</button></div>
+   </div>
+   <div class="dpWeekGrid">${cells}</div>
  </div>`;
+}
+function setCalendarView(view){
+ state.calendarView=view;
+ if(view==='week' && !state.calendarWeekDate) state.calendarWeekDate=new Date().toISOString().slice(0,10);
+ render();
 }
 function statsPage(){let mins=students.reduce((n,s)=>n+s.lessons.reduce((a,l)=>a+l.duration,0),0);document.getElementById('content').innerHTML=`<div class="cards"><div class="card"><div class="muted">Fahrschüler</div><div class="stat">${students.length}</div></div><div class="card"><div class="muted">Fahrstunden</div><div class="stat">${allLessons().length}</div></div><div class="card"><div class="muted">Gesamtminuten</div><div class="stat">${mins}</div></div><div class="card"><div class="muted">Termine heute</div><div class="stat">${allLessons().filter(x=>x.l.date===new Date().toISOString().slice(0,10)).length}</div><div class="small" style="margin-top:8px">Fahrstunden</div></div></div><div class="card" style="margin-top:16px"><h3>Ausbildungsstand</h3>${students.map(s=>`<div style="margin:15px 0"><div style="display:flex;justify-content:space-between"><b>${esc(s.firstName+' '+s.lastName)}</b><span>${pct(s)}%</span></div><div class="progress"><i style="width:${pct(s)}%"></i></div></div>`).join('')||'<div class="empty">Noch keine Daten.</div>'}</div>`}
 function openModal(content){document.getElementById('modalBody').innerHTML=content;document.getElementById('modal').classList.add('open');setTimeout(()=>initSignature(),20)}
@@ -866,6 +948,32 @@ if ('serviceWorker' in navigator) {
     const b=e.target.closest('.nav button');
     if(b) setTimeout(closeMobileMenu,80);
   });
+})();
+</script>
+
+<script>
+(function(){
+ function bindDriveProLogo(){
+   document.querySelectorAll('.brand,.brand .logo').forEach(function(el){
+     if(el.dataset.dpHomeBound)return;
+     el.dataset.dpHomeBound='1';
+     el.style.cursor='pointer';
+     el.addEventListener('click',function(e){
+       e.preventDefault();
+       e.stopPropagation();
+       if(typeof page==='function') page('dashboard');
+     });
+   });
+ }
+ const originalRender=window.render;
+ if(typeof originalRender==='function'){
+   window.render=function(){
+     originalRender.apply(this,arguments);
+     setTimeout(bindDriveProLogo,0);
+   };
+ }
+ document.addEventListener('DOMContentLoaded',bindDriveProLogo);
+ setTimeout(bindDriveProLogo,100);
 })();
 </script>
 </body>
