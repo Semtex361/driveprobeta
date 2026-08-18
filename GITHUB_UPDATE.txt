@@ -1,13 +1,16 @@
-V84 – LOGBUCH IM FAHRSCHÜLER-DESIGN
+V86 – LOGBUCH FILTER
 
-- „Aktivitäten“-Bereich/Statistik/Header entfernt.
-- Logbuch nutzt jetzt exakt die gleiche Grundstruktur wie der Fahrschüler-Reiter:
-  Toolbar + Suche + zweispaltige Karten + Avatar + Meta-Informationen + Öffnen-Button.
-- Jede Logänderung ist eine eigene Karte.
-- Karten zeigen Fahrschüler, Änderungsart, Datum, Uhrzeit und Kurzbeschreibung.
-- Suche funktioniert über Fahrschüler, Änderungsart, Details und Datum.
-- Klick auf „Öffnen“ zeigt weiterhin das Detailfenster.
-- Darkmode angepasst.
+Neu:
+- Filter neben der Suche.
+- Filteroptionen:
+  Alle Änderungen
+  Hinzugefügt
+  Bearbeitet
+  Verschoben
+  Gelöscht
+- Suche und Filter funktionieren gleichzeitig.
+- Meldung bei keinen passenden Ergebnissen.
+- Darkmode und Responsive Layout angepasst.
 
 GitHub ersetzen:
 index.html

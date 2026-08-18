@@ -1313,6 +1313,172 @@ body{overflow-x:hidden}
 [data-theme="dark"] .logStudent.deleted .logAvatar{background:#49252f!important;color:#ffadb9!important}
 [data-theme="dark"] .logDetailLine{color:#91a5ba}
 @media(max-width:800px){.logStudents{grid-template-columns:1fr!important}}
+
+/* V85 – Logbuch Feinschliff + Darkmode */
+.logbookWrap{max-width:1180px;margin:0 auto}
+.logStudents{align-items:stretch}
+.logStudents .logStudent{
+ min-height:112px;
+ padding:18px 20px!important;
+ gap:16px;
+ background:#fff!important;
+ border:1px solid #dbe6f0!important;
+ border-radius:18px!important;
+ box-shadow:0 5px 16px rgba(25,62,100,.055)!important;
+ transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease!important;
+}
+.logStudents .logStudent:hover{
+ transform:translateY(-2px);
+ border-color:#b9d0e5!important;
+ box-shadow:0 10px 25px rgba(25,62,100,.10)!important;
+}
+.logAvatar{
+ width:48px!important;height:48px!important;
+ border-radius:14px!important;
+ font-size:16px!important;
+ align-self:flex-start;
+ box-shadow:inset 0 0 0 1px rgba(23,105,210,.08);
+}
+.logStudents .grow{padding:1px 2px}
+.logStudents .grow>b{font-size:13px;letter-spacing:-.1px}
+.logStudents .studentMeta{gap:5px;margin-top:8px}
+.logStudents .studentMeta span{
+ font-size:9px!important;
+ padding:4px 7px!important;
+ background:#f5f8fb!important;
+ border:1px solid #e2e9f0!important;
+ color:#66798d!important;
+}
+.logStudents .studentMeta .logActionTag{
+ font-weight:850!important;
+}
+.logDetailLine{
+ margin-top:8px!important;
+ font-size:9px!important;
+ color:#7a8b9c!important;
+ line-height:1.35;
+ max-width:700px;
+}
+.logStudents .studentActions{padding-left:8px}
+.logStudents .studentActions .secondary{
+ min-width:72px;
+ padding:8px 12px!important;
+ border:1px solid #d5e2ee;
+ background:#f3f7fb;
+ color:#1769d2;
+ font-size:10px!important;
+ font-weight:800;
+}
+.logStudents .studentActions .secondary:hover{
+ background:#e8f1fa;
+ border-color:#bdd2e5;
+}
+.logStudents .logStudent.added{border-left:3px solid #36a866!important}
+.logStudents .logStudent.edited{border-left:3px solid #2f80ed!important}
+.logStudents .logStudent.moved{border-left:3px solid #7956c9!important}
+.logStudents .logStudent.deleted{border-left:3px solid #d63b55!important}
+
+/* Darkmode – komplette Karte */
+[data-theme="dark"] .logStudents .logStudent{
+ background:#17283a!important;
+ border-color:#2b4055!important;
+ box-shadow:0 6px 18px rgba(0,0,0,.18)!important;
+ color:#edf4fb!important;
+}
+[data-theme="dark"] .logStudents .logStudent:hover{
+ background:#1b2e42!important;
+ border-color:#3a5770!important;
+ box-shadow:0 11px 26px rgba(0,0,0,.28)!important;
+}
+[data-theme="dark"] .logStudents .logStudent .grow>b{
+ color:#f1f6fb!important;
+}
+[data-theme="dark"] .logStudents .studentMeta span{
+ background:#203448!important;
+ border-color:#30485f!important;
+ color:#b4c5d5!important;
+}
+[data-theme="dark"] .logStudents .logActionTag.added{
+ background:#193c2b!important;
+ border-color:#285c42!important;
+ color:#80d6a3!important;
+}
+[data-theme="dark"] .logStudents .logActionTag.edited{
+ background:#193553!important;
+ border-color:#2b5378!important;
+ color:#82bfff!important;
+}
+[data-theme="dark"] .logStudents .logActionTag.moved{
+ background:#34294b!important;
+ border-color:#544078!important;
+ color:#c8aaf7!important;
+}
+[data-theme="dark"] .logStudents .logActionTag.deleted{
+ background:#47262f!important;
+ border-color:#683944!important;
+ color:#ff9eac!important;
+}
+[data-theme="dark"] .logStudents .logDetailLine{
+ color:#9fb1c2!important;
+}
+[data-theme="dark"] .logStudents .logAvatar{
+ box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);
+}
+[data-theme="dark"] .logStudents .studentActions .secondary{
+ background:#20364b!important;
+ border-color:#38536c!important;
+ color:#a9d0f5!important;
+}
+[data-theme="dark"] .logStudents .studentActions .secondary:hover{
+ background:#29435a!important;
+ border-color:#4a6984!important;
+ color:#fff!important;
+}
+[data-theme="dark"] .logStudents .logStudent.added .logAvatar{
+ background:linear-gradient(145deg,#1d4533,#18382a)!important;color:#83d7a4!important
+}
+[data-theme="dark"] .logStudents .logStudent.edited .logAvatar{
+ background:linear-gradient(145deg,#1d3d5d,#19344e)!important;color:#8cc5ff!important
+}
+[data-theme="dark"] .logStudents .logStudent.moved .logAvatar{
+ background:linear-gradient(145deg,#3c3056,#302644)!important;color:#d0b5fa!important
+}
+[data-theme="dark"] .logStudents .logStudent.deleted .logAvatar{
+ background:linear-gradient(145deg,#4b2932,#3d222a)!important;color:#ffadba!important
+}
+
+/* Search/toolbar on logbook */
+#logSearch{
+ min-width:230px;
+}
+[data-theme="dark"] #logSearch{
+ background:#17283a!important;
+ border-color:#2b4055!important;
+ color:#edf4fb!important;
+}
+[data-theme="dark"] #logSearch::placeholder{color:#8195a8}
+@media(max-width:800px){
+ .logStudents .logStudent{padding:15px!important;min-height:100px}
+ .logStudents .studentActions{margin-left:auto}
+}
+@media(max-width:520px){
+ .logStudents .logStudent{gap:11px}
+ .logStudents .studentActions .secondary{min-width:62px}
+ .logStudents .studentMeta span{font-size:8px!important}
+ .logDetailLine{max-width:100%}
+}
+
+/* V86 – Logbuch Filter */
+.logToolbar{align-items:center}
+.logControls{display:flex;align-items:center;gap:8px}
+#logFilter{min-width:175px}
+#logFilter,#logSearch{height:38px;border-radius:10px}
+#logFilter{padding:0 11px;font-size:10px;font-weight:750;color:#52677d;background:#fff;border:1px solid #dce5ef;outline:none;cursor:pointer}
+#logFilter:focus,#logSearch:focus{border-color:#9fc3e3;box-shadow:0 0 0 3px rgba(47,128,237,.09)}
+[data-theme="dark"] #logFilter{background:#17283a!important;border-color:#2b4055!important;color:#dbe8f4!important}
+[data-theme="dark"] #logFilter option{background:#17283a;color:#dbe8f4}
+@media(max-width:700px){.logToolbar{align-items:stretch;flex-direction:column;gap:9px}.logControls{width:100%}.logControls>*{flex:1;min-width:0!important}}
+@media(max-width:450px){.logControls{flex-direction:column}.logControls>*{width:100%}}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -1612,7 +1778,7 @@ function logbookPage(){
  const counts={added:0,edited:0,deleted:0,moved:0};
  entries.forEach(x=>{if(counts[x.action]!==undefined)counts[x.action]++});
  document.getElementById('content').innerHTML=`
- <div class="toolbar"><div class="muted">Alle Änderungen verwalten</div><input id="logSearch" placeholder="Suchen…" oninput="filterLogbook()"></div>
+ <div class="toolbar logToolbar"><div class="muted">Alle Änderungen verwalten</div><div class="logControls"><select id="logFilter" onchange="filterLogbook()"><option value="all">Alle Änderungen</option><option value="added">➕ Hinzugefügt</option><option value="edited">✎ Bearbeitet</option><option value="moved">↔ Verschoben</option><option value="deleted">× Gelöscht</option></select><input id="logSearch" placeholder="Fahrschüler oder Änderung suchen…" oninput="filterLogbook()"></div></div>
  <div id="logList" class="students logStudents">${entries.map(logStudentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Noch keine Änderungen protokolliert.</div>'}</div>`;
 }
 function logStudentRow(x){
@@ -1632,9 +1798,14 @@ function logStudentRow(x){
  </div>`;
 }
 function filterLogbook(){
- const q=(document.getElementById('logSearch')?.value||'').toLowerCase();
- const list=getActivityLog().filter(x=>(`${x.studentName||''} ${activityLabel(x.action)} ${x.details||''} ${x.time||''}`).toLowerCase().includes(q));
- document.getElementById('logList').innerHTML=list.map(logStudentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Keine Treffer.</div>';
+ const q=(document.getElementById('logSearch')?.value||'').trim().toLowerCase();
+ const type=document.getElementById('logFilter')?.value||'all';
+ const list=getActivityLog().filter(x=>{
+   const matchesType=type==='all'||x.action===type;
+   const haystack=`${x.studentName||''} ${activityLabel(x.action)} ${x.details||''} ${x.time||''}`.toLowerCase();
+   return matchesType && haystack.includes(q);
+ });
+ document.getElementById('logList').innerHTML=list.map(logStudentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Keine passenden Einträge gefunden.</div>';
 }
 function openLogEntry(entryId){
  const x=getActivityLog().find(e=>e.id===entryId);if(!x)return;
