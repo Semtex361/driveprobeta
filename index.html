@@ -655,6 +655,19 @@ body{overflow-x:hidden}
  .dpWeekGrid{grid-template-columns:repeat(7,minmax(145px,1fr));overflow-x:auto;padding-bottom:5px}
  .dpWeekDay{min-height:360px}
 }
+
+/* V54 – DrivePro Konfliktfenster */
+.conflictModal{text-align:center;padding:8px 4px 2px}
+.conflictIcon{width:58px;height:58px;margin:0 auto 12px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:#fff3cd;font-size:28px;box-shadow:0 8px 20px rgba(150,110,20,.12)}
+.conflictModal h2{margin:5px 0 8px;color:#173b69}
+.conflictModal>p{margin:0 auto 16px;max-width:520px;color:#667991;line-height:1.55}
+.conflictCompare{display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left;margin:0 0 18px}
+.conflictItem{padding:12px;border-radius:13px;background:#f7faff;border:1px solid #dce8f4}
+.conflictItem span{display:block;font-size:10px;text-transform:uppercase;font-weight:800;color:#8191a5;margin-bottom:5px}
+.conflictItem b{display:block;color:#1769d2;font-size:15px}
+.conflictItem small{display:block;margin-top:5px;color:#687b92}
+.conflictModal .actions{justify-content:center}
+@media(max-width:600px){.conflictCompare{grid-template-columns:1fr}.conflictModal h2{font-size:20px}}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -815,8 +828,18 @@ function saveLesson(oldStudentId,lessonId){
    const start=conflict.lesson.startTime||'--:--';
    const end=conflict.lesson.duration?endTime(start,conflict.lesson.duration):'--:--';
    const name=conflict.student.firstName+' '+conflict.student.lastName;
-   alert(`⚠️ Fahrstunden überschneiden sich!\n\nDer Zeitraum ${data.startTime} – ${endTime(data.startTime,data.duration)} überschneidet sich mit:\n${start} – ${end}\n${name}\n\nBitte wähle eine andere Uhrzeit.`);
-   return;
+   openModal(`<div class="conflictModal">
+ <div class="conflictIcon">⚠️</div>
+ <div class="eyebrow">KALENDERKONFLIKT</div>
+ <h2>Fahrstunden überschneiden sich</h2>
+ <p>Die neue Fahrstunde <b>${esc(data.startTime)} – ${esc(endTime(data.startTime,data.duration))}</b> überschneidet sich mit einer bereits eingetragenen Fahrstunde.</p>
+ <div class="conflictCompare">
+  <div class="conflictItem"><span>Neue Fahrstunde</span><b>${esc(data.startTime)} – ${esc(endTime(data.startTime,data.duration))}</b></div>
+  <div class="conflictItem"><span>Bereits eingetragen</span><b>${esc(start)} – ${esc(end)}</b><small>${esc(name)}</small></div>
+ </div>
+ <div class="actions"><button class="primary" onclick="closeModal()">Andere Uhrzeit wählen</button></div>
+ </div>`);
+ return;
  }
  if(lessonId){
    let old=getStudent(oldStudentId).lessons.find(x=>x.id===lessonId);
