@@ -1,16 +1,17 @@
-DRIVEPRO BETA V41
+DRIVEPRO BETA V42
 
-Kalender:
-- Monatsansicht durch Wochenansicht ersetzt.
-- 7 Tage werden nebeneinander angezeigt.
-- Fahrstunden erscheinen mit Uhrzeit, Fahrschüler, Fahrtart und Dauer.
-- aktueller Tag wird blau hervorgehoben.
-- Pfeile wechseln jeweils eine komplette Woche.
-- „Heute“ springt zur aktuellen Woche.
-- Fahrstunde kann weiterhin angeklickt und geöffnet werden.
-- Mobile Ansicht ist horizontal scrollbar, damit alle 7 Tage sauber lesbar bleiben.
+Der Kalender ist jetzt technisch und optisch fest auf Wochenansicht gesetzt.
+Die alte Monatsansicht/Calgrid wird ausgeblendet.
 
-GitHub:
-index.html, sw.js und manifest.json ersetzen.
-Test:
-https://semtex361.github.io/driveprobeta/?v=41
+7 Spalten:
+Mo | Di | Mi | Do | Fr | Sa | So
+
+- Fahrstunden mit Uhrzeit, Schüler, Fahrtart und Dauer
+- Woche vor/zurück
+- Heute
+- anklickbare Fahrstunden
+- mobile horizontale Wochenansicht
+- Cache-Version 42
+
+GitHub: index.html, sw.js und manifest.json ersetzen.
+Test: https://semtex361.github.io/driveprobeta/?v=42
