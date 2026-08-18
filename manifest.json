@@ -1,7 +1,7 @@
 {
   "name": "DrivePro Beta",
   "short_name": "DrivePro Beta",
-  "start_url": "./index.html?v=49",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f4f7fc",
   "theme_color": "#1769d2",
