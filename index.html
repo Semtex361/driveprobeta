@@ -662,6 +662,72 @@ body{overflow-x:hidden}
 .conflictOverlay .conflictModal{position:relative!important;left:auto!important;top:auto!important;transform:none!important;margin:auto!important;width:min(620px,calc(100% - 28px))!important;max-height:calc(100% - 40px)!important;overflow:auto!important;background:#fff!important;border-radius:22px!important;padding:28px!important;box-shadow:0 30px 90px rgba(0,0,0,.30)!important}
 .conflictActions{display:flex!important;justify-content:center!important;gap:10px!important}.conflictActions button{min-width:170px!important;cursor:pointer!important}
 @media(max-width:600px){.conflictOverlay{padding:12px!important}.conflictOverlay .conflictModal{width:calc(100% - 24px)!important;padding:24px 18px!important}.conflictCompare{grid-template-columns:1fr!important}.conflictActions{flex-direction:column-reverse!important}.conflictActions button{width:100%!important}}
+
+/* V59 – final visual polish, keeping all V58 functionality intact */
+:root{
+ --blue:#1769d2;--blue2:#2f80ed;--blueSoft:#eaf3ff;--ink:#173b69;
+ --lineBlue:#dce8f4;--mutedBlue:#71839a;
+}
+body{background:linear-gradient(180deg,#f6faff 0%,#eef5fb 100%)}
+.card,.dialog,.heroCard,.studentCard,.quickAction{border-color:#dce8f4!important}
+.dialog{
+ width:min(820px,calc(100vw - 32px))!important;
+ padding:30px!important;
+ border-radius:24px!important;
+ box-shadow:0 24px 70px rgba(25,69,112,.18)!important;
+}
+.dialog h2{color:var(--ink)!important;font-size:25px!important;letter-spacing:-.5px!important}
+.dialog .row{gap:16px!important}
+.field{margin:8px 0 12px!important}
+.field label{color:#637890!important;font-size:11px!important;text-transform:uppercase!important;letter-spacing:.35px!important}
+.field input,.field select,.field textarea{
+ border:1px solid #d6e3ef!important;border-radius:12px!important;
+ min-height:45px!important;background:#fbfdff!important;color:#193b61!important;
+ transition:border-color .18s,box-shadow .18s,background .18s!important;
+}
+.field input:hover,.field select:hover,.field textarea:hover{border-color:#b9d1e8!important;background:#fff!important}
+.field input:focus,.field select:focus,.field textarea:focus{
+ border-color:#5a9be8!important;box-shadow:0 0 0 4px rgba(47,128,237,.10)!important;background:#fff!important;
+}
+.actions{gap:10px!important;margin-top:22px!important}
+.actions button{border-radius:12px!important;font-weight:800!important}
+.dialog>.actions{padding-top:8px!important;border-top:1px solid #edf3f8!important}
+button.primary{border-radius:12px!important}
+button.secondary{border:1px solid #d4e5f5!important}
+button.danger{border:1px solid #f2d8d8!important}
+.dpCalendarCard{border:1px solid #dce8f4!important;box-shadow:0 12px 30px rgba(32,83,133,.07)!important}
+.dpCalendarHeader{padding:2px 2px 20px!important}
+.dpCalendarSwitch{box-shadow:0 4px 12px rgba(35,85,135,.06)!important}
+.dpWeekDay,.dpMonthDay{box-shadow:0 2px 9px rgba(31,76,120,.035)!important}
+.dpWeekEvent{transition:transform .16s,box-shadow .16s,background .16s!important}
+.dpWeekEvent:hover{transform:translateY(-2px)!important;box-shadow:0 8px 18px rgba(47,128,237,.13)!important;background:#e3f0ff!important}
+.conflictOverlay{
+ animation:dpOverlayIn .18s ease-out both!important;
+}
+.conflictOverlay .conflictModal{
+ border:1px solid #dce8f4!important;
+ animation:dpConflictIn .22s cubic-bezier(.2,.8,.2,1) both!important;
+}
+.conflictClose:hover{background:#e4eef8!important;color:#173b69!important}
+.conflictItem{
+ box-shadow:0 4px 12px rgba(31,76,120,.045)!important;
+}
+.conflictItem:first-child{border-left:3px solid #2f80ed!important}
+.conflictItem:last-child{border-left:3px solid #f0b429!important}
+.conflictActions .primary{min-height:46px!important}
+.conflictActions .secondary{min-height:46px!important}
+@keyframes dpOverlayIn{from{opacity:0}to{opacity:1}}
+@keyframes dpConflictIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:700px){
+ .dialog{width:calc(100vw - 20px)!important;padding:21px!important;border-radius:20px!important}
+ .dialog h2{font-size:21px!important}
+ .dialog .row{grid-template-columns:1fr!important}
+ .actions{flex-wrap:wrap!important}
+ .actions button{flex:1 1 150px!important}
+ .dpCalendarCard{padding:16px!important}
+}
+
+.conflictBadge{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;background:#fff3cd;color:#9a6a00;font-size:10px;font-weight:900;letter-spacing:.6px;margin-bottom:5px}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -975,7 +1041,7 @@ function showConflictOverlay(info){
  div.innerHTML=`<div class="conflictModal" role="dialog" aria-modal="true">
    <button type="button" class="conflictClose" onclick="closeConflictOverlay()" aria-label="Schließen">×</button>
    <div class="conflictIcon">⚠️</div>
-   <div class="eyebrow">KALENDERKONFLIKT</div>
+   <div class="conflictBadge">ZEITKONFLIKT</div>
    <h2>Fahrstunden überschneiden sich</h2>
    <p>Die neue Fahrstunde <b>${info.newTime}</b> überschneidet sich mit einer bereits eingetragenen Fahrstunde.</p>
    <div class="conflictCompare">
