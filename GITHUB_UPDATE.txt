@@ -1,13 +1,9 @@
-V65 – Ausbildungsdiagramm Statuskreise
+V66 – Fahrschülernamen korrigiert
 
-Ausbildungsdiagramm geändert:
-- Offen = weißer Kreis
-- Üben = gelber Kreis
-- Sicher = grüner Kreis
-- Status wird per Klick auf den jeweiligen Kreis gesetzt.
-- Aktiver Status wird durch eine dezente blaue Hervorhebung markiert.
-- Die bisherigen gespeicherten Werte Offen / Übung / Sicher bleiben intern unverändert.
-- Notizfeld bleibt erhalten.
+- Namen in den weißen Fahrschüler-Karten sind jetzt dunkelblau und deutlich lesbar.
+- Zusatzinformationen sind dunkelgrau.
+- Gilt auch im Darkmode: Die Fahrschüler-Karten bleiben weiß.
+- Ausbildungsdiagramm aus V65 bleibt unverändert.
 
 GitHub ersetzen:
 index.html
