@@ -1,11 +1,14 @@
-DRIVEPRO BETA V44
+DRIVEPRO BETA V47
 
-Korrektur: Die vorherige V43 enthielt intern noch die alte Monatsfunktion.
-V44 ersetzt die tatsächlich ausgelieferte calendarPage-Funktion vollständig.
+Kalender:
+- Umschalter zwischen Woche und Monat.
+- Wochenansicht zeigt Fahrstunden detailliert.
+- Monatsansicht zeigt pro Tag nur eine Markierung/Anzahl bei vorhandenen Terminen.
+- Klick auf einen Tag in der Monatsansicht öffnet die Woche dieses Tages.
+- Standard ist die aktuelle Woche.
+- DrivePro-Logo/Brand-Navigation führt per Klick zum Dashboard/Startseite.
 
-Der Kalender zeigt jetzt ausschließlich:
-Montag | Dienstag | Mittwoch | Donnerstag | Freitag | Samstag | Sonntag
-der AKTUELLEN Woche.
-
-Keine Monatsansicht, keine Monatsnavigation, keine Pfeile für andere Wochen.
-Die Woche wird beim Öffnen immer aus dem aktuellen Datum berechnet.
+GitHub:
+index.html, sw.js und manifest.json ersetzen.
+Test:
+https://semtex361.github.io/driveprobeta/?v=47
