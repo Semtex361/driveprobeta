@@ -1,10 +1,19 @@
-V55 – Überschneidungsfenster verbessert
+DRIVEPRO BETA V61
 
-„Andere Uhrzeit wählen“:
-- Konfliktfenster schließt sich.
-- Das Startzeit-Feld der gerade bearbeiteten Fahrstunde wird automatisch fokussiert.
-- Der vorhandene Wert wird markiert, damit direkt eine neue Uhrzeit eingegeben werden kann.
-- Die Fahrstunde wird erst gespeichert, wenn die neue Zeit nicht mehr kollidiert.
+Neu über GitHub/ohne Backend:
+- Einstellungen als eigener Menüpunkt
+- Hell/Dunkel-Modus, lokal gespeichert
+- Fahrschulname, Adresse, Telefon, E-Mail
+- Fahrstundendauern frei einstellbar
+- Neue Fahrstunden verwenden die eingestellten Standarddauern
+- Daten als JSON sichern
+- JSON-Sicherung wiederherstellen
+- Daten komplett zurücksetzen mit Sicherheitsabfrage
+- Mobile Darstellung optimiert
+
+Wichtig:
+Das ist weiterhin eine lokale/static GitHub-Pages-Version.
+Login, Cloud-Synchronisierung und serverseitige Benutzerkonten kommen später.
 
 GitHub ersetzen:
 index.html
