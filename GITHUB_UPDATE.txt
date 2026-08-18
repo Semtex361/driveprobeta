@@ -1,16 +1,16 @@
-DRIVEPRO BETA V40 – Side Menu Fix
+DRIVEPRO BETA V41
 
-V39 hatte einen Fehler: Die Abdunklungs-/Blur-Ebene war dauerhaft sichtbar und
-hat dadurch den Hauptbildschirm blockiert.
-
-V40:
-- Overlay standardmäßig vollständig deaktiviert.
-- Overlay erscheint ausschließlich, wenn das Seitenmenü geöffnet ist.
-- Hauptbildschirm ist wieder normal sichtbar und anklickbar.
-- Swipe-Navigation bleibt erhalten.
-- Desktop bleibt unverändert.
+Kalender:
+- Monatsansicht durch Wochenansicht ersetzt.
+- 7 Tage werden nebeneinander angezeigt.
+- Fahrstunden erscheinen mit Uhrzeit, Fahrschüler, Fahrtart und Dauer.
+- aktueller Tag wird blau hervorgehoben.
+- Pfeile wechseln jeweils eine komplette Woche.
+- „Heute“ springt zur aktuellen Woche.
+- Fahrstunde kann weiterhin angeklickt und geöffnet werden.
+- Mobile Ansicht ist horizontal scrollbar, damit alle 7 Tage sauber lesbar bleiben.
 
 GitHub:
 index.html, sw.js und manifest.json ersetzen.
 Test:
-https://semtex361.github.io/driveprobeta/?v=40
+https://semtex361.github.io/driveprobeta/?v=41
