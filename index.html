@@ -833,6 +833,13 @@ function clearSignature(){const c=document.getElementById('signatureCanvas');c.g
 function saveSignature(sid){const c=document.getElementById('signatureCanvas');const s=getStudent(sid);s.signature=c.toDataURL('image/png');save();alert('Unterschrift gespeichert.')}
 function allLessons(){const a=[];students.forEach(s=>(s.lessons||[]).forEach(l=>a.push({s,l})));return a.sort((a,b)=>(b.l.date+' '+b.l.startTime).localeCompare(a.l.date+' '+a.l.startTime))}
 function lessonsPage(){document.getElementById('content').innerHTML=`<div class="toolbar"><div class="muted">Alle gespeicherten Fahrstunden – zum Öffnen anklicken</div><button class="primary" onclick="openLessonForm()">+ Fahrstunde</button></div><div class="card">${allLessons().map(x=>lessonRow(x.s,x.l,true)).join('')||'<div class="empty">Noch keine Fahrstunden.</div>'}</div>`}
+function endTime(start,duration){
+ const m=String(start||'').match(/^(\d{1,2}):(\d{2})$/);
+ if(!m) return '';
+ let mins=Number(m[1])*60+Number(m[2])+Number(duration||0);
+ mins%=1440;
+ return String(Math.floor(mins/60)).padStart(2,'0')+':'+String(mins%60).padStart(2,'0');
+}
 function calendarPage(){
  const now=new Date();
  const view=state.calendarView||'week';
@@ -884,7 +891,7 @@ function calendarPage(){
    const lessons=allLessons().filter(x=>x.l.date===ds).sort((a,b)=>(a.l.startTime||'').localeCompare(b.l.startTime||''));
    cells+=`<div class="dpWeekDay ${ds===today?'today':''}">
      <div class="dpWeekHead"><span>${labels[i]}</span><b>${d.getDate()}</b></div>
-     <div class="dpWeekEvents">${lessons.length?lessons.map(x=>`<div class="dpWeekEvent" onclick="openLessonDetail('${x.s.id}','${x.l.id}')"><b>${esc(x.l.startTime||'')}</b><strong>${esc(x.s.firstName+' '+x.s.lastName)}</strong><small>${esc(x.l.special||'Übungsfahrt')} · ${x.l.duration} Min.</small></div>`).join(''):'<div class="dpWeekEmpty">Keine Fahrstunde</div>'}</div>
+     <div class="dpWeekEvents">${lessons.length?lessons.map(x=>`<div class="dpWeekEvent" onclick="openLessonDetail('${x.s.id}','${x.l.id}')"><b>${esc(x.l.startTime||'')} – ${esc(endTime(x.l.startTime,x.l.duration))}</b><strong>${esc(x.s.firstName+' '+x.s.lastName)}</strong><small>${esc(x.l.special||'Übungsfahrt')}</small></div>`).join(''):'<div class="dpWeekEmpty">Keine Fahrstunde</div>'}</div>
    </div>`;
  }
  const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);

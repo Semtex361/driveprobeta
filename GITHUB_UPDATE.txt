@@ -1,15 +1,13 @@
-DRIVEPRO BETA V51
+DRIVEPRO BETA V52
 
-Kalender-Wochenansicht:
-Fahrstunden zeigen jetzt wieder die komplette Zeitspanne:
-Start – Endzeit.
-
-Beispiel:
+Wochenansicht zeigt jetzt:
 10:00 – 11:20
-Max Mustermann
+Fahrschüler
 Übungsfahrt
 
-Die Endzeit wird automatisch aus Startzeit + Fahrstundendauer berechnet.
+Die Endzeit wird automatisch aus Startzeit + Dauer berechnet.
 
 GitHub ersetzen:
-index.html, sw.js, manifest.json
+index.html
+sw.js
+manifest.json
