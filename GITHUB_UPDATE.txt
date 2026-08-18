@@ -1,10 +1,13 @@
-V64 – FAHRSCHÜLER-KARTEN DARKMODE
+V65 – Ausbildungsdiagramm Statuskreise
 
-Im Darkmode bleiben die Fahrschüler-Karten bewusst weiß.
-- Fahrschülernamen wieder dunkelblau und gut lesbar.
-- Zusatzinformationen dunkelgrau.
-- Dashboard-Begrüßung bleibt hell/weiß.
-- Restlicher Darkmode bleibt unverändert.
+Ausbildungsdiagramm geändert:
+- Offen = weißer Kreis
+- Üben = gelber Kreis
+- Sicher = grüner Kreis
+- Status wird per Klick auf den jeweiligen Kreis gesetzt.
+- Aktiver Status wird durch eine dezente blaue Hervorhebung markiert.
+- Die bisherigen gespeicherten Werte Offen / Übung / Sicher bleiben intern unverändert.
+- Notizfeld bleibt erhalten.
 
 GitHub ersetzen:
 index.html

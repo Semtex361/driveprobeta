@@ -1074,6 +1074,17 @@ body{overflow-x:hidden}
 [data-theme="dark"] .studentCard small{
  color:#64778c!important;
 }
+
+/* V65 – Ausbildungsdiagramm: Status als Kreise */
+.statusDots{display:flex;align-items:center;gap:10px;min-width:104px}
+.statusDot{width:22px!important;height:22px!important;min-width:22px!important;padding:0!important;border-radius:50%!important;border:2px solid #b9c5d0!important;box-shadow:none!important;background:#fff!important;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}
+.statusDot.statusOpen{background:#fff!important;border-color:#aebbc7!important}
+.statusDot.statusPractice{background:#f4c542!important;border-color:#d6a800!important}
+.statusDot.statusSafe{background:#39b86b!important;border-color:#239052!important}
+.statusDot.selected{transform:scale(1.16);box-shadow:0 0 0 3px rgba(47,128,237,.16)!important}
+.statusDot:hover{transform:scale(1.12)}
+[data-theme="dark"] .statusDot.statusOpen{background:#fff!important;border-color:#9eabb8!important}
+[data-theme="dark"] .statusDot.selected{box-shadow:0 0 0 3px rgba(91,166,245,.25)!important}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -1217,7 +1228,11 @@ function studentOverview(s){
  </div>
  <div class="studentFacts"><span><b>Klasse</b> ${esc(s.license)}</span><span><b>Ausbildungsbeginn</b> ${fmtDate(s.start)}</span><span><b>Sehhilfe</b> ${s.visionAid?'Ja':'Nein'}</span><span><b>Theorie</b> ${s.theoryPassed?'Bestanden':'Noch nicht bestanden'}</span></div>`;
 }
-function diagram(s){return `<h3>Ausbildungsdiagramm</h3><p class="muted">Änderungen bleiben beim Schüler gespeichert. Der Bereich bleibt geöffnet.</p>${s.areas.map((a,i)=>`<div class="area"><b>${esc(a.name)}</b><select onchange="setArea('${s.id}',${i},this.value)">${['Offen','Übung','Sicher'].map(x=>`<option ${x===a.level?'selected':''}>${x}</option>`).join('')}</select><input value="${esc(a.note)}" placeholder="Notiz…" onchange="setAreaNote('${s.id}',${i},this.value)"></div>`).join('')}`}
+function diagram(s){return `<h3>Ausbildungsdiagramm</h3><p class="muted">Änderungen bleiben beim Schüler gespeichert.</p>${s.areas.map((a,i)=>`<div class="area"><b>${esc(a.name)}</b><div class="statusDots" role="group" aria-label="Ausbildungsstand">
+ <button type="button" class="statusDot statusOpen ${a.level==='Offen'?'selected':''}" title="Offen" aria-label="Offen" onclick="setArea('${s.id}',${i},'Offen')"></button>
+ <button type="button" class="statusDot statusPractice ${a.level==='Übung'?'selected':''}" title="Üben" aria-label="Üben" onclick="setArea('${s.id}',${i},'Übung')"></button>
+ <button type="button" class="statusDot statusSafe ${a.level==='Sicher'?'selected':''}" title="Sicher" aria-label="Sicher" onclick="setArea('${s.id}',${i},'Sicher')"></button>
+ </div><input value="${esc(a.note)}" placeholder="Notiz…" onchange="setAreaNote('${s.id}',${i},this.value)"></div>`).join('')}`}
 function setArea(sid,i,v){const s=getStudent(sid);s.areas[i].level=v;save();const active=document.querySelector('.tabs .sel');studentTab('diagram',sid,active)}
 function setAreaNote(sid,i,v){const s=getStudent(sid);s.areas[i].note=v;save()}
 function studentLessons(s){return `<div style="display:flex;justify-content:space-between;align-items:center"><h3>Gespeicherte Fahrstunden</h3><button class="primary" onclick="openLessonForm('${s.id}')">+ Fahrstunde</button></div>${s.lessons.slice().sort((a,b)=>(b.date+' '+b.startTime).localeCompare(a.date+' '+a.startTime)).map(l=>lessonRow(s,l,true)).join('')||'<div class="empty">Noch keine Fahrstunden.</div>'}`}
