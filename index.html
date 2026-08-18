@@ -594,6 +594,29 @@ body{overflow-x:hidden}
 @media screen and (min-width:701px){
   .mobileMenuShade,.mobileSwipeHint{display:none!important}
 }
+
+/* V46: calendar is current week only */
+.calgrid,.weeknames{display:none!important}
+.dpWeekCard{overflow:hidden!important}
+.dpWeekTitle{text-align:center;padding:4px 0 18px}
+.dpWeekTitle h2{margin:3px 0;font-size:22px;color:#173b69}
+.dpWeekTitle p{margin:0;color:#718096;font-size:12px}
+.dpWeekGrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.dpWeekDay{min-height:420px;background:#f7fbff;border:1px solid #dce8f4;border-radius:15px;overflow:hidden}
+.dpWeekDay.today{border:2px solid #2f80ed;box-shadow:0 8px 20px rgba(47,128,237,.12)}
+.dpWeekHead{display:flex;justify-content:space-between;align-items:center;padding:11px 10px;background:#fff;border-bottom:1px solid #e1eaf3}
+.dpWeekHead span{font-size:10px;text-transform:uppercase;font-weight:800;color:#71839a}
+.dpWeekHead b{font-size:20px;color:#173b69}
+.dpWeekDay.today .dpWeekHead b{color:#1769d2}
+.dpWeekEvents{padding:8px;display:flex;flex-direction:column;gap:7px}
+.dpWeekEvent{padding:9px;border-radius:11px;background:#eaf3ff;border-left:3px solid #2f80ed;color:#173b69;display:flex;flex-direction:column;gap:2px;cursor:pointer}
+.dpWeekEvent b{font-size:11px;color:#1769d2}.dpWeekEvent strong{font-size:11px}.dpWeekEvent small{font-size:9px;color:#6d8097}
+.dpWeekEmpty{text-align:center;color:#a0adba;font-size:9px;padding:18px 2px}
+@media(max-width:700px){
+ .dpWeekGrid{grid-template-columns:repeat(7,minmax(145px,1fr));overflow-x:auto;padding-bottom:5px}
+ .dpWeekDay{min-height:360px}
+ .dpWeekTitle h2{font-size:18px}
+}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -772,8 +795,31 @@ function clearSignature(){const c=document.getElementById('signatureCanvas');c.g
 function saveSignature(sid){const c=document.getElementById('signatureCanvas');const s=getStudent(sid);s.signature=c.toDataURL('image/png');save();alert('Unterschrift gespeichert.')}
 function allLessons(){const a=[];students.forEach(s=>(s.lessons||[]).forEach(l=>a.push({s,l})));return a.sort((a,b)=>(b.l.date+' '+b.l.startTime).localeCompare(a.l.date+' '+a.l.startTime))}
 function lessonsPage(){document.getElementById('content').innerHTML=`<div class="toolbar"><div class="muted">Alle gespeicherten Fahrstunden – zum Öffnen anklicken</div><button class="primary" onclick="openLessonForm()">+ Fahrstunde</button></div><div class="card">${allLessons().map(x=>lessonRow(x.s,x.l,true)).join('')||'<div class="empty">Noch keine Fahrstunden.</div>'}</div>`}
-function calendarPage(){const d=state.month,y=d.getFullYear(),m=d.getMonth(),first=new Date(y,m,1),days=new Date(y,m+1,0).getDate(),start=(first.getDay()+6)%7;let cells=[];for(let i=0;i<start;i++)cells.push('<div class="day"></div>');for(let day=1;day<=days;day++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;const ev=allLessons().filter(x=>x.l.date===ds).map(x=>`<div class="event" onclick="openLessonDetail('${x.s.id}','${x.l.id}')"><b>${esc(x.l.startTime||'')}</b> · ${esc(x.s.firstName)}<br>${x.l.duration} Min.</div>`).join('');cells.push(`<div class="day"><div class="daynum">${day}</div>${ev}</div>`)}document.getElementById('content').innerHTML=`<div class="card"><div class="toolbar"><button onclick="changeMonth(-1)">‹</button><h2>${d.toLocaleDateString('de-DE',{month:'long',year:'numeric'})}</h2><button onclick="changeMonth(1)">›</button></div><div class="weeknames"><div>Mo</div><div>Di</div><div>Mi</div><div>Do</div><div>Fr</div><div>Sa</div><div>So</div></div><div class="calgrid">${cells.join('')}</div></div>`}
-function changeMonth(n){state.month.setMonth(state.month.getMonth()+n);render()}
+function calendarPage(){
+ const now=new Date();
+ const monday=new Date(now);
+ monday.setHours(12,0,0,0);
+ monday.setDate(monday.getDate()-((monday.getDay()+6)%7));
+ const labels=['Mo','Di','Mi','Do','Fr','Sa','So'];
+ const today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+ let daysHtml='';
+ for(let i=0;i<7;i++){
+   const d=new Date(monday);
+   d.setDate(monday.getDate()+i);
+   const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+   const lessons=allLessons().filter(x=>x.l.date===ds).sort((a,b)=>(a.l.startTime||'').localeCompare(b.l.startTime||''));
+   daysHtml+=`<div class="dpWeekDay ${ds===today?'today':''}">
+     <div class="dpWeekHead"><span>${labels[i]}</span><b>${d.getDate()}</b></div>
+     <div class="dpWeekEvents">${lessons.length?lessons.map(x=>`<div class="dpWeekEvent" onclick="openLessonDetail('${x.s.id}','${x.l.id}')"><b>${esc(x.l.startTime||'')}</b><strong>${esc(x.s.firstName+' '+x.s.lastName)}</strong><small>${esc(x.l.special||'Übungsfahrt')} · ${x.l.duration} Min.</small></div>`).join(''):'<div class="dpWeekEmpty">Keine Fahrstunde</div>'}</div>
+   </div>`;
+ }
+ const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);
+ const range=monday.getDate()+'. – '+sunday.getDate()+'. '+sunday.toLocaleDateString('de-DE',{month:'long',year:'numeric'});
+ document.getElementById('content').innerHTML=`<div class="card dpWeekCard">
+   <div class="dpWeekTitle"><div class="eyebrow">KALENDER</div><h2>Aktuelle Woche</h2><p>${range}</p></div>
+   <div class="dpWeekGrid">${daysHtml}</div>
+ </div>`;
+}
 function statsPage(){let mins=students.reduce((n,s)=>n+s.lessons.reduce((a,l)=>a+l.duration,0),0);document.getElementById('content').innerHTML=`<div class="cards"><div class="card"><div class="muted">Fahrschüler</div><div class="stat">${students.length}</div></div><div class="card"><div class="muted">Fahrstunden</div><div class="stat">${allLessons().length}</div></div><div class="card"><div class="muted">Gesamtminuten</div><div class="stat">${mins}</div></div><div class="card"><div class="muted">Termine heute</div><div class="stat">${allLessons().filter(x=>x.l.date===new Date().toISOString().slice(0,10)).length}</div><div class="small" style="margin-top:8px">Fahrstunden</div></div></div><div class="card" style="margin-top:16px"><h3>Ausbildungsstand</h3>${students.map(s=>`<div style="margin:15px 0"><div style="display:flex;justify-content:space-between"><b>${esc(s.firstName+' '+s.lastName)}</b><span>${pct(s)}%</span></div><div class="progress"><i style="width:${pct(s)}%"></i></div></div>`).join('')||'<div class="empty">Noch keine Daten.</div>'}</div>`}
 function openModal(content){document.getElementById('modalBody').innerHTML=content;document.getElementById('modal').classList.add('open');setTimeout(()=>initSignature(),20)}
 function closeModal(){document.getElementById('modal').classList.remove('open')}
