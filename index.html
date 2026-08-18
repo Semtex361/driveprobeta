@@ -1292,6 +1292,27 @@ body{overflow-x:hidden}
 [data-theme="dark"] .logOverviewCard,[data-theme="dark"] .logMainCard{background:#132235;border-color:#2b4056}.logItem:hover{background:#102031}.logItem{border-color:#24394d}.logItemHeading strong{color:#eaf3ff}.logItemHeading span{background:#203246;color:#b9c9d8}.logItemText,.logItemMeta{color:#91a5ba}.logDetailPremium .logPerson{background:#182c40}.logInfoGrid>div,.logDescription{border-color:#2b4056;background:#15283a}.logPerson strong,.logInfoGrid strong{color:#edf5fc}.logDescription p{color:#a5b7c9}
 @media(max-width:720px){.logTop{align-items:flex-start;flex-direction:column}.logTopRight{width:100%}.logTotal{margin-right:auto}.logOverview{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:470px){.logOverview{grid-template-columns:1fr 1fr}.logItem{padding-right:6px}.logItemText{white-space:normal}.logItemArrow{display:none}}
+
+/* V84 – Logbuch exakt im Fahrschüler-Listenstil */
+.logStudents .logStudent{position:relative}
+.logStudents .logStudent:hover{transform:translateY(-3px)}
+.logAvatar{font-size:17px!important;background:linear-gradient(145deg,#eaf3ff,#dcecff)!important;color:#1769d2!important}
+.logStudent.added .logAvatar{background:linear-gradient(145deg,#e8f7ef,#d8f0e3)!important;color:#29965b!important}
+.logStudent.moved .logAvatar{background:linear-gradient(145deg,#f1ebff,#e6dcff)!important;color:#7956c9!important}
+.logStudent.deleted .logAvatar{background:linear-gradient(145deg,#ffebee,#ffe0e5)!important;color:#d63b55!important}
+.logActionTag{font-weight:800!important}
+.logActionTag.added{background:#e8f7ef!important;border-color:#cdebd9!important;color:#29965b!important}
+.logActionTag.edited{background:#eaf3ff!important;border-color:#d5e6fa!important;color:#1769d2!important}
+.logActionTag.moved{background:#f1ebff!important;border-color:#dfd1fb!important;color:#7956c9!important}
+.logActionTag.deleted{background:#ffebee!important;border-color:#f6d1d7!important;color:#d63b55!important}
+.logDetailLine{font-size:10px;color:#718196;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[data-theme="dark"] .logStudents .logStudent{background:#132235!important;border-color:#2b4056!important}
+[data-theme="dark"] .logAvatar{background:#20364d!important;color:#b9d8f4!important}
+[data-theme="dark"] .logStudent.added .logAvatar{background:#183d2b!important;color:#7bd69f!important}
+[data-theme="dark"] .logStudent.moved .logAvatar{background:#35264d!important;color:#d4bdf8!important}
+[data-theme="dark"] .logStudent.deleted .logAvatar{background:#49252f!important;color:#ffadb9!important}
+[data-theme="dark"] .logDetailLine{color:#91a5ba}
+@media(max-width:800px){.logStudents{grid-template-columns:1fr!important}}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -1590,60 +1611,40 @@ function logbookPage(){
  const entries=getActivityLog();
  const counts={added:0,edited:0,deleted:0,moved:0};
  entries.forEach(x=>{if(counts[x.action]!==undefined)counts[x.action]++});
- const latest=entries[0], d=latest?new Date(latest.time):null;
  document.getElementById('content').innerHTML=`
- <div class="logbookPage">
-  <div class="logTop">
-   <div class="logTitleBlock">
-    <div class="logIconBig">↻</div>
-    <div><div class="eyebrow">AKTIVITÄTEN</div><h2>Logbuch</h2><p>Alle Änderungen an deiner Fahrschule auf einen Blick.</p></div>
+ <div class="toolbar"><div class="muted">Alle Änderungen verwalten</div><input id="logSearch" placeholder="Suchen…" oninput="filterLogbook()"></div>
+ <div id="logList" class="students logStudents">${entries.map(logStudentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Noch keine Änderungen protokolliert.</div>'}</div>`;
+}
+function logStudentRow(x){
+ const d=new Date(x.time), action=x.action||'edited';
+ return `<div class="student logStudent ${action}">
+  <div class="avatar logAvatar">${activityIcon(x.action)}</div>
+  <div class="grow">
+   <b>${esc(x.studentName||'Unbekannt')}</b>
+   <div class="studentMeta">
+    <span class="logActionTag ${action}">${esc(activityLabel(x.action))}</span>
+    <span>📅 ${d.toLocaleDateString('de-DE')}</span>
+    <span>🕐 ${d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</span>
    </div>
-   <div class="logTopRight">
-    <div class="logTotal"><strong>${entries.length}</strong><span>Aktivitäten</span></div>
-    <button class="logClear" onclick="clearActivityLog()">Logbuch leeren</button>
-   </div>
+   <div class="logDetailLine">${esc(x.details||'Änderung protokolliert')}</div>
   </div>
-
-  <div class="logOverview">
-   <div class="logOverviewCard"><span class="ovIcon green">＋</span><div><small>HINZUGEFÜGT</small><strong>${counts.added}</strong></div></div>
-   <div class="logOverviewCard"><span class="ovIcon blue">✎</span><div><small>BEARBEITET</small><strong>${counts.edited}</strong></div></div>
-   <div class="logOverviewCard"><span class="ovIcon purple">↔</span><div><small>VERSCHOBEN</small><strong>${counts.moved}</strong></div></div>
-   <div class="logOverviewCard"><span class="ovIcon red">×</span><div><small>GELÖSCHT</small><strong>${counts.deleted}</strong></div></div>
-  </div>
-
-  <div class="logMainCard">
-   <div class="logMainHeader">
-    <div><h3>Aktivitäten</h3><p>Chronologisch sortiert · neueste Änderung zuerst</p></div>
-    <div class="logLive"><span></span>Aktiv</div>
-   </div>
-   ${entries.length?`<div class="logList">${entries.map((x,i)=>{
-      const dt=new Date(x.time), cls=x.action||'edited';
-      return `<button class="logItem ${cls}" onclick="openLogEntry('${x.id}')">
-       <div class="logItemAccent"></div>
-       <div class="logItemIcon">${activityIcon(x.action)}</div>
-       <div class="logItemBody">
-        <div class="logItemHeading"><strong>${esc(activityLabel(x.action))}</strong><span>${esc(x.studentName||'Unbekannt')}</span></div>
-        <div class="logItemText">${esc(x.details||'Änderung protokolliert')}</div>
-        <div class="logItemMeta"><span>${dt.toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})}</span><i></i><span>${dt.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} Uhr</span></div>
-       </div>
-       <div class="logItemArrow">›</div>
-      </button>`}).join('')}</div>`:
-      `<div class="logEmpty"><div class="emptyIcon">↻</div><h3>Alles ruhig</h3><p>Hier erscheinen automatisch alle Änderungen, sobald du mit DrivePro arbeitest.</p></div>`}
-  </div>
+  <div class="studentActions"><button class="secondary" onclick="openLogEntry('${x.id}')">Öffnen</button></div>
  </div>`;
+}
+function filterLogbook(){
+ const q=(document.getElementById('logSearch')?.value||'').toLowerCase();
+ const list=getActivityLog().filter(x=>(`${x.studentName||''} ${activityLabel(x.action)} ${x.details||''} ${x.time||''}`).toLowerCase().includes(q));
+ document.getElementById('logList').innerHTML=list.map(logStudentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Keine Treffer.</div>';
 }
 function openLogEntry(entryId){
  const x=getActivityLog().find(e=>e.id===entryId);if(!x)return;
  const d=new Date(x.time);
  openModal(`<div class="logDetailPremium">
-  <div class="logDetailTop"><div class="logDetailIcon ${esc(x.action)}">${activityIcon(x.action)}</div><div><div class="eyebrow">LOGBUCH</div><h2>${esc(activityLabel(x.action))}</h2></div></div>
+  <div class="logDetailTop"><div class="logDetailIcon ${esc(x.action)}">${activityIcon(x.action)}</div><div><div class="eyebrow">LOGBUCH-EINTRAG</div><h2>${esc(activityLabel(x.action))}</h2></div></div>
   <div class="logPerson"><div class="logPersonAvatar">${esc((x.studentName||'?').charAt(0).toUpperCase())}</div><div><small>FAHRSCHÜLER</small><strong>${esc(x.studentName||'Unbekannt')}</strong></div></div>
-  <div class="logInfoGrid">
-   <div><small>DATUM</small><strong>${d.toLocaleDateString('de-DE')}</strong></div>
-   <div><small>UHRZEIT</small><strong>${d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</strong></div>
-  </div>
+  <div class="logInfoGrid"><div><small>DATUM</small><strong>${d.toLocaleDateString('de-DE')}</strong></div><div><small>UHRZEIT</small><strong>${d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</strong></div></div>
   <div class="logDescription"><small>DETAILS</small><p>${esc(x.details||'Änderung protokolliert')}</p></div>
-  <button class="primary logClose" onclick="closeModal()">Schließen</button>
+  <div class="actions"><button class="primary" onclick="closeModal()">Schließen</button></div>
  </div>`);
 }
 

@@ -1,19 +1,13 @@
-V83 – LOGBUCH PREMIUM DESIGN
+V84 – LOGBUCH IM FAHRSCHÜLER-DESIGN
 
-Logbuch komplett optisch überarbeitet:
-- kompakter, moderner Header
-- Aktivitätszähler
-- vier übersichtliche Statistik-Karten
-- klare Aktivitätsliste statt klobiger Karten
-- dezente farbliche Seitenmarkierung je Änderungsart
-- Fahrschüler als Badge
-- Datum/Uhrzeit sauber dargestellt
-- Hover-Effekt
-- Detailansicht als hochwertiges Modal
-- Darkmode angepasst
-- responsive für kleinere Bildschirme
-
-Funktionalität bleibt unverändert.
+- „Aktivitäten“-Bereich/Statistik/Header entfernt.
+- Logbuch nutzt jetzt exakt die gleiche Grundstruktur wie der Fahrschüler-Reiter:
+  Toolbar + Suche + zweispaltige Karten + Avatar + Meta-Informationen + Öffnen-Button.
+- Jede Logänderung ist eine eigene Karte.
+- Karten zeigen Fahrschüler, Änderungsart, Datum, Uhrzeit und Kurzbeschreibung.
+- Suche funktioniert über Fahrschüler, Änderungsart, Details und Datum.
+- Klick auf „Öffnen“ zeigt weiterhin das Detailfenster.
+- Darkmode angepasst.
 
 GitHub ersetzen:
 index.html
