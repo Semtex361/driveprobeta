@@ -1173,6 +1173,23 @@ body{overflow-x:hidden}
  overflow:visible;
 }
 .dpTimelineWrap{position:relative}
+
+/* V73 – Kalender: Rechtsklick + Fahrtenfarben */
+.dpCalendarContext{position:fixed;z-index:2147483646;min-width:215px;padding:9px;border:1px solid #d8e3ee;border-radius:12px;background:#fff;box-shadow:0 14px 34px rgba(25,55,90,.2)}
+.dpCalendarContext .ctxTitle{font-weight:850;color:#173b69;font-size:12px;padding:4px 6px}.dpCalendarContext .ctxTime{font-size:10px;color:#718096;padding:0 6px 7px}.dpCalendarContext button{width:100%;text-align:left;padding:9px 8px;border:0;border-radius:8px;background:#eaf3ff;color:#1769d2;font-weight:800;cursor:pointer}.dpCalendarContext button:hover{background:#dcecff}
+.dpTimelineEvent{border-left-width:4px!important}
+.dpTimelineEvent.lessonColorPractice{background:#eaf3ff!important;border-left-color:#2f80ed!important;color:#173b69!important}
+.dpTimelineEvent.lessonColorB197{background:#f2eaff!important;border-left-color:#8b5cf6!important;color:#4b2b83!important}
+.dpTimelineEvent.lessonColorCountry{background:#eaf8ef!important;border-left-color:#2e9d5b!important;color:#185c35!important}
+.dpTimelineEvent.lessonColorMotorway{background:#fff2df!important;border-left-color:#ed8b22!important;color:#75450e!important}
+.dpTimelineEvent.lessonColorNight{background:#e9eef8!important;border-left-color:#5169a6!important;color:#263a69!important}
+[data-theme="dark"] .dpCalendarContext{background:#132235;border-color:#2c4259}.dark .dpCalendarContext .ctxTitle,[data-theme="dark"] .dpCalendarContext .ctxTitle{color:#eef5ff}
+[data-theme="dark"] .dpCalendarContext .ctxTime{color:#91a5ba}
+[data-theme="dark"] .dpTimelineEvent.lessonColorPractice{background:#173451!important;color:#eaf3ff!important}
+[data-theme="dark"] .dpTimelineEvent.lessonColorB197{background:#35264d!important;color:#f1e9ff!important}
+[data-theme="dark"] .dpTimelineEvent.lessonColorCountry{background:#173d2a!important;color:#e5f8ec!important}
+[data-theme="dark"] .dpTimelineEvent.lessonColorMotorway{background:#4a341c!important;color:#fff0d6!important}
+[data-theme="dark"] .dpTimelineEvent.lessonColorNight{background:#25314e!important;color:#edf2ff!important}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -1325,7 +1342,7 @@ function setArea(sid,i,v){const s=getStudent(sid);s.areas[i].level=v;save();cons
 function setAreaNote(sid,i,v){const s=getStudent(sid);s.areas[i].note=v;save()}
 function studentLessons(s){return `<div style="display:flex;justify-content:space-between;align-items:center"><h3>Gespeicherte Fahrstunden</h3><button class="primary" onclick="openLessonForm('${s.id}')">+ Fahrstunde</button></div>${s.lessons.slice().sort((a,b)=>(b.date+' '+b.startTime).localeCompare(a.date+' '+a.startTime)).map(l=>lessonRow(s,l,true)).join('')||'<div class="empty">Noch keine Fahrstunden.</div>'}`}
 function lessonRow(s,l,clickable=false){return `<div class="lesson ${clickable?'clickable':''}" ${clickable?`onclick="openLessonDetail('${s.id}','${l.id}')"`:''}><b>${fmtDate(l.date)} · ${fmtTime(l.startTime)}${l.endTime?'–'+l.endTime:''} · ${l.duration} Min.</b><div class="muted">${esc(l.special||'Übungsfahrt')} · ${esc(s.firstName+' '+s.lastName)}${l.km?' · '+l.km+' km':''}</div>${l.note?`<div class="small" style="margin-top:5px">${esc(l.note)}</div>`:''}</div>`}
-function openLessonForm(studentId='',lessonId=''){let s=studentId?getStudent(studentId):null,l=lessonId?s.lessons.find(x=>x.id===lessonId):null;openModal(`<h2>${l?'Fahrstunde bearbeiten':'Fahrstunde dokumentieren'}</h2><div class="row"><div class="field"><label>Fahrschüler</label><select id="ls">${students.map(x=>`<option value="${x.id}" ${x.id===(s?.id||'')?'selected':''}>${esc(x.firstName+' '+x.lastName)}</option>`).join('')}</select></div><div class="field"><label>Datum</label><input id="ld" type="date" value="${l?.date||new Date().toISOString().slice(0,10)}"></div></div><div class="row"><div class="field"><label>Beginn</label><input id="lt" type="time" value="${l?.startTime||'09:00'}"></div><div class="field"><label>Dauer (Minuten)</label><input id="lm" type="number" value="${l?.duration||appSettings.durations['Übungsfahrt']}"></div></div><div class="field"><label>Art</label><select id="lsp" onchange="setLessonDuration(this.value)">${['Übungsfahrt','B197 Fahrstunde','Überlandfahrt','Autobahnfahrt','Beleuchtungsfahrt'].map(x=>`<option ${x===(l?.special||'Übungsfahrt')?'selected':''}>${x}</option>`).join('')}</select></div></div><div class="field"><label>Bemerkung</label><textarea id="ln" rows="4">${esc(l?.note||'')}</textarea></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveLesson('${studentId}','${lessonId}')">${l?'Änderungen speichern':'Speichern'}</button></div>`)}
+function openLessonForm(studentId='',lessonId='',presetDate='',presetTime=''){let s=studentId?getStudent(studentId):null,l=lessonId?s.lessons.find(x=>x.id===lessonId):null;const baseDate=new Date().toISOString().slice(0,10);openModal(`<h2>${l?'Fahrstunde bearbeiten':'Fahrstunde dokumentieren'}</h2><div class="row"><div class="field"><label>Fahrschüler</label><select id="ls">${students.map(x=>`<option value="${x.id}" ${x.id===(s?.id||'')?'selected':''}>${esc(x.firstName+' '+x.lastName)}</option>`).join('')}</select></div><div class="field"><label>Datum</label><input id="ld" type="date" value="${l?.date||presetDate||baseDate}"></div></div><div class="row"><div class="field"><label>Beginn</label><input id="lt" type="time" value="${l?.startTime||presetTime||'09:00'}"></div><div class="field"><label>Dauer (Minuten)</label><input id="lm" type="number" value="${l?.duration||appSettings.durations['Übungsfahrt']}"></div></div><div class="field"><label>Art</label><select id="lsp" onchange="setLessonDuration(this.value)">${['Übungsfahrt','B197 Fahrstunde','Überlandfahrt','Autobahnfahrt','Beleuchtungsfahrt'].map(x=>`<option ${x===(l?.special||'Übungsfahrt')?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Bemerkung</label><textarea id="ln" rows="4">${esc(l?.note||'')}</textarea></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveLesson('${studentId}','${lessonId}')">${l?'Änderungen speichern':'Speichern'}</button></div>`)}
 function updateLessonDuration(){const sel=document.getElementById('lsp'),m=document.getElementById('lm');if(!sel||!m)return;const d=appSettings.durations;if(d[sel.value])m.value=d[sel.value];}
 function setLessonDuration(type){
  const m=document.getElementById('lm'); if(!m)return;
@@ -1601,7 +1618,7 @@ function calendarPage(){
      const startMin=hh*60+mm;
      const top=Math.max(0,(startMin-timelineStart*60)/60*hourHeight);
      const height=Math.max(42,(Number(x.l.duration)||60)/60*hourHeight-5);
-     return `<button type="button" class="dpWeekEvent dpTimelineEvent" data-sid="${x.s.id}" data-lid="${x.l.id}" data-date="${ds}" data-start="${esc(x.l.startTime||'00:00')}" data-duration="${Number(x.l.duration)||60}" style="top:${top}px;height:${height}px">
+     return `<button type="button" class="dpWeekEvent dpTimelineEvent ${lessonColorClass(x.l.special)}" data-sid="${x.s.id}" data-lid="${x.l.id}" data-date="${ds}" data-start="${esc(x.l.startTime||'00:00')}" data-duration="${Number(x.l.duration)||60}" style="top:${top}px;height:${height}px">
        <b>${esc(x.l.startTime||'')} – ${esc(endTime(x.l.startTime,x.l.duration))}</b>
        <strong>${esc(x.s.firstName+' '+x.s.lastName)}</strong>
        <small>${esc(x.l.special||'Übungsfahrt')}</small>
@@ -1629,8 +1646,48 @@ function calendarPage(){
    <div class="dpTimelineWrap"><div class="dpTimelineGrid">${cells}</div>${currentTimeHtml}</div>
  </div>`;
  initTimelineDrag();
+ initTimelineContextMenu();
 }
 
+
+function lessonColorClass(type){
+ const map={
+  'Übungsfahrt':'lessonColorPractice',
+  'B197 Fahrstunde':'lessonColorB197',
+  'Überlandfahrt':'lessonColorCountry',
+  'Autobahnfahrt':'lessonColorMotorway',
+  'Beleuchtungsfahrt':'lessonColorNight'
+ };
+ return map[type]||'lessonColorPractice';
+}
+function initTimelineContextMenu(){
+ document.querySelectorAll('.dpTimelineBody').forEach(body=>{
+   body.addEventListener('contextmenu',e=>{
+     e.preventDefault();
+     const grid=document.querySelector('.dpTimelineGrid'), rect=body.getBoundingClientRect();
+     if(!grid)return;
+     const dayEl=body.closest('.dpWeekDay');
+     const dayIndex=[...document.querySelectorAll('.dpWeekDay')].indexOf(dayEl);
+     if(dayIndex<0)return;
+     const d=new Date(state.calendarWeekDate||new Date());d.setHours(12,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7)+dayIndex);
+     const date=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+     const minute=Math.max(6*60,Math.min(22*60-5,Math.round(((e.clientY-rect.top)/58*60+6*60)/5)*5));
+     const time=String(Math.floor(minute/60)).padStart(2,'0')+':'+String(minute%60).padStart(2,'0');
+     showCalendarContextMenu(e.clientX,e.clientY,date,time);
+   });
+ });
+}
+function showCalendarContextMenu(x,y,date,time){
+ document.querySelector('.dpCalendarContext')?.remove();
+ const menu=document.createElement('div');menu.className='dpCalendarContext';
+ menu.innerHTML=`<div class="ctxTitle">Fahrstunde hinzufügen</div><div class="ctxTime">${fmtDate(date)} · ${time} Uhr</div><button type="button" onclick="closeCalendarContext();openLessonForm('','', '${date}','${time}')">＋ Fahrstunde hinzufügen</button>`;
+ document.body.appendChild(menu);
+ const r=menu.getBoundingClientRect();
+ menu.style.left=Math.min(window.innerWidth-r.width-10,Math.max(8,x+4))+'px';
+ menu.style.top=Math.min(window.innerHeight-r.height-10,Math.max(8,y+4))+'px';
+ setTimeout(()=>document.addEventListener('pointerdown',closeCalendarContext,{once:true}),0);
+}
+function closeCalendarContext(){document.querySelector('.dpCalendarContext')?.remove();}
 function initTimelineDrag(){
  const events=document.querySelectorAll('.dpTimelineEvent');
  events.forEach(el=>{

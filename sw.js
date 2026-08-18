@@ -1,4 +1,4 @@
-const CACHE='drivepro-beta-v72';
+const CACHE='drivepro-beta-v73';
 const APP_SHELL=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png'];
 
 self.addEventListener('install',event=>{

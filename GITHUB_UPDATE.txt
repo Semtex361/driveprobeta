@@ -1,10 +1,18 @@
-V72 – DRAG-VORSCHAU IMMER IM VORDERGRUND
+V73 – RECHTSKLICK + FARBEN
 
-- Die Zeitvorschau beim Verschieben wird jetzt direkt an document.body gehängt.
-- Sehr hoher z-index verhindert, dass die Vorschau hinter den Wochentagen/Kalender-Spalten verschwindet.
-- Vorschau bleibt auch beim horizontalen Verschieben über die Tage sichtbar.
-- Keine Änderung an der Verschiebe- oder Speicherlogik.
-- Überschneidungsprüfung bleibt unverändert.
+Wochenansicht:
+- Rechtsklick auf einen freien Bereich eines Tages öffnet ein eigenes Menü.
+- Das Menü zeigt Datum und die angeklickte Uhrzeit.
+- „Fahrstunde hinzufügen“ öffnet direkt das vorhandene Fahrstundenformular mit Datum/Uhrzeit vorausgefüllt.
+- Normales Klick-/Drag-Verhalten der bestehenden Fahrstunden bleibt erhalten.
+
+Fahrtenfarben:
+- Übungsfahrt = Blau
+- B197 Fahrstunde = Violett
+- Überlandfahrt = Grün
+- Autobahnfahrt = Orange
+- Beleuchtungsfahrt = Dunkelblau
+- Darkmode entsprechend angepasst.
 
 GitHub ersetzen:
 index.html
