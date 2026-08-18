@@ -1,16 +1,11 @@
-DRIVEPRO BETA V43
+DRIVEPRO BETA V44
 
-Kalender:
-- Es wird ausschließlich die AKTUELLE Kalenderwoche angezeigt.
-- Keine Vor-/Zurück-Pfeile.
-- Keine Monatsansicht.
-- Keine Möglichkeit, auf andere Wochen zu wechseln.
-- Die Woche läuft immer Montag bis Sonntag.
-- Der heutige Tag wird blau hervorgehoben.
-- Fahrstunden sind anklickbar.
-- Auf dem iPhone bleiben die 7 Tage horizontal scrollbar, falls der Bildschirm zu schmal ist.
+Korrektur: Die vorherige V43 enthielt intern noch die alte Monatsfunktion.
+V44 ersetzt die tatsächlich ausgelieferte calendarPage-Funktion vollständig.
 
-GitHub:
-index.html, sw.js und manifest.json ersetzen.
-Test:
-https://semtex361.github.io/driveprobeta/?v=43
+Der Kalender zeigt jetzt ausschließlich:
+Montag | Dienstag | Mittwoch | Donnerstag | Freitag | Samstag | Sonntag
+der AKTUELLEN Woche.
+
+Keine Monatsansicht, keine Monatsnavigation, keine Pfeile für andere Wochen.
+Die Woche wird beim Öffnen immer aus dem aktuellen Datum berechnet.
