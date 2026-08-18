@@ -1086,30 +1086,39 @@ body{overflow-x:hidden}
 [data-theme="dark"] .statusDot.statusOpen{background:#fff!important;border-color:#9eabb8!important}
 [data-theme="dark"] .statusDot.selected{box-shadow:0 0 0 3px rgba(91,166,245,.25)!important}
 
-/* V66 – Fahrschülernamen auf weißen Karten */
-.students .studentCard .studentName,
-.students .studentCard h3,
-.students .studentCard h3 a,
-.students .studentCard .name{
-  color:#173b69!important;
-  font-weight:800!important;
-}
-.students .studentCard .muted,
-.students .studentCard small{
-  color:#64778c!important;
-}
-[data-theme="dark"] .students .studentCard{
-  background:#fff!important;
-}
-[data-theme="dark"] .students .studentCard .studentName,
-[data-theme="dark"] .students .studentCard h3,
-[data-theme="dark"] .students .studentCard h3 a,
-[data-theme="dark"] .students .studentCard .name{
-  color:#173b69!important;
-}
-[data-theme="dark"] .students .studentCard .muted,
-[data-theme="dark"] .students .studentCard small{
-  color:#64778c!important;
+/* V67 – final visual polish, no data/function changes */
+.brand{cursor:pointer;user-select:none}
+.brand:focus-visible{outline:3px solid rgba(47,128,237,.25);outline-offset:4px;border-radius:14px}
+.student> .grow > b{color:#173b69;font-weight:850;letter-spacing:-.15px}
+.studentMeta{display:flex;flex-wrap:wrap;gap:5px 10px;margin:5px 0 2px}
+.studentMeta span{font-size:10px;color:#718096}
+.studentActions{display:flex;gap:7px;flex:none}
+.diagramHead{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding-bottom:10px}
+.diagramLegend{display:flex;gap:12px;flex-wrap:wrap;align-items:center;background:#f7fafc;border:1px solid #e3ebf2;border-radius:12px;padding:8px 10px}
+.diagramLegend span{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:750;color:#6e8092}
+.legendDot{display:inline-block;width:12px;height:12px;border-radius:50%;border:1.5px solid #adb9c4}
+.legendDot.open{background:#fff}.legendDot.practice{background:#f4c542;border-color:#d6a800}.legendDot.safe{background:#39b86b;border-color:#239052}
+.area{transition:background .15s ease;border-radius:10px;padding-left:8px;padding-right:8px}
+.area:hover{background:#f8fbfd}
+.statusDots{justify-content:center}
+.statusDot:focus-visible{outline:3px solid rgba(47,128,237,.25);outline-offset:2px}
+.statusDot.selected{z-index:1}
+.lesson.clickable{cursor:pointer}
+.lesson.clickable:focus-visible{outline:3px solid rgba(47,128,237,.18);outline-offset:2px}
+[data-theme="dark"] .student>.grow>b{color:#173b69!important}
+[data-theme="dark"] .studentMeta span{color:#64778c!important}
+[data-theme="dark"] .diagramLegend{background:#101d2c!important;border-color:#2b425a!important}
+[data-theme="dark"] .diagramLegend span{color:#91a5ba!important}
+[data-theme="dark"] .area:hover{background:#172a3d!important}
+[data-theme="dark"] .student{border-color:#2a4058}
+@media(max-width:760px){
+ .diagramHead{flex-direction:column}
+ .diagramLegend{width:100%;justify-content:flex-start}
+ .area{grid-template-columns:minmax(120px,1fr) auto!important;grid-template-rows:auto auto}
+ .area .statusDots{grid-column:2;grid-row:1}
+ .area input{grid-column:1/-1;grid-row:2}
+ .studentActions{flex-direction:column}
+ .studentActions button{white-space:nowrap}
 }
 </style>
 <link rel="manifest" href="manifest.json">
@@ -1122,7 +1131,7 @@ body{overflow-x:hidden}
 <body data-drivepro-version="V50"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 <div class="app">
 <aside class="side">
-  <div class="brand">
+  <div class="brand" role="button" tabindex="0" title="Zur Startseite" onclick="page('dashboard')" onkeydown="if(event.key==='Enter'||event.key===' ')page('dashboard')">
   <div class="logo">
     <svg viewBox="0 0 48 48" aria-hidden="true">
       <path d="M9 28.5 12.8 17c.7-2.1 2.7-3.5 4.9-3.5h12.6c2.2 0 4.2 1.4 4.9 3.5L39 28.5v7.2c0 1.7-1.3 3-3 3h-2.2c-1.7 0-3-1.3-3-3v-1.2H17.2v1.2c0 1.7-1.3 3-3 3H12c-1.7 0-3-1.3-3-3v-7.2Z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/>
@@ -1254,7 +1263,7 @@ function studentOverview(s){
  </div>
  <div class="studentFacts"><span><b>Klasse</b> ${esc(s.license)}</span><span><b>Ausbildungsbeginn</b> ${fmtDate(s.start)}</span><span><b>Sehhilfe</b> ${s.visionAid?'Ja':'Nein'}</span><span><b>Theorie</b> ${s.theoryPassed?'Bestanden':'Noch nicht bestanden'}</span></div>`;
 }
-function diagram(s){return `<h3>Ausbildungsdiagramm</h3><p class="muted">Änderungen bleiben beim Schüler gespeichert.</p>${s.areas.map((a,i)=>`<div class="area"><b>${esc(a.name)}</b><div class="statusDots" role="group" aria-label="Ausbildungsstand">
+function diagram(s){return `<div class="diagramHead"><div><h3>Ausbildungsdiagramm</h3><p class="muted">Klicke auf einen Kreis, um den aktuellen Ausbildungsstand zu setzen.</p></div><div class="diagramLegend"><span><i class="legendDot open"></i>Offen</span><span><i class="legendDot practice"></i>Üben</span><span><i class="legendDot safe"></i>Sicher</span></div></div>${s.areas.map((a,i)=>`<div class="area"><b>${esc(a.name)}</b><div class="statusDots" role="group" aria-label="Ausbildungsstand">
  <button type="button" class="statusDot statusOpen ${a.level==='Offen'?'selected':''}" title="Offen" aria-label="Offen" onclick="setArea('${s.id}',${i},'Offen')"></button>
  <button type="button" class="statusDot statusPractice ${a.level==='Übung'?'selected':''}" title="Üben" aria-label="Üben" onclick="setArea('${s.id}',${i},'Übung')"></button>
  <button type="button" class="statusDot statusSafe ${a.level==='Sicher'?'selected':''}" title="Sicher" aria-label="Sicher" onclick="setArea('${s.id}',${i},'Sicher')"></button>

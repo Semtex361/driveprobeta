@@ -1,9 +1,23 @@
-V66 – Fahrschülernamen korrigiert
+V67 – FINALER FEINSCHLIFF AUF BASIS V64/V65
 
-- Namen in den weißen Fahrschüler-Karten sind jetzt dunkelblau und deutlich lesbar.
-- Zusatzinformationen sind dunkelgrau.
-- Gilt auch im Darkmode: Die Fahrschüler-Karten bleiben weiß.
-- Ausbildungsdiagramm aus V65 bleibt unverändert.
+Bewusst nur bestehende Funktionen/Optik verbessert, keine neue Datenstruktur.
+
+- DrivePro-Logo und Name führen per Klick zurück zum Dashboard.
+- Ausbildungsdiagramm:
+  * Weiß = Offen
+  * Gelb = Üben
+  * Grün = Sicher
+  * kompakte Legende
+  * bessere Hover-/Focus-Darstellung
+  * mobile Darstellung verbessert
+  * gespeicherte Werte bleiben unverändert
+- Darkmode:
+  * Fahrschülernamen auf weißen Karten dunkelblau und lesbar
+  * Zusatzinformationen passend dunkelgrau
+  * Diagramm-Legende und Hover-Zustände angepasst
+- Fahrschülerliste aufgeräumt
+- Buttons/Interaktionen auf Mobilgeräten verbessert
+- Keine Änderung an Kalenderlogik, Fahrstundenlogik, Überschneidungsprüfung oder Signaturen.
 
 GitHub ersetzen:
 index.html
