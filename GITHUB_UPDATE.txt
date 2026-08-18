@@ -1,14 +1,16 @@
-V87 – LOGBUCH FILTER FARBLICH
+V86 – LOGBUCH FILTER
 
-Der Filter passt sich jetzt farblich an die ausgewählte Änderungsart an:
-- Alle Änderungen: neutral/grau
-- Hinzugefügt: grün
-- Bearbeitet: blau
-- Verschoben: violett
-- Gelöscht: rot
-
-Darkmode ebenfalls angepasst.
-Die Farbe ändert sich automatisch beim Wechsel des Filters.
+Neu:
+- Filter neben der Suche.
+- Filteroptionen:
+  Alle Änderungen
+  Hinzugefügt
+  Bearbeitet
+  Verschoben
+  Gelöscht
+- Suche und Filter funktionieren gleichzeitig.
+- Meldung bei keinen passenden Ergebnissen.
+- Darkmode und Responsive Layout angepasst.
 
 GitHub ersetzen:
 index.html

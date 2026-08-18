@@ -1479,22 +1479,6 @@ body{overflow-x:hidden}
 [data-theme="dark"] #logFilter option{background:#17283a;color:#dbe8f4}
 @media(max-width:700px){.logToolbar{align-items:stretch;flex-direction:column;gap:9px}.logControls{width:100%}.logControls>*{flex:1;min-width:0!important}}
 @media(max-width:450px){.logControls{flex-direction:column}.logControls>*{width:100%}}
-
-/* V87 – farbiger Logbuch-Filter */
-#logFilter{
- font-weight:800!important;
- transition:background .15s,border-color .15s,color .15s,box-shadow .15s;
-}
-#logFilter.filter-all{background:#f4f7fa!important;border-color:#dce5ef!important;color:#53677b!important}
-#logFilter.filter-added{background:#e9f8ef!important;border-color:#bfe6ce!important;color:#278b55!important}
-#logFilter.filter-edited{background:#eaf3ff!important;border-color:#bfd8f2!important;color:#216fca!important}
-#logFilter.filter-moved{background:#f2ecff!important;border-color:#d7c7f4!important;color:#704bb7!important}
-#logFilter.filter-deleted{background:#ffedf0!important;border-color:#f0c4cc!important;color:#c73550!important}
-[data-theme="dark"] #logFilter.filter-all{background:#203144!important;border-color:#344b61!important;color:#c3d0dc!important}
-[data-theme="dark"] #logFilter.filter-added{background:#193c2b!important;border-color:#2b6045!important;color:#7bd29d!important}
-[data-theme="dark"] #logFilter.filter-edited{background:#193652!important;border-color:#2d5679!important;color:#80bbef!important}
-[data-theme="dark"] #logFilter.filter-moved{background:#34294b!important;border-color:#574274!important;color:#c6a7f3!important}
-[data-theme="dark"] #logFilter.filter-deleted{background:#47262f!important;border-color:#693a46!important;color:#ff9eaa!important}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -1796,7 +1780,6 @@ function logbookPage(){
  document.getElementById('content').innerHTML=`
  <div class="toolbar logToolbar"><div class="muted">Alle Änderungen verwalten</div><div class="logControls"><select id="logFilter" onchange="filterLogbook()"><option value="all">Alle Änderungen</option><option value="added">➕ Hinzugefügt</option><option value="edited">✎ Bearbeitet</option><option value="moved">↔ Verschoben</option><option value="deleted">× Gelöscht</option></select><input id="logSearch" placeholder="Fahrschüler oder Änderung suchen…" oninput="filterLogbook()"></div></div>
  <div id="logList" class="students logStudents">${entries.map(logStudentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Noch keine Änderungen protokolliert.</div>'}</div>`;
- updateLogFilterColor();
 }
 function logStudentRow(x){
  const d=new Date(x.time), action=x.action||'edited';
@@ -1814,13 +1797,7 @@ function logStudentRow(x){
   <div class="studentActions"><button class="secondary" onclick="openLogEntry('${x.id}')">Öffnen</button></div>
  </div>`;
 }
-function updateLogFilterColor(){
- const el=document.getElementById('logFilter');if(!el)return;
- el.classList.remove('filter-all','filter-added','filter-edited','filter-moved','filter-deleted');
- el.classList.add('filter-'+(el.value||'all'));
-}
 function filterLogbook(){
- updateLogFilterColor();
  const q=(document.getElementById('logSearch')?.value||'').trim().toLowerCase();
  const type=document.getElementById('logFilter')?.value||'all';
  const list=getActivityLog().filter(x=>{
