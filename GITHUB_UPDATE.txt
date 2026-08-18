@@ -1,22 +1,15 @@
-DRIVEPRO BETA V50 – CACHE FIX
+DRIVEPRO BETA V51
 
-Wichtig:
-- Service Worker wurde komplett auf Netzwerk-vorrangig für index.html umgestellt.
-- Beim Öffnen der App wird die aktuelle index.html vom Server angefordert.
-- Alte Service-Worker-Caches werden beim Aktivieren gelöscht.
-- Wenn das Netzwerk verfügbar ist, sollte Strg+F5 nicht mehr nötig sein.
-- Offline-Fallback bleibt für index.html erhalten.
-- Statische Icons/Assets bleiben cachefähig.
+Kalender-Wochenansicht:
+Fahrstunden zeigen jetzt wieder die komplette Zeitspanne:
+Start – Endzeit.
+
+Beispiel:
+10:00 – 11:20
+Max Mustermann
+Übungsfahrt
+
+Die Endzeit wird automatisch aus Startzeit + Fahrstundendauer berechnet.
 
 GitHub ersetzen:
-1. index.html
-2. sw.js
-3. manifest.json
-
-Danach einmalig:
-- DrivePro neu laden.
-- Falls die alte Version ein letztes Mal erscheint: Seite einmal schließen und erneut öffnen.
-- Danach sollte die aktuelle Version automatisch geladen werden.
-
-Test:
-https://semtex361.github.io/driveprobeta/
+index.html, sw.js, manifest.json
