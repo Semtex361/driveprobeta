@@ -1204,6 +1204,14 @@ body{overflow-x:hidden}
 #notificationButton{margin-top:4px}
 [data-theme="dark"] #notificationButton{color:#fff}
 </style>
+
+/* V79 – Logbuch */
+.activityLog{display:flex;flex-direction:column;gap:7px;margin-top:12px;max-height:420px;overflow:auto}
+.activityItem{display:flex;align-items:flex-start;gap:10px;padding:10px 11px;border:1px solid var(--border,#dce5ef);border-radius:10px;background:var(--card,#fff)}
+.activityIcon{width:28px;height:28px;display:grid;place-items:center;border-radius:8px;background:#eef5fc;flex:none}
+.activityMain{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}.activityMain b{font-size:11px}.activityMain span{font-size:10px;font-weight:750}.activityMain small{font-size:9px;color:#718096}.activityItem time{font-size:8px;color:#8a99a9;white-space:nowrap}
+[data-theme="dark"] .activityItem{background:#132235;border-color:#2b4056}.activityIcon{background:#eaf3ff}
+[data-theme="dark"] .activityIcon{background:#20364d}.activityMain small{color:#91a5ba}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -1277,6 +1285,18 @@ const DEFAULT_AREAS=["Fahrzeugbedienung","Anfahren / Anhalten","Blickführung","
 const state={page:'dashboard',studentId:null,month:new Date(),calendarView:'week',calendarWeekDate:null};
 let students=[];
 try{students=JSON.parse(localStorage.getItem(KEY)||'[]')||[]}catch(e){students=[]}
+function getActivityLog(){try{return JSON.parse(localStorage.getItem('drivepro_activity_log')||'[]')}catch(e){return[]}}
+function logActivity(action,student,lesson,details=''){
+ const log=getActivityLog();
+ log.unshift({id:id(),time:new Date().toISOString(),action,studentId:student?.id||'',studentName:student?`${student.firstName} ${student.lastName}`:'',lessonId:lesson?.id||'',details});
+ localStorage.setItem('drivepro_activity_log',JSON.stringify(log.slice(0,500)));
+}
+function activityLabel(x){
+ const map={added:'Fahrstunde hinzugefügt',edited:'Fahrstunde geändert',deleted:'Fahrstunde gelöscht',moved:'Fahrstunde verschoben',student_added:'Fahrschüler hinzugefügt',student_edited:'Fahrschüler geändert',student_deleted:'Fahrschüler gelöscht'};
+ return map[x]||x;
+}
+function activityIcon(x){return ({added:'➕',edited:'✏️',deleted:'🗑️',moved:'↔️',student_added:'👤',student_edited:'📝',student_deleted:'👤'})[x]||'•'}
+function clearActivityLog(){if(!confirm('Das gesamte Logbuch wirklich löschen?'))return;localStorage.removeItem('drivepro_activity_log');render()}
 function save(){localStorage.setItem(KEY,JSON.stringify(students))}
 function notifyLessonChange(action,student,lesson){
  if(!('Notification' in window)||Notification.permission!=='granted')return;
@@ -1431,7 +1451,10 @@ function saveLesson(oldStudentId,lessonId){
    changedLesson={id:id(),...data,signature:null};
    s.lessons.push(changedLesson);notificationAction='added';
  }
- save();closeModal();render();notifyLessonChange(notificationAction,s,changedLesson);
+ save();closeModal();render();
+ const actionText=notificationAction==='added'?'Neue Fahrstunde angelegt':`Fahrstunde geändert: ${changedLesson.startTime||'—'} – ${endTime(changedLesson.startTime,changedLesson.duration)} · ${changedLesson.special||'Übungsfahrt'}`;
+ logActivity(notificationAction,s,changedLesson,actionText);
+ notifyLessonChange(notificationAction,s,changedLesson);
 }
 function openLessonDetail(sid,lid){
  const s=getStudent(sid),l=s.lessons.find(x=>x.id===lid);
@@ -1452,7 +1475,7 @@ function openLessonDetail(sid,lid){
  <div class="actions"><button class="danger" onclick="deleteLesson('${sid}','${lid}')">Löschen</button><button class="secondary" onclick="closeModal();openLessonForm('${sid}','${lid}')">Bearbeiten</button></div>`);
  setTimeout(()=>initLessonSignature(sid,lid),30);
 }
-function deleteLesson(sid,lid){if(!confirm('Fahrstunde wirklich löschen?'))return;const s=getStudent(sid),lesson=s.lessons.find(l=>l.id===lid);if(!lesson)return;s.lessons=s.lessons.filter(l=>l.id!==lid);save();closeModal();render();notifyLessonChange('deleted',s,lesson)}
+function deleteLesson(sid,lid){if(!confirm('Fahrstunde wirklich löschen?'))return;const s=getStudent(sid),lesson=s.lessons.find(l=>l.id===lid);if(!lesson)return;s.lessons=s.lessons.filter(l=>l.id!==lid);save();closeModal();render();logActivity('deleted',s,lesson,`Fahrstunde gelöscht: ${lesson.startTime||'—'} – ${endTime(lesson.startTime,lesson.duration)} · ${lesson.special||'Übungsfahrt'}`);notifyLessonChange('deleted',s,lesson)}
 function initLessonSignature(sid,lid){
  const c=document.getElementById('lessonSignatureCanvas'); if(!c)return;
  const ctx=c.getContext('2d'); ctx.lineWidth=3; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#173b69';
@@ -1525,7 +1548,14 @@ function settingsPage(){
       <div class="settingsHint">Die Sicherung enthält Fahrschüler, Fahrstunden, Unterschriften und Einstellungen dieses Geräts.</div>
     </section>
    </div>
-   <section class="card settingsDanger">
+   <section class="card settingsCard">
+ <div class="settingsCardHead"><div class="settingsIcon">📖</div><div><h3>Logbuch</h3><p>Hier werden Änderungen an Fahrstunden nachvollziehbar protokolliert.</p></div></div>
+ <div class="activityLog">
+ ${getActivityLog().map(x=>`<div class="activityItem"><div class="activityIcon">${activityIcon(x.action)}</div><div class="activityMain"><b>${esc(activityLabel(x.action))}</b><span>${esc(x.studentName||'—')}</span><small>${esc(x.details||'')}</small></div><time>${new Date(x.time).toLocaleString('de-DE')}</time></div>`).join('')||'<div class="empty">Noch keine Änderungen protokolliert.</div>'}
+ </div>
+ <div class="actions"><button class="secondary" onclick="clearActivityLog()">Logbuch leeren</button></div>
+</section>
+<section class="card settingsDanger">
     <div><h3>Daten zurücksetzen</h3><p>Entfernt alle Fahrschüler und Fahrstunden von diesem Gerät. Dieser Vorgang kann nicht rückgängig gemacht werden.</p></div>
     <button class="danger" onclick="resetDriveProData()">Alle Daten löschen</button>
    </section>
@@ -1790,7 +1820,7 @@ function initTimelineDrag(){
        showConflictOverlay({newTime:`${data.startTime} – ${endTime(data.startTime,data.duration)}`,oldTime:`${conflict.lesson.startTime||'--:--'} – ${endTime(conflict.lesson.startTime,conflict.lesson.duration)}`,name:esc(conflict.student.firstName+' '+conflict.student.lastName)});
        return;
      }
-     lesson.date=data.date;lesson.startTime=data.startTime;save();state.calendarWeekDate=data.date;render();notifyLessonChange('edited',getStudent(d.sid),lesson);
+     const previousDate=lesson.date,previousTime=lesson.startTime;lesson.date=data.date;lesson.startTime=data.startTime;save();state.calendarWeekDate=data.date;render();logActivity('moved',getStudent(d.sid),lesson,`Verschoben von ${fmtDate(previousDate)} ${previousTime||'—'} nach ${fmtDate(lesson.date)} ${lesson.startTime||'—'}`);notifyLessonChange('edited',getStudent(d.sid),lesson);
    });
    el.addEventListener('pointercancel',()=>{if(drag){drag=null;el.classList.remove('dragging');el.style.transform=''}document.querySelector('.dpDragPreview')?.remove()});
  });

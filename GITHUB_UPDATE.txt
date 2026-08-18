@@ -1,14 +1,23 @@
-V78 – BENACHRICHTIGUNGEN
+V79 – LOGBUCH
 
-Einstellungen → Benachrichtigungen:
-- Benachrichtigungen aktivieren
+Unter Einstellungen gibt es jetzt ein Logbuch.
 
-Nach Browser-Erlaubnis:
-- Fahrstunde hinzugefügt → Meldung
-- Fahrstunde bearbeitet → Meldung
-- Fahrstunde gelöscht → Meldung
-- Fahrstunde per Drag & Drop verschoben → Änderungsmeldung
+Protokolliert werden:
+- Fahrstunde hinzugefügt
+- Fahrstunde bearbeitet
+- Fahrstunde gelöscht
+- Fahrstunde per Drag & Drop verschoben
 
-Die Meldung enthält Fahrschüler, Datum, Uhrzeit und Fahrtart.
+Jeder Eintrag enthält:
+- Datum/Uhrzeit der Änderung
+- Fahrschüler
+- Art der Änderung
+- zusätzliche Details, z. B. alte/neue Zeit
 
-Aktuell sind das Browser-/Geräte-Benachrichtigungen. Echte serverseitige Push-Nachrichten auf mehrere Geräte, auch bei geschlossener App, benötigen später das Login + Backend/Push-System.
+Das Logbuch wird lokal im Browser gespeichert und kann über „Logbuch leeren“ gelöscht werden.
+Bis zur zentralen Datenbank ist es daher gerätebezogen.
+
+GitHub ersetzen:
+index.html
+sw.js
+manifest.json
