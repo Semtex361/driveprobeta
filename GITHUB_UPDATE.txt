@@ -1,11 +1,16 @@
-DRIVEPRO BETA V52
+DRIVEPRO BETA V53 – ÜBERSCHNEIDUNGSWARNUNG
 
-Wochenansicht zeigt jetzt:
-10:00 – 11:20
-Fahrschüler
-Übungsfahrt
+Beim Speichern wird geprüft, ob sich die neue/bearbeitete Fahrstunde mit einer
+anderen bereits gespeicherten Fahrstunde überschneidet.
 
-Die Endzeit wird automatisch aus Startzeit + Dauer berechnet.
+Die Prüfung gilt für alle Fahrschüler, da ein Fahrlehrer nicht gleichzeitig
+zwei Fahrstunden durchführen kann.
+
+Bei Überschneidung:
+- Warnmeldung zeigt beide Zeiträume.
+- Betroffener Fahrschüler wird genannt.
+- Die neue Fahrstunde wird NICHT gespeichert.
+- Die gerade bearbeitete Fahrstunde wird bei der Prüfung ignoriert.
 
 GitHub ersetzen:
 index.html

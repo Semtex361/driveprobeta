@@ -785,7 +785,51 @@ function setLessonDuration(type){
  else if(type==='Autobahnfahrt')m.value=180;
  else if(type==='Beleuchtungsfahrt')m.value=135;
 }
-function saveLesson(oldStudentId,lessonId){const sid=document.getElementById('ls').value,s=getStudent(sid);const data={date:document.getElementById('ld').value,startTime:document.getElementById('lt').value,duration:Number(document.getElementById('lm').value)||0,special:document.getElementById('lsp').value,note:document.getElementById('ln').value};if(lessonId){let old=getStudent(oldStudentId).lessons.find(x=>x.id===lessonId);Object.assign(old,data);if(oldStudentId!==sid){getStudent(oldStudentId).lessons=getStudent(oldStudentId).lessons.filter(x=>x.id!==lessonId);s.lessons.push(old)}}else{s.lessons.push({id:id(),...data,signature:null})}save();closeModal();render()}
+function lessonStartMinutes(t){
+ const m=String(t||'').match(/^(\d{1,2}):(\d{2})$/);
+ return m?Number(m[1])*60+Number(m[2]):null;
+}
+function lessonEndMinutes(l){
+ const start=lessonStartMinutes(l.startTime);
+ return start===null?null:start+Number(l.duration||0);
+}
+function findLessonConflict(data,ignoreId){
+ const start=lessonStartMinutes(data.startTime);
+ const end=start===null?null:start+Number(data.duration||0);
+ if(start===null||end===null||end<=start)return null;
+ for(const st of students){
+   for(const l of (st.lessons||[])){
+     if(l.id===ignoreId || l.date!==data.date)continue;
+     const os=lessonStartMinutes(l.startTime), oe=lessonEndMinutes(l);
+     if(os===null||oe===null)continue;
+     if(start<oe && end>os)return {student:st,lesson:l};
+   }
+ }
+ return null;
+}
+function saveLesson(oldStudentId,lessonId){
+ const sid=document.getElementById('ls').value,s=getStudent(sid);
+ const data={date:document.getElementById('ld').value,startTime:document.getElementById('lt').value,duration:Number(document.getElementById('lm').value)||0,special:document.getElementById('lsp').value,note:document.getElementById('ln').value};
+ const conflict=findLessonConflict(data,lessonId);
+ if(conflict){
+   const start=conflict.lesson.startTime||'--:--';
+   const end=conflict.lesson.duration?endTime(start,conflict.lesson.duration):'--:--';
+   const name=conflict.student.firstName+' '+conflict.student.lastName;
+   alert(`⚠️ Fahrstunden überschneiden sich!\n\nDer Zeitraum ${data.startTime} – ${endTime(data.startTime,data.duration)} überschneidet sich mit:\n${start} – ${end}\n${name}\n\nBitte wähle eine andere Uhrzeit.`);
+   return;
+ }
+ if(lessonId){
+   let old=getStudent(oldStudentId).lessons.find(x=>x.id===lessonId);
+   Object.assign(old,data);
+   if(oldStudentId!==sid){
+     getStudent(oldStudentId).lessons=getStudent(oldStudentId).lessons.filter(x=>x.id!==lessonId);
+     s.lessons.push(old);
+   }
+ }else{
+   s.lessons.push({id:id(),...data,signature:null});
+ }
+ save();closeModal();render();
+}
 function openLessonDetail(sid,lid){
  const s=getStudent(sid),l=s.lessons.find(x=>x.id===lid);
  openModal(`<div class="lessonDetailHeader"><div><div class="eyebrow">FAHRSTUNDE</div><h2>${fmtDate(l.date)} · ${fmtTime(l.startTime)}</h2></div><span class="lessonTypeBadge">${esc(l.special||'Übungsfahrt')}</span></div>
