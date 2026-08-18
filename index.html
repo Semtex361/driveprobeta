@@ -1692,12 +1692,17 @@ function showCalendarContextMenu(x,y,date,time){
  const menu=document.createElement('div');menu.className='dpCalendarContext';
  menu.innerHTML=`<div class="ctxTitle">Fahrstunde hinzufügen</div><div class="ctxTime">${fmtDate(date)} · ${time} Uhr</div><button type="button" class="ctxAddLesson">＋ Fahrstunde hinzufügen</button>`;
  const add=menu.querySelector('.ctxAddLesson');
- add.onclick=()=>{closeCalendarContext();openLessonForm('','',date,time)};
+ add.onclick=(e)=>{e.preventDefault();e.stopPropagation();openLessonForm('','',date,time);closeCalendarContext()};
  document.body.appendChild(menu);
  const r=menu.getBoundingClientRect();
  menu.style.left=Math.min(window.innerWidth-r.width-10,Math.max(8,x+4))+'px';
  menu.style.top=Math.min(window.innerHeight-r.height-10,Math.max(8,y+4))+'px';
- setTimeout(()=>document.addEventListener('pointerdown',closeCalendarContext,{once:true}),0);
+ setTimeout(()=>{
+  document.addEventListener('click',function closeFromOutside(e){
+    const menu=document.querySelector('.dpCalendarContext');
+    if(menu && !menu.contains(e.target)) closeCalendarContext();
+  },{once:true});
+},0);
 }
 function closeCalendarContext(){document.querySelector('.dpCalendarContext')?.remove();}
 function initTimelineDrag(){

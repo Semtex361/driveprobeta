@@ -1,12 +1,14 @@
-V74 – RECHTSKLICK FUNKTIONIERT
+V75 – RECHTSKLICK BUTTON FINAL REPARIERT
 
-Der Rechtsklick wurde technisch stabilisiert:
-- Event-Handler wird direkt an jede neu gerenderte Timeline-Spalte gebunden.
-- Rechtsklick auf freie Bereiche einer Tages-Spalte öffnet das Menü zuverlässig.
-- Datum und angeklickte Uhrzeit werden aus der tatsächlichen Position berechnet.
-- Das Menü öffnet die vorhandene Fahrstundenmaske direkt mit Datum/Uhrzeit vorausgefüllt.
-- Button im Kontextmenü nutzt einen echten Event-Handler statt inline onclick.
-- Bestehendes Drag & Drop und Fahrtenfarben bleiben erhalten.
+Ursache des Problems:
+Das Kontextmenü wurde beim pointerdown des Buttons sofort entfernt, bevor der click-Handler die Fahrstundenmaske öffnen konnte.
+
+Korrektur:
+- Außenklick schließt das Menü erst über click.
+- „Fahrstunde hinzufügen“ stoppt die Weitergabe des Events.
+- Die Fahrstundenmaske wird zuerst geöffnet und danach nur das Kontextmenü geschlossen.
+- Datum und Uhrzeit bleiben vorausgefüllt.
+- Keine Änderung an Drag & Drop oder Fahrtenfarben.
 
 GitHub ersetzen:
 index.html
