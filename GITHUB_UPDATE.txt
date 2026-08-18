@@ -1,13 +1,12 @@
-V65 – GROSSES FUNKTIONSUPDATE
-- Erweiterte Fahrschülerakte: Geburtsdatum, Telefon, E-Mail, Prüfungsdaten, Notizen
-- Ausbildungsakte drucken / als PDF über den Browser speichern
-- Fahrschüler-Suche + Klassen-/Fortschrittsfilter
-- Globale Fahrschülersuche am Desktop
-- Fahrzeuge verwalten und Fahrstunden zuordnen
-- Kilometer je Fahrstunde
-- Erweiterte Statistik mit Fahrtarten, Rankings und Fortschritt
-- Datensicherung enthält Fahrzeuge und neue Schülerdaten
-- Darkmode für neue Bereiche angepasst
-- bestehende Überschneidungskontrolle und Signaturen bleiben erhalten
-- weiterhin vollständig lokal über GitHub Pages; Login/Cloud bewusst noch nicht enthalten
-GitHub ersetzen: index.html, sw.js, manifest.json
+V64 – FAHRSCHÜLER-KARTEN DARKMODE
+
+Im Darkmode bleiben die Fahrschüler-Karten bewusst weiß.
+- Fahrschülernamen wieder dunkelblau und gut lesbar.
+- Zusatzinformationen dunkelgrau.
+- Dashboard-Begrüßung bleibt hell/weiß.
+- Restlicher Darkmode bleibt unverändert.
+
+GitHub ersetzen:
+index.html
+sw.js
+manifest.json
