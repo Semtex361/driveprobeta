@@ -1212,6 +1212,13 @@ body{overflow-x:hidden}
 .activityMain{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}.activityMain b{font-size:11px}.activityMain span{font-size:10px;font-weight:750}.activityMain small{font-size:9px;color:#718096}.activityItem time{font-size:8px;color:#8a99a9;white-space:nowrap}
 [data-theme="dark"] .activityItem{background:#132235;border-color:#2b4056}.activityIcon{background:#eaf3ff}
 [data-theme="dark"] .activityIcon{background:#20364d}.activityMain small{color:#91a5ba}
+
+/* V80 – eigenes Logbuch als Hauptreiter */
+.logbookWrap{display:flex;flex-direction:column;gap:18px}
+.logbookActions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.logbookCard{padding:14px}
+#nav-logbook{position:relative}
+#nav-logbook.active{font-weight:850}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -1240,6 +1247,7 @@ body{overflow-x:hidden}
     <button id="nav-students" onclick="page('students')"><span>👥</span>Fahrschüler</button>
     <button id="nav-calendar" onclick="page('calendar')"><span>▣</span>Kalender</button>
     <button id="nav-stats" onclick="page('stats')"><span>▥</span>Statistik</button>
+    <button id="nav-logbook" onclick="page('logbook')"><span>📖</span>Logbuch</button>
     <button id="nav-settings" onclick="page('settings')"><span>⚙</span>Einstellungen</button>
   </nav>
   <div class="sidefoot">Windows-Testversion<br>Fahrstunden je Fahrschüler<br>Lokale Speicherung</div>
@@ -1321,8 +1329,8 @@ function getStudent(id){return students.find(s=>s.id===id)}
 function pct(s){return s.areas?.length?Math.round(s.areas.filter(a=>a.level==='Sicher').length/s.areas.length*100):0}
 function fmtDate(d){return new Date(d+'T12:00:00').toLocaleDateString('de-DE')}
 function fmtTime(t){return t||'—'}
-function page(p){state.page=p;state.studentId=null;document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));document.getElementById('nav-'+p).classList.add('active');document.getElementById('pageTitle').textContent={dashboard:'Dashboard',students:'Fahrschüler',calendar:'Kalender',stats:'Statistik',settings:'Einstellungen'}[p];render()}
-function render(){if(state.page==='dashboard')dashboard();else if(state.page==='students')studentsPage();else if(state.page==='calendar')calendarPage();else if(state.page==='stats')statsPage();else if(state.page==='settings')settingsPage();else dashboard()}
+function page(p){state.page=p;state.studentId=null;document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));document.getElementById('nav-'+p).classList.add('active');document.getElementById('pageTitle').textContent={dashboard:'Dashboard',students:'Fahrschüler',calendar:'Kalender',stats:'Statistik',logbook:'Logbuch',settings:'Einstellungen'}[p];render()}
+function render(){if(state.page==='dashboard')dashboard();else if(state.page==='students')studentsPage();else if(state.page==='calendar')calendarPage();else if(state.page==='stats')statsPage();else if(state.page==='logbook')logbookPage();else if(state.page==='settings')settingsPage();else dashboard()}
 function dashboard(){
  const all=allLessons();
  const total=students.reduce((n,s)=>n+(s.lessons?.length||0),0);
@@ -1504,6 +1512,19 @@ function saveSignature(sid){const c=document.getElementById('signatureCanvas');c
 function allLessons(){const a=[];students.forEach(s=>(s.lessons||[]).forEach(l=>a.push({s,l})));return a.sort((a,b)=>(b.l.date+' '+b.l.startTime).localeCompare(a.l.date+' '+a.l.startTime))}
 function lessonsPage(){document.getElementById('content').innerHTML=`<div class="toolbar"><div class="muted">Alle gespeicherten Fahrstunden – zum Öffnen anklicken</div><button class="primary" onclick="openLessonForm()">+ Fahrstunde</button></div><div class="card">${allLessons().map(x=>lessonRow(x.s,x.l,true)).join('')||'<div class="empty">Noch keine Fahrstunden.</div>'}</div>`}
 
+function logbookPage(){
+ const entries=getActivityLog();
+ document.getElementById('content').innerHTML=`
+ <div class="logbookWrap">
+  <div class="settingsIntro">
+   <div><div class="eyebrow">ÄNDERUNGSPROTOKOLL</div><h2>Logbuch</h2><p>Hier siehst du nachvollziehbar, was in DrivePro geändert wurde.</p></div>
+   <div class="logbookActions"><span class="settingsSaved">✓ ${entries.length} Einträge</span><button class="secondary" onclick="clearActivityLog()">Logbuch leeren</button></div>
+  </div>
+  <div class="card logbookCard">
+   ${entries.length?`<div class="activityLog">${entries.map(x=>`<div class="activityItem"><div class="activityIcon">${activityIcon(x.action)}</div><div class="activityMain"><b>${esc(activityLabel(x.action))}</b><span>${esc(x.studentName||'—')}</span><small>${esc(x.details||'')}</small></div><time>${new Date(x.time).toLocaleString('de-DE')}</time></div>`).join('')}</div>`:'<div class="empty">Noch keine Änderungen protokolliert.</div>'}
+  </div>
+ </div>`;
+}
 function settingsPage(){
  const d=appSettings.durations;
  document.getElementById('content').innerHTML=`
@@ -1548,14 +1569,7 @@ function settingsPage(){
       <div class="settingsHint">Die Sicherung enthält Fahrschüler, Fahrstunden, Unterschriften und Einstellungen dieses Geräts.</div>
     </section>
    </div>
-   <section class="card settingsCard">
- <div class="settingsCardHead"><div class="settingsIcon">📖</div><div><h3>Logbuch</h3><p>Hier werden Änderungen an Fahrstunden nachvollziehbar protokolliert.</p></div></div>
- <div class="activityLog">
- ${getActivityLog().map(x=>`<div class="activityItem"><div class="activityIcon">${activityIcon(x.action)}</div><div class="activityMain"><b>${esc(activityLabel(x.action))}</b><span>${esc(x.studentName||'—')}</span><small>${esc(x.details||'')}</small></div><time>${new Date(x.time).toLocaleString('de-DE')}</time></div>`).join('')||'<div class="empty">Noch keine Änderungen protokolliert.</div>'}
- </div>
- <div class="actions"><button class="secondary" onclick="clearActivityLog()">Logbuch leeren</button></div>
-</section>
-<section class="card settingsDanger">
+   <section class="card settingsDanger">
     <div><h3>Daten zurücksetzen</h3><p>Entfernt alle Fahrschüler und Fahrstunden von diesem Gerät. Dieser Vorgang kann nicht rückgängig gemacht werden.</p></div>
     <button class="danger" onclick="resetDriveProData()">Alle Daten löschen</button>
    </section>

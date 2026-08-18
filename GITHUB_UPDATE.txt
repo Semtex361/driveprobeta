@@ -1,21 +1,25 @@
-V79 – LOGBUCH
+V80 – LOGBUCH ALS EIGENER REITER
 
-Unter Einstellungen gibt es jetzt ein Logbuch.
+Das Logbuch ist jetzt kein Abschnitt in den Einstellungen mehr.
 
-Protokolliert werden:
-- Fahrstunde hinzugefügt
-- Fahrstunde bearbeitet
-- Fahrstunde gelöscht
-- Fahrstunde per Drag & Drop verschoben
+Neue Seitenleiste:
+Dashboard
+Fahrschüler
+Kalender
+Statistik
+📖 Logbuch
+Einstellungen
 
-Jeder Eintrag enthält:
-- Datum/Uhrzeit der Änderung
+Der Logbuch-Reiter zeigt:
+- alle protokollierten Änderungen
+- Datum/Uhrzeit
 - Fahrschüler
-- Art der Änderung
-- zusätzliche Details, z. B. alte/neue Zeit
+- Änderungsart
+- Details zur Änderung
+- Anzahl der Log-Einträge
+- Button zum Leeren des Logbuchs
 
-Das Logbuch wird lokal im Browser gespeichert und kann über „Logbuch leeren“ gelöscht werden.
-Bis zur zentralen Datenbank ist es daher gerätebezogen.
+Die bestehende lokale Logbuchspeicherung bleibt erhalten.
 
 GitHub ersetzen:
 index.html
