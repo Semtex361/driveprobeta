@@ -1190,6 +1190,11 @@ body{overflow-x:hidden}
 [data-theme="dark"] .dpTimelineEvent.lessonColorCountry{background:#173d2a!important;color:#e5f8ec!important}
 [data-theme="dark"] .dpTimelineEvent.lessonColorMotorway{background:#4a341c!important;color:#fff0d6!important}
 [data-theme="dark"] .dpTimelineEvent.lessonColorNight{background:#25314e!important;color:#edf2ff!important}
+
+/* V74 – stabiler Kalender-Rechtsklick */
+.dpWeekDay{position:relative}
+.dpWeekHead{user-select:none}
+.dpCalendarContext{user-select:none}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -1662,25 +1667,32 @@ function lessonColorClass(type){
 }
 function initTimelineContextMenu(){
  document.querySelectorAll('.dpTimelineBody').forEach(body=>{
-   body.addEventListener('contextmenu',e=>{
+   body.oncontextmenu=e=>{
      e.preventDefault();
-     const grid=document.querySelector('.dpTimelineGrid'), rect=body.getBoundingClientRect();
-     if(!grid)return;
+     e.stopPropagation();
      const dayEl=body.closest('.dpWeekDay');
-     const dayIndex=[...document.querySelectorAll('.dpWeekDay')].indexOf(dayEl);
-     if(dayIndex<0)return;
-     const d=new Date(state.calendarWeekDate||new Date());d.setHours(12,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7)+dayIndex);
+     const days=[...document.querySelectorAll('.dpWeekDay')];
+     const dayIndex=days.indexOf(dayEl);
+     if(dayIndex<0)return false;
+     const rect=body.getBoundingClientRect();
+     const d=new Date(state.calendarWeekDate||new Date());
+     d.setHours(12,0,0,0);
+     d.setDate(d.getDate()-((d.getDay()+6)%7)+dayIndex);
      const date=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-     const minute=Math.max(6*60,Math.min(22*60-5,Math.round(((e.clientY-rect.top)/58*60+6*60)/5)*5));
+     let minute=Math.round((((e.clientY-rect.top)/58)*60+360)/5)*5;
+     minute=Math.max(360,Math.min(1315,minute));
      const time=String(Math.floor(minute/60)).padStart(2,'0')+':'+String(minute%60).padStart(2,'0');
      showCalendarContextMenu(e.clientX,e.clientY,date,time);
-   });
+     return false;
+   };
  });
 }
 function showCalendarContextMenu(x,y,date,time){
  document.querySelector('.dpCalendarContext')?.remove();
  const menu=document.createElement('div');menu.className='dpCalendarContext';
- menu.innerHTML=`<div class="ctxTitle">Fahrstunde hinzufügen</div><div class="ctxTime">${fmtDate(date)} · ${time} Uhr</div><button type="button" onclick="closeCalendarContext();openLessonForm('','', '${date}','${time}')">＋ Fahrstunde hinzufügen</button>`;
+ menu.innerHTML=`<div class="ctxTitle">Fahrstunde hinzufügen</div><div class="ctxTime">${fmtDate(date)} · ${time} Uhr</div><button type="button" class="ctxAddLesson">＋ Fahrstunde hinzufügen</button>`;
+ const add=menu.querySelector('.ctxAddLesson');
+ add.onclick=()=>{closeCalendarContext();openLessonForm('','',date,time)};
  document.body.appendChild(menu);
  const r=menu.getBoundingClientRect();
  menu.style.left=Math.min(window.innerWidth-r.width-10,Math.max(8,x+4))+'px';

@@ -1,18 +1,12 @@
-V73 – RECHTSKLICK + FARBEN
+V74 – RECHTSKLICK FUNKTIONIERT
 
-Wochenansicht:
-- Rechtsklick auf einen freien Bereich eines Tages öffnet ein eigenes Menü.
-- Das Menü zeigt Datum und die angeklickte Uhrzeit.
-- „Fahrstunde hinzufügen“ öffnet direkt das vorhandene Fahrstundenformular mit Datum/Uhrzeit vorausgefüllt.
-- Normales Klick-/Drag-Verhalten der bestehenden Fahrstunden bleibt erhalten.
-
-Fahrtenfarben:
-- Übungsfahrt = Blau
-- B197 Fahrstunde = Violett
-- Überlandfahrt = Grün
-- Autobahnfahrt = Orange
-- Beleuchtungsfahrt = Dunkelblau
-- Darkmode entsprechend angepasst.
+Der Rechtsklick wurde technisch stabilisiert:
+- Event-Handler wird direkt an jede neu gerenderte Timeline-Spalte gebunden.
+- Rechtsklick auf freie Bereiche einer Tages-Spalte öffnet das Menü zuverlässig.
+- Datum und angeklickte Uhrzeit werden aus der tatsächlichen Position berechnet.
+- Das Menü öffnet die vorhandene Fahrstundenmaske direkt mit Datum/Uhrzeit vorausgefüllt.
+- Button im Kontextmenü nutzt einen echten Event-Handler statt inline onclick.
+- Bestehendes Drag & Drop und Fahrtenfarben bleiben erhalten.
 
 GitHub ersetzen:
 index.html
