@@ -1,25 +1,19 @@
-V80 – LOGBUCH ALS EIGENER REITER
+V81 – LOGBUCH OPTISCH ÜBERARBEITET
 
-Das Logbuch ist jetzt kein Abschnitt in den Einstellungen mehr.
+Das Logbuch wurde komplett neu gestaltet:
+- modernes Header-Element
+- Statistik-Kacheln für Hinzugefügt/Bearbeitet/Verschoben/Gelöscht
+- Live-Protokoll-Badge
+- chronologische Timeline mit Verbindungslinie
+- unterschiedliche Icons/Farben pro Änderungsart
+- Fahrschüler und Details klar getrennt
+- Uhrzeit und Datum sauber dargestellt
+- Hover-Effekt
+- leerer Zustand mit Erklärung
+- Darkmode vollständig angepasst
+- responsive für kleinere Bildschirme
 
-Neue Seitenleiste:
-Dashboard
-Fahrschüler
-Kalender
-Statistik
-📖 Logbuch
-Einstellungen
-
-Der Logbuch-Reiter zeigt:
-- alle protokollierten Änderungen
-- Datum/Uhrzeit
-- Fahrschüler
-- Änderungsart
-- Details zur Änderung
-- Anzahl der Log-Einträge
-- Button zum Leeren des Logbuchs
-
-Die bestehende lokale Logbuchspeicherung bleibt erhalten.
+Die Logik und gespeicherten Log-Einträge bleiben unverändert.
 
 GitHub ersetzen:
 index.html
