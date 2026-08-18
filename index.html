@@ -1267,6 +1267,31 @@ body{overflow-x:hidden}
 .logDetailModal{text-align:center;padding:8px 4px}.logDetailIcon{width:48px;height:48px;margin:0 auto 9px;border-radius:14px;display:grid;place-items:center;font-size:22px;background:#eaf3ff}.logDetailIcon.added{background:#e8f7ef}.logDetailIcon.moved{background:#f1ebff}.logDetailIcon.deleted{background:#ffebee}.logDetailStudent{font-weight:850;color:#52677d;margin:4px 0 17px}.logDetailGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:left}.logDetailGrid>div{padding:10px;background:#f6f9fc;border-radius:9px}.logDetailGrid small{display:block;color:#8a99a9;font-size:8px}.logDetailGrid b{display:block;margin-top:2px;font-size:11px}.logDetailText{text-align:left;margin-top:10px;padding:11px;border:1px solid #dce5ef;border-radius:9px;font-size:10px;color:#52677d;line-height:1.5}
 [data-theme="dark"] .logStudentCard{background:#132235;border-color:#2b4056;color:#eef5ff}.logStudentName{color:#173b69}.logStudentDetails{color:#91a5ba}.logStudentFooter{border-color:#2b4056;color:#91a5ba}.logActionBadge{background:#203246;color:#b6c7d8}.logDetailGrid>div{background:#182b3e}.logDetailGrid b{color:#eef5ff}.logDetailText{border-color:#2b4056;color:#b6c7d8}
 @media(max-width:600px){.logStudentGrid{grid-template-columns:1fr;padding:11px}.logbookHeroActions{margin-left:0}}
+
+/* V83 – Logbuch Premium */
+.logbookPage{max-width:1160px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.logTop{min-height:126px;padding:23px 25px;border-radius:20px;background:linear-gradient(135deg,#12345b 0%,#1d568c 58%,#2871ad 100%);display:flex;align-items:center;justify-content:space-between;gap:20px;color:#fff;box-shadow:0 12px 30px rgba(19,57,91,.14)}
+.logTitleBlock{display:flex;align-items:center;gap:15px}.logIconBig{width:51px;height:51px;border-radius:15px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.15);display:grid;place-items:center;font-size:25px;font-weight:300}
+.logTitleBlock .eyebrow{color:#a9cdea;font-size:8px;letter-spacing:1.4px;font-weight:900}.logTitleBlock h2{margin:2px 0 4px;font-size:27px;color:#fff;letter-spacing:-.5px}.logTitleBlock p{margin:0;color:#d3e5f4;font-size:10px}
+.logTopRight{display:flex;align-items:center;gap:12px}.logTotal{min-width:72px;text-align:center;padding-right:13px;border-right:1px solid rgba(255,255,255,.2)}.logTotal strong{display:block;font-size:23px;line-height:1}.logTotal span{font-size:8px;color:#bcd4e8}
+.logClear{border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;border-radius:9px;padding:9px 11px;font-size:9px;font-weight:750;cursor:pointer}.logClear:hover{background:rgba(255,255,255,.17)}
+.logOverview{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.logOverviewCard{display:flex;align-items:center;gap:11px;padding:13px 15px;background:var(--card,#fff);border:1px solid var(--border,#dce5ef);border-radius:14px}
+.ovIcon{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;font-weight:900;font-size:16px}.ovIcon.green{background:#e8f7ef;color:#2b9b60}.ovIcon.blue{background:#eaf3ff;color:#2877d8}.ovIcon.purple{background:#f1ebff;color:#7651c5}.ovIcon.red{background:#ffebee;color:#d33e57}
+.logOverviewCard small{display:block;font-size:7px;letter-spacing:.7px;font-weight:850;color:#8190a0}.logOverviewCard strong{display:block;font-size:18px;margin-top:1px}
+.logMainCard{background:var(--card,#fff);border:1px solid var(--border,#dce5ef);border-radius:18px;overflow:hidden;box-shadow:0 5px 18px rgba(22,51,80,.045)}
+.logMainHeader{height:65px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border,#dce5ef)}.logMainHeader h3{margin:0;font-size:14px}.logMainHeader p{margin:3px 0 0;font-size:8px;color:#8796a6}
+.logLive{display:flex;align-items:center;gap:6px;padding:6px 9px;border-radius:20px;background:#edf8f2;color:#278b57;font-size:8px;font-weight:850}.logLive span{width:6px;height:6px;border-radius:50%;background:#35a867;box-shadow:0 0 0 3px rgba(53,168,103,.12)}
+.logList{padding:8px 10px 12px}
+.logItem{width:100%;min-height:76px;display:flex;align-items:center;gap:12px;position:relative;padding:12px 12px 12px 14px;border:0;border-bottom:1px solid #edf1f5;background:transparent;text-align:left;color:inherit;cursor:pointer;transition:background .15s}.logItem:last-child{border-bottom:0}.logItem:hover{background:#f8fafc}
+.logItemAccent{position:absolute;left:0;top:15px;bottom:15px;width:3px;border-radius:4px;background:#2f80ed}.logItem.added .logItemAccent{background:#31a466}.logItem.edited .logItemAccent{background:#2f80ed}.logItem.moved .logItemAccent{background:#7956c9}.logItem.deleted .logItemAccent{background:#d63b55}
+.logItemIcon{width:38px;height:38px;flex:none;border-radius:11px;display:grid;place-items:center;font-size:15px;background:#eaf3ff;color:#2f80ed}.logItem.added .logItemIcon{background:#e8f7ef;color:#29965b}.logItem.moved .logItemIcon{background:#f1ebff;color:#7956c9}.logItem.deleted .logItemIcon{background:#ffebee;color:#d63b55}
+.logItemBody{min-width:0;flex:1}.logItemHeading{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.logItemHeading strong{font-size:10px;color:#173b69}.logItemHeading span{font-size:8px;font-weight:800;padding:4px 7px;border-radius:20px;background:#f0f4f7;color:#637588}.logItemText{font-size:9px;color:#718196;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.logItemMeta{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:7px;color:#9aa7b5}.logItemMeta i{width:3px;height:3px;border-radius:50%;background:#b5c0ca}.logItemArrow{font-size:21px;color:#a6b2bd;padding:0 3px}
+.logEmpty{text-align:center;padding:65px 20px}.emptyIcon{margin:auto;width:52px;height:52px;border-radius:16px;background:#eef5fc;color:#2f80ed;display:grid;place-items:center;font-size:26px}.logEmpty h3{margin:10px 0 3px;font-size:14px}.logEmpty p{max-width:330px;margin:auto;color:#8998a7;font-size:9px;line-height:1.5}
+.logDetailPremium{padding:4px 2px}.logDetailTop{display:flex;align-items:center;gap:12px}.logDetailIcon{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:#eaf3ff;color:#2f80ed;font-size:20px}.logDetailIcon.added{background:#e8f7ef;color:#29965b}.logDetailIcon.moved{background:#f1ebff;color:#7956c9}.logDetailIcon.deleted{background:#ffebee;color:#d63b55}.logDetailTop h2{margin:2px 0 0;font-size:17px}.logPerson{display:flex;align-items:center;gap:10px;margin-top:18px;padding:11px 12px;border-radius:12px;background:#f6f9fc}.logPersonAvatar{width:34px;height:34px;border-radius:10px;background:#dcecff;color:#276bb1;display:grid;place-items:center;font-size:13px;font-weight:900}.logPerson small,.logInfoGrid small,.logDescription small{display:block;font-size:7px;letter-spacing:.6px;color:#8a99a8;font-weight:850}.logPerson strong{display:block;margin-top:2px;font-size:10px;color:#29455f}.logInfoGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.logInfoGrid>div{padding:10px 11px;border:1px solid #e1e8ef;border-radius:10px}.logInfoGrid strong{display:block;margin-top:3px;font-size:10px}.logDescription{margin-top:8px;padding:11px;border:1px solid #e1e8ef;border-radius:10px}.logDescription p{margin:5px 0 0;font-size:9px;line-height:1.5;color:#61758a}.logClose{width:100%;margin-top:12px}
+[data-theme="dark"] .logOverviewCard,[data-theme="dark"] .logMainCard{background:#132235;border-color:#2b4056}.logItem:hover{background:#102031}.logItem{border-color:#24394d}.logItemHeading strong{color:#eaf3ff}.logItemHeading span{background:#203246;color:#b9c9d8}.logItemText,.logItemMeta{color:#91a5ba}.logDetailPremium .logPerson{background:#182c40}.logInfoGrid>div,.logDescription{border-color:#2b4056;background:#15283a}.logPerson strong,.logInfoGrid strong{color:#edf5fc}.logDescription p{color:#a5b7c9}
+@media(max-width:720px){.logTop{align-items:flex-start;flex-direction:column}.logTopRight{width:100%}.logTotal{margin-right:auto}.logOverview{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:470px){.logOverview{grid-template-columns:1fr 1fr}.logItem{padding-right:6px}.logItemText{white-space:normal}.logItemArrow{display:none}}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -1565,37 +1590,61 @@ function logbookPage(){
  const entries=getActivityLog();
  const counts={added:0,edited:0,deleted:0,moved:0};
  entries.forEach(x=>{if(counts[x.action]!==undefined)counts[x.action]++});
- const actionClass={added:'added',edited:'edited',deleted:'deleted',moved:'moved'};
+ const latest=entries[0], d=latest?new Date(latest.time):null;
  document.getElementById('content').innerHTML=`
- <div class="logbookWrap">
-  <div class="logbookHero">
-   <div class="logbookHeroIcon">📖</div><div class="grow"><div class="eyebrow">ÄNDERUNGSPROTOKOLL</div><h2>Logbuch</h2><p>Alle Änderungen übersichtlich nach Einträgen dargestellt.</p></div>
-   <div class="logbookHeroActions"><div class="logbookCount"><strong>${entries.length}</strong><span>Einträge</span></div><button class="secondary logClearBtn" onclick="clearActivityLog()">🗑 Logbuch leeren</button></div>
+ <div class="logbookPage">
+  <div class="logTop">
+   <div class="logTitleBlock">
+    <div class="logIconBig">↻</div>
+    <div><div class="eyebrow">AKTIVITÄTEN</div><h2>Logbuch</h2><p>Alle Änderungen an deiner Fahrschule auf einen Blick.</p></div>
+   </div>
+   <div class="logTopRight">
+    <div class="logTotal"><strong>${entries.length}</strong><span>Aktivitäten</span></div>
+    <button class="logClear" onclick="clearActivityLog()">Logbuch leeren</button>
+   </div>
   </div>
-  <div class="logStats">
-   <div class="logStat"><span class="logStatIcon added">＋</span><div><strong>${counts.added}</strong><small>Hinzugefügt</small></div></div>
-   <div class="logStat"><span class="logStatIcon edited">✎</span><div><strong>${counts.edited}</strong><small>Bearbeitet</small></div></div>
-   <div class="logStat"><span class="logStatIcon moved">↔</span><div><strong>${counts.moved}</strong><small>Verschoben</small></div></div>
-   <div class="logStat"><span class="logStatIcon deleted">×</span><div><strong>${counts.deleted}</strong><small>Gelöscht</small></div></div>
+
+  <div class="logOverview">
+   <div class="logOverviewCard"><span class="ovIcon green">＋</span><div><small>HINZUGEFÜGT</small><strong>${counts.added}</strong></div></div>
+   <div class="logOverviewCard"><span class="ovIcon blue">✎</span><div><small>BEARBEITET</small><strong>${counts.edited}</strong></div></div>
+   <div class="logOverviewCard"><span class="ovIcon purple">↔</span><div><small>VERSCHOBEN</small><strong>${counts.moved}</strong></div></div>
+   <div class="logOverviewCard"><span class="ovIcon red">×</span><div><small>GELÖSCHT</small><strong>${counts.deleted}</strong></div></div>
   </div>
-  <div class="logbookPanel">
-   <div class="logbookPanelHead"><div><h3>Alle Einträge</h3><span>Neueste Änderungen zuerst.</span></div><span class="liveBadge"><i></i> Live-Protokoll</span></div>
-   ${entries.length?`<div class="logStudentGrid">${entries.map(x=>{
-      const d=new Date(x.time), cls=actionClass[x.action]||'edited';
-      return `<button type="button" class="logStudentCard ${cls}" onclick="openLogEntry('${x.id}')">
-       <div class="logCardTop"><div class="logActionIcon">${activityIcon(x.action)}</div><span class="logActionBadge">${esc(activityLabel(x.action))}</span></div>
-       <div class="logStudentName">${esc(x.studentName||'Unbekannt')}</div>
-       <div class="logStudentDetails">${esc(x.details||'Änderung protokolliert')}</div>
-       <div class="logStudentFooter"><span>📅 ${d.toLocaleDateString('de-DE')}</span><span>🕐 ${d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</span></div>
+
+  <div class="logMainCard">
+   <div class="logMainHeader">
+    <div><h3>Aktivitäten</h3><p>Chronologisch sortiert · neueste Änderung zuerst</p></div>
+    <div class="logLive"><span></span>Aktiv</div>
+   </div>
+   ${entries.length?`<div class="logList">${entries.map((x,i)=>{
+      const dt=new Date(x.time), cls=x.action||'edited';
+      return `<button class="logItem ${cls}" onclick="openLogEntry('${x.id}')">
+       <div class="logItemAccent"></div>
+       <div class="logItemIcon">${activityIcon(x.action)}</div>
+       <div class="logItemBody">
+        <div class="logItemHeading"><strong>${esc(activityLabel(x.action))}</strong><span>${esc(x.studentName||'Unbekannt')}</span></div>
+        <div class="logItemText">${esc(x.details||'Änderung protokolliert')}</div>
+        <div class="logItemMeta"><span>${dt.toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})}</span><i></i><span>${dt.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} Uhr</span></div>
+       </div>
+       <div class="logItemArrow">›</div>
       </button>`}).join('')}</div>`:
-      `<div class="logEmpty"><div>📖</div><h3>Noch keine Aktivitäten</h3><p>Sobald du eine Änderung machst, erscheint hier ein eigener Eintrag.</p></div>`}
+      `<div class="logEmpty"><div class="emptyIcon">↻</div><h3>Alles ruhig</h3><p>Hier erscheinen automatisch alle Änderungen, sobald du mit DrivePro arbeitest.</p></div>`}
   </div>
  </div>`;
 }
 function openLogEntry(entryId){
  const x=getActivityLog().find(e=>e.id===entryId);if(!x)return;
  const d=new Date(x.time);
- openModal(`<div class="logDetailModal"><div class="logDetailIcon ${esc(x.action)}">${activityIcon(x.action)}</div><div class="eyebrow">LOGBUCH-EINTRAG</div><h2>${esc(activityLabel(x.action))}</h2><div class="logDetailStudent">${esc(x.studentName||'Unbekannt')}</div><div class="logDetailGrid"><div><small>Datum</small><b>${d.toLocaleDateString('de-DE')}</b></div><div><small>Uhrzeit</small><b>${d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</b></div></div><div class="logDetailText">${esc(x.details||'Änderung protokolliert')}</div><div class="actions"><button class="primary" onclick="closeModal()">Schließen</button></div></div>`);
+ openModal(`<div class="logDetailPremium">
+  <div class="logDetailTop"><div class="logDetailIcon ${esc(x.action)}">${activityIcon(x.action)}</div><div><div class="eyebrow">LOGBUCH</div><h2>${esc(activityLabel(x.action))}</h2></div></div>
+  <div class="logPerson"><div class="logPersonAvatar">${esc((x.studentName||'?').charAt(0).toUpperCase())}</div><div><small>FAHRSCHÜLER</small><strong>${esc(x.studentName||'Unbekannt')}</strong></div></div>
+  <div class="logInfoGrid">
+   <div><small>DATUM</small><strong>${d.toLocaleDateString('de-DE')}</strong></div>
+   <div><small>UHRZEIT</small><strong>${d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</strong></div>
+  </div>
+  <div class="logDescription"><small>DETAILS</small><p>${esc(x.details||'Änderung protokolliert')}</p></div>
+  <button class="primary logClose" onclick="closeModal()">Schließen</button>
+ </div>`);
 }
 
 function settingsPage(){
