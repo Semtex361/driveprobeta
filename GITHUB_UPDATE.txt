@@ -1,18 +1,14 @@
-V70 – FAHRSTUNDEN PER DRAG & DROP VERSCHIEBEN
+V71 – PRÄZISES VERSCHIEBEN
 
-In der Wochenansicht können Fahrstunden jetzt direkt mit Maus oder Finger verschoben werden.
-
-- vertikal verschieben = Uhrzeit ändern
-- horizontal verschieben = Wochentag ändern
-- Rasterung in 5-Minuten-Schritten
-- Fahrstundendauer bleibt unverändert
-- Termin wird nach dem Verschieben automatisch neu positioniert
-- vorhandene Überschneidungsprüfung bleibt aktiv
-- bei einem Konflikt wird das bestehende Konfliktfenster angezeigt und der Termin wird nicht verschoben
-- Änderungen werden direkt gespeichert
-- Klick ohne Verschieben öffnet weiterhin die Fahrstundendetails
-- Monatsansicht bleibt unverändert
-- mobile Bedienung per Finger unterstützt
+Drag & Drop der Fahrstunden verbessert:
+- Während des Ziehens erscheint eine Live-Info direkt am Mauszeiger/Finger.
+- Anzeige von Wochentag + Datum.
+- Anzeige der exakten neuen Zeit von-bis.
+- weiterhin 5-Minuten-Raster.
+- Vorschau aktualisiert sich während des Ziehens.
+- Die Fahrstunde wird erst beim Loslassen tatsächlich gespeichert.
+- Überschneidungsprüfung bleibt aktiv.
+- Klick ohne Ziehen öffnet weiterhin die Details.
 
 GitHub ersetzen:
 index.html

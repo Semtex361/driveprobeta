@@ -1154,6 +1154,12 @@ body{overflow-x:hidden}
 .dpTimelineEvent:not(.dragging){cursor:grab}
 .dpTimelineEvent:active{cursor:grabbing}
 [data-theme="dark"] .dpTimelineEvent.dragging{box-shadow:0 10px 24px rgba(0,0,0,.35)}
+
+/* V71 – präzises Drag & Drop mit Zeitvorschau */
+.dpDragPreview{position:fixed;z-index:99999;pointer-events:none;min-width:205px;max-width:245px;padding:10px 12px;border-radius:11px;background:#173b69;color:#fff;box-shadow:0 10px 28px rgba(20,45,75,.25);font-size:11px}
+.dpDragPreview b{display:block;font-size:10px;opacity:.8;margin-bottom:2px}.dpDragPreview strong{display:block;font-size:17px;line-height:1.2}.dpDragPreview small{display:block;margin-top:4px;opacity:.75;font-size:9px}
+.dpTimelineEvent.dragging{opacity:.78;cursor:grabbing;z-index:30!important}
+@media(max-width:700px){.dpDragPreview{min-width:190px;padding:9px 11px}.dpDragPreview strong{font-size:15px}}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -1616,65 +1622,64 @@ function initTimelineDrag(){
  const events=document.querySelectorAll('.dpTimelineEvent');
  events.forEach(el=>{
    let drag=null;
-   el.addEventListener('pointerdown',e=>{
-     if(e.button!==undefined && e.button!==0)return;
-     const rect=el.getBoundingClientRect();
-     drag={x:e.clientX,y:e.clientY,rect,started:false,origDate:el.dataset.date,origStart:el.dataset.start,duration:Number(el.dataset.duration)||60,sid:el.dataset.sid,lid:el.dataset.lid};
-     el.setPointerCapture?.(e.pointerId);
-     e.preventDefault();
-   });
-   el.addEventListener('pointermove',e=>{
-     if(!drag)return;
-     const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
-     if(!drag.started && Math.hypot(dx,dy)<6)return;
-     drag.started=true;
-     el.classList.add('dragging');
-     el.style.transform=`translate(${dx}px,${dy}px)`;
-   });
-   el.addEventListener('pointerup',e=>{
-     if(!drag)return;
-     const d=drag;drag=null;el.classList.remove('dragging');el.style.transform='';
-     if(!d.started){
-       openLessonDetail(d.sid,d.lid);
-       return;
-     }
+   const getTarget=(e,d)=>{
      const grid=document.querySelector('.dpTimelineGrid');
-     if(!grid)return;
-     const gridRect=grid.getBoundingClientRect();
-     const colWidth=gridRect.width/7;
+     if(!grid)return null;
+     const gridRect=grid.getBoundingClientRect(), colWidth=gridRect.width/7;
      let col=Math.floor((e.clientX-gridRect.left)/colWidth);
      col=Math.max(0,Math.min(6,col));
      const targetDay=new Date(state.calendarWeekDate||new Date());
      targetDay.setHours(12,0,0,0);
      targetDay.setDate(targetDay.getDate()-((targetDay.getDay()+6)%7)+col);
      const date=targetDay.getFullYear()+'-'+String(targetDay.getMonth()+1).padStart(2,'0')+'-'+String(targetDay.getDate()).padStart(2,'0');
-     const body=el.closest('.dpWeekDay')?.querySelector('.dpTimelineBody');
-     if(!body)return;
-     const bodyRect=body.getBoundingClientRect();
-     const hourHeight=58, timelineStart=6;
+     const body=grid.querySelectorAll('.dpWeekDay')[col]?.querySelector('.dpTimelineBody');
+     if(!body)return null;
+     const bodyRect=body.getBoundingClientRect(), hourHeight=58, timelineStart=6;
      let minutes=Math.round((e.clientY-bodyRect.top)/(hourHeight/60)/5)*5 + timelineStart*60;
      minutes=Math.max(timelineStart*60,Math.min(22*60-d.duration,minutes));
-     const hh=String(Math.floor(minutes/60)).padStart(2,'0'),mm=String(minutes%60).padStart(2,'0');
-     const oldStudent=getStudent(d.sid), lesson=oldStudent?.lessons.find(x=>x.id===d.lid);
-     if(!lesson)return;
-     const data={date,startTime:`${hh}:${mm}`,duration:d.duration};
+     return {date,startTime:`${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`,col,minutes};
+   };
+   el.addEventListener('pointerdown',e=>{
+     if(e.button!==undefined&&e.button!==0)return;
+     drag={x:e.clientX,y:e.clientY,started:false,sid:el.dataset.sid,lid:el.dataset.lid,duration:Number(el.dataset.duration)||60};
+     el.setPointerCapture?.(e.pointerId);e.preventDefault();
+   });
+   el.addEventListener('pointermove',e=>{
+     if(!drag)return;
+     const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+     if(!drag.started&&Math.hypot(dx,dy)<5)return;
+     drag.started=true;el.classList.add('dragging');
+     el.style.transform=`translate(${dx}px,${dy}px)`;
+     const target=getTarget(e,drag);
+     if(target) showDragPreview(target,drag.duration,e.clientX,e.clientY);
+   });
+   el.addEventListener('pointerup',e=>{
+     if(!drag)return;
+     const d=drag;drag=null;el.classList.remove('dragging');el.style.transform='';
+     const preview=document.querySelector('.dpDragPreview');if(preview)preview.remove();
+     if(!d.started){openLessonDetail(d.sid,d.lid);return}
+     const target=getTarget(e,d);if(!target)return;
+     const lesson=getStudent(d.sid)?.lessons.find(x=>x.id===d.lid);if(!lesson)return;
+     const data={date:target.date,startTime:target.startTime,duration:d.duration};
      const conflict=findLessonConflict(data,d.lid);
      if(conflict){
-       showConflictOverlay({
-         newTime:`${data.startTime} – ${endTime(data.startTime,data.duration)}`,
-         oldTime:`${conflict.lesson.startTime||'--:--'} – ${endTime(conflict.lesson.startTime,conflict.lesson.duration)}`,
-         name:esc(conflict.student.firstName+' '+conflict.student.lastName)
-       });
+       showConflictOverlay({newTime:`${data.startTime} – ${endTime(data.startTime,data.duration)}`,oldTime:`${conflict.lesson.startTime||'--:--'} – ${endTime(conflict.lesson.startTime,conflict.lesson.duration)}`,name:esc(conflict.student.firstName+' '+conflict.student.lastName)});
        return;
      }
-     lesson.date=date;lesson.startTime=data.startTime;
-     save();
-     state.calendarWeekDate=date;
-     render();
+     lesson.date=data.date;lesson.startTime=data.startTime;save();state.calendarWeekDate=data.date;render();
    });
-   el.addEventListener('pointercancel',()=>{if(drag){drag=null;el.classList.remove('dragging');el.style.transform=''}});
+   el.addEventListener('pointercancel',()=>{if(drag){drag=null;el.classList.remove('dragging');el.style.transform=''}document.querySelector('.dpDragPreview')?.remove()});
  });
 }
+function showDragPreview(target,duration,clientX,clientY){
+ let p=document.querySelector('.dpDragPreview');
+ if(!p){p=document.createElement('div');p.className='dpDragPreview';document.body.appendChild(p)}
+ const dayName=['So','Mo','Di','Mi','Do','Fr','Sa'][new Date(target.date+'T12:00:00').getDay()];
+ p.innerHTML=`<b>${dayName}, ${fmtDate(target.date)}</b><strong>${target.startTime} – ${endTime(target.startTime,duration)}</strong><small>5-Minuten-Raster · loslassen zum Verschieben</small>`;
+ p.style.left=Math.min(window.innerWidth-250,Math.max(10,clientX+14))+'px';
+ p.style.top=Math.min(window.innerHeight-92,Math.max(10,clientY+14))+'px';
+}
+
 function setCalendarView(view){
  state.calendarView=view;
  if(view==='week' && !state.calendarWeekDate) state.calendarWeekDate=new Date().toISOString().slice(0,10);
