@@ -1,15 +1,9 @@
-V76 – PRÜFUNGSFAHRT
+V77 – PRÜFUNGSFAHRT IN EINSTELLUNGEN
 
-Neue Fahrtart:
-- Prüfungsfahrt
-
-Sie kann im normalen Fahrstundenformular ausgewählt werden.
-Sie ist auch über „Fahrstunde hinzufügen“ per Rechtsklick verfügbar.
-Sie wird im Kalender mit einer eigenen Farbe dargestellt:
-- Hellmodus: Rot/Rosa
-- Darkmode: dunkles Rot
-
-Bestehende Fahrten und Funktionen bleiben erhalten.
+Prüfungsfahrt ist jetzt auch unter Einstellungen → Fahrstundendauer vorhanden.
+Standardwert: 45 Minuten.
+Der Wert kann dort wie alle anderen Fahrtarten individuell geändert werden.
+Die Auswahl im Fahrstundenformular und die Kalenderfarbe aus V76 bleiben erhalten.
 
 GitHub ersetzen:
 index.html
