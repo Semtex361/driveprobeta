@@ -1,19 +1,25 @@
-V81 – LOGBUCH OPTISCH ÜBERARBEITET
+V82 – ABSCHLUSS + PERSÖNLICHE DATEN + LOGBUCH
 
-Das Logbuch wurde komplett neu gestaltet:
-- modernes Header-Element
-- Statistik-Kacheln für Hinzugefügt/Bearbeitet/Verschoben/Gelöscht
-- Live-Protokoll-Badge
-- chronologische Timeline mit Verbindungslinie
-- unterschiedliche Icons/Farben pro Änderungsart
-- Fahrschüler und Details klar getrennt
-- Uhrzeit und Datum sauber dargestellt
-- Hover-Effekt
-- leerer Zustand mit Erklärung
-- Darkmode vollständig angepasst
-- responsive für kleinere Bildschirme
+1. Ausbildungsabschluss:
+- „Dokumentierte Kilometer“ entfernt.
+- Praktische Prüfung wird automatisch anhand der dokumentierten „Prüfungsfahrt“ datiert.
+- Geburtsdatum wird im Abschlussdokument ausgegeben.
 
-Die Logik und gespeicherten Log-Einträge bleiben unverändert.
+2. Persönliche Daten:
+- Geburtsdatum
+- Telefon
+- E-Mail
+- Adresse
+- Daten können beim Anlegen/Bearbeiten eines Fahrschülers gepflegt werden.
+- Daten werden auch in der Schülerübersicht angezeigt.
+
+3. Logbuch:
+- Nicht mehr als reine Timeline.
+- Eigene Karten/Fenster ähnlich dem Fahrschüler-Reiter.
+- Jede Änderung ist eine eigene anklickbare Karte.
+- Klick öffnet ein Detailfenster mit Änderungsart, Fahrschüler, Datum, Uhrzeit und Details.
+- Farben unterscheiden Hinzugefügt/Bearbeitet/Verschoben/Gelöscht.
+- Darkmode angepasst.
 
 GitHub ersetzen:
 index.html
