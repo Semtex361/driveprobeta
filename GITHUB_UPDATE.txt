@@ -1,25 +1,7 @@
-V67 – FINALER FEINSCHLIFF AUF BASIS V64/V65
-
-Bewusst nur bestehende Funktionen/Optik verbessert, keine neue Datenstruktur.
-
-- DrivePro-Logo und Name führen per Klick zurück zum Dashboard.
-- Ausbildungsdiagramm:
-  * Weiß = Offen
-  * Gelb = Üben
-  * Grün = Sicher
-  * kompakte Legende
-  * bessere Hover-/Focus-Darstellung
-  * mobile Darstellung verbessert
-  * gespeicherte Werte bleiben unverändert
-- Darkmode:
-  * Fahrschülernamen auf weißen Karten dunkelblau und lesbar
-  * Zusatzinformationen passend dunkelgrau
-  * Diagramm-Legende und Hover-Zustände angepasst
-- Fahrschülerliste aufgeräumt
-- Buttons/Interaktionen auf Mobilgeräten verbessert
-- Keine Änderung an Kalenderlogik, Fahrstundenlogik, Überschneidungsprüfung oder Signaturen.
-
-GitHub ersetzen:
-index.html
-sw.js
-manifest.json
+V68 – FÜHRERSCHEIN ERHALTEN
+- Im Fahrschüler-Profil: „✓ Führerschein erhalten“
+- Klick öffnet einen druckfertigen Ausbildungsabschluss in einem neuen Fenster.
+- Browser öffnet automatisch den Druckdialog; dort „Als PDF speichern“ möglich.
+- Enthält Schülerdaten, Prüfungsdaten, Gesamtfahrzeit, Kilometer, Sonderfahrten, jede einzelne Fahrstunde chronologisch, Bemerkungen, Unterschriftsstatus und Ausbildungsdiagramm.
+- Keine vorhandenen Daten werden verändert.
+GitHub ersetzen: index.html, sw.js, manifest.json
