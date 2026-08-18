@@ -1,13 +1,18 @@
-V69 – KALENDER WOCHENANSICHT MIT TIMELINE
+V70 – FAHRSTUNDEN PER DRAG & DROP VERSCHIEBEN
 
-- Wochenansicht hat jetzt eine echte vertikale Zeitachse von 06:00 bis 22:00.
-- Jede Stunde ist als horizontale Linie sichtbar.
-- Fahrstunden werden anhand ihrer Startzeit und Dauer an der richtigen Position dargestellt.
-- Fahrstunden zeigen weiterhin von-bis, Fahrschüler und Fahrtart.
-- Die aktuelle Uhrzeit wird am aktuellen Wochentag als rote Linie angezeigt.
-- Klick auf eine Fahrstunde öffnet weiterhin die Fahrstundendetails.
-- Mobile Wochenansicht bleibt horizontal scrollbar.
-- Monatsansicht bleibt unverändert.
+In der Wochenansicht können Fahrstunden jetzt direkt mit Maus oder Finger verschoben werden.
+
+- vertikal verschieben = Uhrzeit ändern
+- horizontal verschieben = Wochentag ändern
+- Rasterung in 5-Minuten-Schritten
+- Fahrstundendauer bleibt unverändert
+- Termin wird nach dem Verschieben automatisch neu positioniert
+- vorhandene Überschneidungsprüfung bleibt aktiv
+- bei einem Konflikt wird das bestehende Konfliktfenster angezeigt und der Termin wird nicht verschoben
+- Änderungen werden direkt gespeichert
+- Klick ohne Verschieben öffnet weiterhin die Fahrstundendetails
+- Monatsansicht bleibt unverändert
+- mobile Bedienung per Finger unterstützt
 
 GitHub ersetzen:
 index.html
