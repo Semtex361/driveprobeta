@@ -1,18 +1,9 @@
-DRIVEPRO BETA V62 – DARK MODE FIX
+V63 – DARK MODE TEXT FIX
 
-Dark Mode vollständig nachgeschärft:
-- Dashboard-Karten und Schnellzugriff
-- Fahrschülerlisten und Fahrstunden
-- Kalender Monat/Woche
-- Suchfelder und Formulare
-- Modalfenster
-- Buttons, Tabs, Tags und Fortschrittsanzeigen
-- Einstellungen
-- Konfliktfenster
-- leere Zustände und Hilfetexte
-- bessere Kontraste und lesbare Sekundärtexte
-- keine weißen Karten mehr im Darkmode
-- Service Worker Cache auf v62 aktualisiert
+Gezielt korrigiert:
+- Fahrschüler-Namen im Reiter „Fahrschüler“ sind im Darkmode jetzt hell und klar lesbar.
+- „Guten Tag“ / Begrüßung im Dashboard ist im Darkmode jetzt hell und klar lesbar.
+- Sekundäre Informationen bleiben dezent, aber lesbar.
 
 GitHub ersetzen:
 index.html
