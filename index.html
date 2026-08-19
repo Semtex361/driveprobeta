@@ -1908,7 +1908,19 @@ function saveLessonSignature(sid,lid){
 function signature(s){return `<h3>Unterschrift des Fahrschülers</h3><div class="hint">Mit Maus, Touchscreen oder Stift unterschreiben.</div><div class="sigwrap" style="margin-top:10px"><div class="sighead"><span>${esc(s.firstName+' '+s.lastName)}</span><button onclick="clearSignature()">Löschen</button></div><canvas id="signatureCanvas" class="signature" width="700" height="180"></canvas></div><div class="actions"><button class="primary" onclick="saveSignature('${s.id}')">Unterschrift speichern</button></div>`}
 function initSignature(){const c=document.getElementById('signatureCanvas');if(!c)return;const ctx=c.getContext('2d');ctx.lineWidth=2.5;ctx.lineCap='round';ctx.strokeStyle='#17211d';let draw=false;const p=e=>{const r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height}};c.onpointerdown=e=>{draw=true;const q=p(e);ctx.beginPath();ctx.moveTo(q.x,q.y);c.setPointerCapture(e.pointerId)};c.onpointermove=e=>{if(!draw)return;const q=p(e);ctx.lineTo(q.x,q.y);ctx.stroke()};c.onpointerup=()=>draw=false;c.onpointercancel=()=>draw=false;const s=getStudent(state.studentId);if(s.signature){const im=new Image();im.onload=()=>ctx.drawImage(im,0,0,c.width,c.height);im.src=s.signature}}
 function clearSignature(){const c=document.getElementById('signatureCanvas');c.getContext('2d').clearRect(0,0,c.width,c.height)}
-function saveSignature(sid){const c=document.getElementById('signatureCanvas');const s=getStudent(sid);s.signature=c.toDataURL('image/png');save();alert('Unterschrift gespeichert.')}
+function saveSignature(sid){
+ const c=document.getElementById('signatureCanvas'),s=getStudent(sid);
+ if(!c||!s)return;
+ s.signature=c.toDataURL('image/png');
+ dpCloudBackupLocal();save();
+ if(dpCloudReady){
+  dpCloudUpsertStudent(s).catch(e=>{
+   console.error(e);
+   dpCloudStatus('error',e.message||'Unterschrift konnte nicht synchronisiert werden')
+  });
+ }
+ alert('Unterschrift gespeichert.')
+}
 function allLessons(){const a=[];students.forEach(s=>(s.lessons||[]).forEach(l=>a.push({s,l})));return a.sort((a,b)=>(b.l.date+' '+b.l.startTime).localeCompare(a.l.date+' '+a.l.startTime))}
 function lessonsPage(){document.getElementById('content').innerHTML=`<div class="toolbar"><div class="muted">Alle gespeicherten Fahrstunden – zum Öffnen anklicken</div><button class="primary" onclick="openLessonForm()">+ Fahrstunde</button></div><div class="card">${allLessons().map(x=>lessonRow(x.s,x.l,true)).join('')||'<div class="empty">Noch keine Fahrstunden.</div>'}</div>`}
 
@@ -2278,7 +2290,7 @@ function initTimelineDrag(){
        showConflictOverlay({newTime:`${data.startTime} – ${endTime(data.startTime,data.duration)}`,oldTime:`${conflict.lesson.startTime||'--:--'} – ${endTime(conflict.lesson.startTime,conflict.lesson.duration)}`,name:esc(conflict.student.firstName+' '+conflict.student.lastName)});
        return;
      }
-     const previousDate=lesson.date,previousTime=lesson.startTime;lesson.date=data.date;lesson.startTime=data.startTime;save();state.calendarWeekDate=data.date;render();logActivity('moved',getStudent(d.sid),lesson,`Verschoben von ${fmtDate(previousDate)} ${previousTime||'—'} nach ${fmtDate(lesson.date)} ${lesson.startTime||'—'}`);notifyLessonChange('edited',getStudent(d.sid),lesson);
+     const previousDate=lesson.date,previousTime=lesson.startTime;lesson.date=data.date;lesson.startTime=data.startTime;dpCloudBackupLocal();save();state.calendarWeekDate=data.date;render();logActivity('moved',getStudent(d.sid),lesson,`Verschoben von ${fmtDate(previousDate)} ${previousTime||'—'} nach ${fmtDate(lesson.date)} ${lesson.startTime||'—'}`);notifyLessonChange('edited',getStudent(d.sid),lesson);if(dpCloudReady)dpCloudUpsertLesson(getStudent(d.sid),lesson).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Verschieben konnte nicht synchronisiert werden')});
    });
    el.addEventListener('pointercancel',()=>{if(drag){drag=null;el.classList.remove('dragging');el.style.transform=''}document.querySelector('.dpDragPreview')?.remove()});
  });
@@ -2653,6 +2665,12 @@ function dpCloudHandleReady(){setTimeout(async()=>{await dpCloudLoad();await dpC
 function dpCloudHandleLogout(){dpCloudStopRealtime();dpCloudReady=false;dpCloudBusy=false;dpCloudKnownStudentIds=new Set();dpCloudStatus('','')}
 window.addEventListener('drivepro:auth-ready',dpCloudHandleReady);
 window.addEventListener('drivepro:auth-logout',dpCloudHandleLogout);
+window.addEventListener('online',()=>{if(dpCloudReady)dpCloudLoad().then(()=>dpCloudStartRealtime()).catch(e=>console.error('DrivePro reconnect-sync:',e))});
+document.addEventListener('visibilitychange',()=>{
+ if(document.visibilityState==='visible' && dpCloudReady && !dpCloudBusy){
+  dpCloudLoad().catch(e=>console.error('DrivePro visibility-sync:',e));
+ }
+});
 
 render()
 </script>
