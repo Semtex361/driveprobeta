@@ -1639,7 +1639,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-logbook" onclick="page('logbook')"><span>📖</span>Logbuch</button>
     <button id="nav-settings" onclick="page('settings')"><span>⚙</span>Einstellungen</button>
   </nav>
-  <div class="sidefoot">V89 · Login aktiv<br>Fahrstunden je Fahrschüler<br>Datenmigration folgt</div>
+  <div class="sidefoot">V90.9 · Login V90.9 · Login & Cloud-Sync aktiv Cloud-Sync aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -1759,16 +1759,38 @@ function dashboardStudent(s){
 function upcomingLesson(s,l){
  return `<div class="upcoming" onclick="openLessonDetail('${s.id}','${l.id}')"><div class="timeBadge">${esc(l.startTime||'--:--')}</div><div class="grow"><b>${esc(s.firstName+' '+s.lastName)}</b><div class="muted">${l.duration} Min. · ${esc(l.special||'Übungsfahrt')}</div></div><span class="arrow">›</span></div>`;
 }
-function studentRow(s){return `<div class="student" style="padding:12px 0;border-bottom:1px solid var(--line)"><div class="avatar">${esc((s.firstName[0]||'')+(s.lastName[0]||''))}</div><div class="grow"><b>${esc(s.firstName+' '+s.lastName)}</b><div class="studentMeta"><span>Klasse ${esc(s.license)}</span><span>${(s.lessons||[]).length} Fahrstunden</span><span>${s.visionAid?'👓 Sehhilfe':'👁 Keine Sehhilfe'}</span><span>${s.theoryPassed?'✓ Theorie bestanden':'○ Theorie offen'}</span></div><div class="progress"><i style="width:${pct(s)}%"></i></div></div><div class="studentActions"><button class="secondary" onclick="openStudent('${s.id}')">Öffnen</button><button class="primary smallBtn" onclick="openStudentForm('${s.id}')">Bearbeiten</button></div></div>`}
+function studentRow(s){return `<div class="student" style="padding:12px 0;border-bottom:1px solid var(--line)"><div class="avatar">${esc((s.firstName[0]||'')+(s.lastName[0]||''))}</div><div class="grow"><b>${esc(s.firstName+' '+s.lastName)}</b><div class="studentMeta"><span>Klasse ${esc(s.license)}</span><span>${(s.lessons||[]).length} Fahrstunden</span><span>${s.visionAid?'👓 Sehhilfe':'👁 Keine Sehhilfe'}</span><span>${s.theoryPassed?'✓ Theorie bestanden':'○ Theorie offen'}</span></div><div class="progress"><i style="width:${pct(s)}%"></i></div></div><div class="studentActions"><button class="secondary" onclick="openStudent('${s.id}')">Öffnen</button><button class="primary smallBtn" onclick="openStudentForm('${s.id}')">Bearbeiten</button><button class="danger smallBtn" onclick="deleteStudent('${s.id}',event)">Löschen</button></div></div>`}
 function studentsPage(){
 document.getElementById('content').innerHTML=`<div class="toolbar"><div class="muted">Alle Fahrschüler verwalten</div><input id="studentSearch" placeholder="Suchen…" oninput="filterStudents()"></div><div id="studentList" class="students">${students.map(studentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Noch keine Fahrschüler.</div>'}</div>`;
 }
 function filterStudents(){let q=(document.getElementById('studentSearch')?.value||'').toLowerCase();let list=students.filter(s=>(s.firstName+' '+s.lastName+' '+s.license).toLowerCase().includes(q));document.getElementById('studentList').innerHTML=list.map(studentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Keine Treffer.</div>'}
 function openStudentForm(studentId=''){let s=studentId?getStudent(studentId):null;openModal(`<h2>${s?'Fahrschüler bearbeiten':'Neuer Fahrschüler'}</h2><div class="row"><div class="field"><label>Vorname</label><input id="sf" value="${esc(s?.firstName||'')}"></div><div class="field"><label>Nachname</label><input id="sl" value="${esc(s?.lastName||'')}"></div></div><div class="row"><div class="field"><label>Klasse</label><select id="sc">${['B','B78','B197'].map(x=>`<option ${x===(s?.license||'B')?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Ausbildungsbeginn</label><input id="sd" type="date" value="${s?.start||new Date().toISOString().slice(0,10)}"></div></div><div class="row"><div class="field"><label>Geburtsdatum</label><input id="sb" type="date" value="${s?.birthDate||''}"></div><div class="field"><label>Telefon</label><input id="sphone" type="tel" value="${esc(s?.phone||'')}" placeholder="z. B. 0176 12345678"></div></div><div class="row"><div class="field"><label>E-Mail</label><input id="semail" type="email" value="${esc(s?.email||'')}" placeholder="name@example.de"></div><div class="field"><label>Adresse</label><input id="saddress" value="${esc(s?.address||'')}" placeholder="Straße, Hausnummer, PLZ Ort"></div></div><div class="studentChecks"><label><input type="checkbox" id="sv" ${s?.visionAid===true?'checked':''}> Sehhilfe</label><label><input type="checkbox" id="st" ${s?.theoryPassed===true?'checked':''}> Theorie bestanden</label></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveStudent('${studentId}')">Speichern</button></div>`)}
+async function deleteStudent(sid,event){
+ if(event){event.preventDefault();event.stopPropagation()}
+ const s=getStudent(sid);if(!s)return;
+ const name=`${s.firstName} ${s.lastName}`;
+ const countLessons=(s.lessons||[]).length;
+ if(!confirm(`Fahrschüler „${name}“ wirklich löschen?\n\nDabei werden auch ${countLessons} Fahrstunde(n) und der Ausbildungsfortschritt dieses Fahrschülers gelöscht.\n\nDieser Vorgang kann nicht rückgängig gemacht werden.`))return;
+ if(!confirm(`Letzte Sicherheitsabfrage:\n\n„${name}“ endgültig löschen?`))return;
+ try{
+  dpCloudBackupLocal();
+  if(dpCloudReady)await dpCloudDeleteStudent(sid);
+  students=students.filter(x=>x.id!==sid);
+  save();
+  logActivity('student_deleted',s,null,`Fahrschüler gelöscht: ${name}`);
+  closeModal();
+  render();
+  dpCloudStatus('ok',`Fahrschüler „${name}“ gelöscht.`);
+ }catch(e){
+  console.error('DrivePro: Fahrschüler konnte nicht gelöscht werden',sid,e);
+  dpCloudStatus('error',e?.message||'Fahrschüler konnte nicht aus der Cloud gelöscht werden.');
+  alert(`Der Fahrschüler konnte nicht vollständig gelöscht werden.\n\n${e?.message||'Unbekannter Cloud-Fehler'}\n\nDie lokalen Daten wurden zur Sicherheit nicht entfernt.`);
+ }
+}
 function saveStudent(sid){const f=document.getElementById('sf').value.trim(),l=document.getElementById('sl').value.trim();if(!f||!l){alert('Bitte Vor- und Nachnamen eingeben.');return}const personal={firstName:f,lastName:l,license:document.getElementById('sc').value,start:document.getElementById('sd').value,birthDate:document.getElementById('sb').value,phone:document.getElementById('sphone').value.trim(),email:document.getElementById('semail').value.trim(),address:document.getElementById('saddress').value.trim(),visionAid:document.getElementById('sv').checked,theoryPassed:document.getElementById('st').checked};
 if(sid){const s=getStudent(sid);Object.assign(s,personal);dpCloudBackupLocal();save();closeModal();render();if(dpCloudReady)dpCloudUpsertStudent(s).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}else{const s={id:id(),...personal,areas:DEFAULT_AREAS.map(name=>({name,level:'Offen',note:''})),lessons:[],signature:null};students.push(s);dpCloudBackupLocal();save();closeModal();render();if(dpCloudReady)dpCloudUpsertStudent(s).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}
 }
-function openStudent(sid){const s=getStudent(sid);state.studentId=sid;openModal(`<div class="profileHeader"><div><h2>${esc(s.firstName+' '+s.lastName)}</h2></div><div class="profileActions"><button class="studentCompleteBtn" onclick="licenseReceivedReport('${sid}')">✓ Führerschein erhalten</button><button class="secondary" onclick="closeModal();openStudentForm('${sid}')">✎ Bearbeiten</button></div></div><div class="tabs"><button class="sel" onclick="studentTab('overview','${sid}',this)">Übersicht</button><button onclick="studentTab('diagram','${sid}',this)">Ausbildungsdiagramm</button><button onclick="studentTab('lessons','${sid}',this)">Fahrstunden</button><button onclick="studentTab('signature','${sid}',this)">Unterschrift</button></div><div id="studentBody">${studentOverview(s)}</div>`)}
+function openStudent(sid){const s=getStudent(sid);state.studentId=sid;openModal(`<div class="profileHeader"><div><h2>${esc(s.firstName+' '+s.lastName)}</h2></div><div class="profileActions"><button class="studentCompleteBtn" onclick="licenseReceivedReport('${sid}')">✓ Führerschein erhalten</button><button class="secondary" onclick="closeModal();openStudentForm('${sid}')">✎ Bearbeiten</button><button class="danger" onclick="deleteStudent('${sid}',event)">🗑 Löschen</button></div></div><div class="tabs"><button class="sel" onclick="studentTab('overview','${sid}',this)">Übersicht</button><button onclick="studentTab('diagram','${sid}',this)">Ausbildungsdiagramm</button><button onclick="studentTab('lessons','${sid}',this)">Fahrstunden</button><button onclick="studentTab('signature','${sid}',this)">Unterschrift</button></div><div id="studentBody">${studentOverview(s)}</div>`)}
 function studentTab(tab,sid,btn){document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');const s=getStudent(sid),body=document.getElementById('studentBody');if(tab==='overview')body.innerHTML=studentOverview(s);if(tab==='diagram')body.innerHTML=diagram(s);if(tab==='lessons')body.innerHTML=studentLessons(s);if(tab==='signature')body.innerHTML=signature(s)}
 function studentOverview(s){
  const specialTypes=[
@@ -2378,6 +2400,7 @@ let dpCloudRealtimeTimer=null;
 let dpCloudRealtimeConnected=false;
 let dpCloudFallbackTimer=null;
 let dpCloudKnownStudentIds=new Set();
+let dpCloudRealtimeStarting=false;
 
 function dpCloudClient(){return window.driveProAuth?.client||null}
 function dpCloudUserId(){return window.driveProAuth?.user?.id||null}
@@ -2428,70 +2451,27 @@ function dpCloudLessonRow(s,l,uid){
   notes:l.note||l.notes||'',color:l.color||null
  };
 }
-/* V90.9 – robust training_progress sync
-   The previous version did SELECT -> INSERT. Two simultaneous syncs could
-   both see "no row yet" and then both INSERT, causing the unique-key 409:
-   training_progress_student_id_area_name_key.
-   We now use a real UPSERT on the same unique key and serialize syncs per
-   student so background/realtime/manual syncs cannot race each other. */
-const dpCloudProgressLocks=new Map();
-
-async function dpCloudSyncProgressLocked(s){
- const client=dpCloudClient(),uid=dpCloudUserId();
- if(!client||!uid||!s)return;
-
- /* Remove duplicate area names from the local array before writing. */
- const areasByName=new Map();
- for(const a of (s.areas||[])){
-  if(a && a.name) areasByName.set(a.name,a);
- }
- const areas=[...areasByName.values()];
- const wanted=new Set(areas.map(a=>a.name));
-
- /* One UPSERT request is atomic and matches the database's unique key. */
- if(areas.length){
-  const payload=areas.map(a=>({
-   user_id:uid,
-   student_id:s.id,
-   area_name:a.name,
-   level:a.level||'Offen',
-   note:a.note||''
-  }));
-  const r=await client
-    .from('training_progress')
-    .upsert(payload,{onConflict:'student_id,area_name'});
-  if(r.error)throw r.error;
- }
-
- /* Only remove progress areas that were intentionally removed locally. */
- const q=await client.from('training_progress')
-   .select('id,area_name')
-   .eq('user_id',uid)
-   .eq('student_id',s.id);
- if(q.error)throw q.error;
- for(const old of (q.data||[])){
-  if(!wanted.has(old.area_name)){
-   const r=await client.from('training_progress')
-     .delete().eq('id',old.id).eq('user_id',uid).eq('student_id',s.id);
-   if(r.error)throw r.error;
-  }
- }
-}
-
 async function dpCloudSyncProgress(s){
  const client=dpCloudClient(),uid=dpCloudUserId();
  if(!client||!uid||!s)return;
-
- /* Serialize all progress writes for this student. This protects against
-    save + realtime + fallback retries running at the same time. */
- const key=`${uid}:${s.id}`;
- const previous=dpCloudProgressLocks.get(key)||Promise.resolve();
- const current=previous.catch(()=>{}).then(()=>dpCloudSyncProgressLocked(s));
- dpCloudProgressLocks.set(key,current);
- try{
-  return await current;
- }finally{
-  if(dpCloudProgressLocks.get(key)===current)dpCloudProgressLocks.delete(key);
+ const q=await client.from('training_progress').select('id,area_name').eq('user_id',uid).eq('student_id',s.id);
+ if(q.error)throw q.error;
+ const existing=q.data||[];
+ const wanted=new Set();
+ for(const a of (s.areas||[])){
+  wanted.add(a.name);
+  const old=existing.find(x=>x.area_name===a.name);
+  const payload={user_id:uid,student_id:s.id,area_name:a.name,level:a.level||'Offen',note:a.note||''};
+  const r=old
+    ?await client.from('training_progress').update({level:payload.level,note:payload.note}).eq('id',old.id).eq('user_id',uid)
+    :await client.from('training_progress').insert(payload);
+  if(r.error)throw r.error;
+ }
+ for(const old of existing){
+  if(!wanted.has(old.area_name)){
+   const r=await client.from('training_progress').delete().eq('id',old.id).eq('user_id',uid);
+   if(r.error)throw r.error;
+  }
  }
 }
 async function dpCloudUpsertStudent(s){
@@ -2524,6 +2504,19 @@ async function dpCloudDeleteLesson(lid){
  const r=await client.from('lessons').delete().eq('id',lid).eq('user_id',uid);
  if(r.error)throw r.error;
  dpCloudStatus('ok','Fahrstunde aus der Cloud gelöscht.');
+}
+async function dpCloudDeleteStudent(sid){
+ const client=dpCloudClient(),uid=dpCloudUserId();
+ if(!client||!uid||!sid)return;
+ dpCloudStatus('syncing','Fahrschüler wird aus der Cloud gelöscht …');
+ let r=await client.from('training_progress').delete().eq('user_id',uid).eq('student_id',sid);
+ if(r.error)throw r.error;
+ r=await client.from('lessons').delete().eq('user_id',uid).eq('student_id',sid);
+ if(r.error)throw r.error;
+ r=await client.from('students').delete().eq('user_id',uid).eq('id',sid);
+ if(r.error)throw r.error;
+ dpCloudKnownStudentIds.delete(sid);
+ dpCloudStatus('ok','Fahrschüler aus der Cloud gelöscht.');
 }
 async function dpCloudDeleteAll(){
  const client=dpCloudClient(),uid=dpCloudUserId();
@@ -2565,7 +2558,7 @@ async function dpCloudMigrateLocal(sourceStudents=students){
  }else{
   localStorage.setItem(DP_CLOUD_OWNER_KEY,uid);
   dpCloudReady=true;
-  dpCloudStatus('ok',`${migrated} Fahrschüler mit der Cloud synchronisiert.`);
+  dpCloudStatus('ok',`${migrated} Fahrschüler mit der Cloud synchronisiert. Automatische Synchronisation aktiv.`);
  }
  return {migrated,failed};
 }
@@ -2651,11 +2644,11 @@ async function dpCloudLoad(){
 
   localStorage.setItem(DP_CLOUD_OWNER_KEY,uid);
   dpCloudReady=true;
-  if(!dpCloudRealtimeConnected)dpCloudStartFallback();
+  dpCloudStartFallback();
   if(stillLocal.length){
    dpCloudStatus('error',`${cloudMapped.length} Cloud-Fahrschüler geladen; ${stillLocal.length} lokale Daten warten noch auf Synchronisation.`);
   }else{
-   dpCloudStatus('ok',`${students.length} Fahrschüler mit der Cloud synchronisiert.`);
+   dpCloudStatus('ok',`${students.length} Fahrschüler mit der Cloud synchronisiert. Automatische Synchronisation aktiv.`);
   }
  }catch(err){
   const msg=err?.message||'Unbekannter Cloud-Lesefehler';
@@ -2677,11 +2670,11 @@ function dpCloudScheduleReload(reason){
   }
  },350);
 }
-let dpCloudRetryDelay=5000;
+let dpCloudRetryDelay=3000;
 function dpCloudStartFallback(){
  if(dpCloudFallbackTimer||!dpCloudReady)return;
  dpCloudFallbackTimer=setInterval(()=>{
-  if(!dpCloudReady||dpCloudRealtimeConnected||dpCloudBusy)return;
+  if(!dpCloudReady||dpCloudBusy)return;
   dpCloudLoad().catch(e=>console.error('DrivePro Fallback-Sync:',e));
  },dpCloudRetryDelay);
 }
@@ -2692,42 +2685,47 @@ function dpCloudStopFallback(){
 
 async function dpCloudStartRealtime(){
  const client=dpCloudClient(),uid=dpCloudUserId();
- if(!client||!uid)return;
-
- if(dpCloudChannel){
-  try{await client.removeChannel(dpCloudChannel)}catch(e){}
-  dpCloudChannel=null;
- }
-
- /* Supabase Realtime: changes made on another device are pushed here
-    immediately. The small debounce groups multiple changes together. */
- dpCloudChannel=client.channel('drivepro-cloud-sync-'+uid)
-   .on('postgres_changes',{event:'*',schema:'public',table:'students',filter:`user_id=eq.${uid}`},
-      payload=>{
-       if(payload.eventType==='DELETE' && payload.old?.id && dpCloudKnownStudentIds.has(payload.old.id)){
-        students=students.filter(s=>s.id!==payload.old.id);
-        save();
-        dpCloudKnownStudentIds.delete(payload.old.id);
-        render();
-       }
-       dpCloudScheduleReload('students');
-      })
-   .on('postgres_changes',{event:'*',schema:'public',table:'lessons',filter:`user_id=eq.${uid}`},
-      ()=>dpCloudScheduleReload('lessons'))
-   .on('postgres_changes',{event:'*',schema:'public',table:'training_progress',filter:`user_id=eq.${uid}`},
-      ()=>dpCloudScheduleReload('training_progress'))
+ if(!client||!uid||dpCloudRealtimeStarting)return;
+ if(dpCloudChannel)return;
+ dpCloudRealtimeStarting=true;
+ try{
+  /* Realtime is an optional acceleration layer. The normal cloud sync must
+     keep working even when Supabase Realtime returns 403 or is unavailable. */
+  const channel=client.channel('drivepro-cloud-sync-'+uid);
+  dpCloudChannel=channel;
+  channel
+   .on('postgres_changes',{event:'*',schema:'public',table:'students',filter:`user_id=eq.${uid}`},payload=>{
+      if(payload.eventType==='DELETE' && payload.old?.id){
+       students=students.filter(s=>s.id!==payload.old.id);
+       save();
+       dpCloudKnownStudentIds.delete(payload.old.id);
+       render();
+      }
+      dpCloudScheduleReload('students');
+   })
+   .on('postgres_changes',{event:'*',schema:'public',table:'lessons',filter:`user_id=eq.${uid}`},()=>dpCloudScheduleReload('lessons'))
+   .on('postgres_changes',{event:'*',schema:'public',table:'training_progress',filter:`user_id=eq.${uid}`},()=>dpCloudScheduleReload('training_progress'))
    .subscribe(status=>{
       if(status==='SUBSCRIBED'){
        dpCloudRealtimeConnected=true;
-       dpCloudStopFallback();
        dpCloudStatus('ok','Cloud-Synchronisation aktiv');
-      }else if(status==='CHANNEL_ERROR' || status==='TIMED_OUT' || status==='CLOSED'){
+      }else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
        console.warn('DrivePro Realtime:',status);
        dpCloudRealtimeConnected=false;
-       dpCloudStatus('ok','Cloud gespeichert – Live-Sync versucht Verbindung herzustellen');
+       dpCloudStatus('ok','Cloud gespeichert – Live-Sync nicht verfügbar, automatische Synchronisation aktiv');
        dpCloudStartFallback();
+       if(dpCloudChannel===channel)dpCloudChannel=null;
       }
    });
+ }catch(e){
+  console.warn('DrivePro Realtime nicht verfügbar:',e);
+  dpCloudRealtimeConnected=false;
+  dpCloudChannel=null;
+  dpCloudStatus('ok','Cloud gespeichert – automatische Synchronisation aktiv');
+  dpCloudStartFallback();
+ }finally{
+  dpCloudRealtimeStarting=false;
+ }
 }
 
 function dpCloudStopRealtime(){
@@ -2739,13 +2737,14 @@ function dpCloudStopRealtime(){
   try{client.removeChannel(dpCloudChannel)}catch(e){}
  }
  dpCloudChannel=null;
+ dpCloudRealtimeStarting=false;
 }
 
-function dpCloudHandleReady(){setTimeout(async()=>{await dpCloudLoad();await dpCloudStartRealtime()},0)}
-function dpCloudHandleLogout(){dpCloudStopRealtime();dpCloudReady=false;dpCloudBusy=false;dpCloudKnownStudentIds=new Set();dpCloudProgressLocks.clear();dpCloudStatus('','')}
+function dpCloudHandleReady(){setTimeout(async()=>{await dpCloudLoad();dpCloudStartFallback()},0)}
+function dpCloudHandleLogout(){dpCloudStopRealtime();dpCloudReady=false;dpCloudBusy=false;dpCloudKnownStudentIds=new Set();dpCloudStatus('','')}
 window.addEventListener('drivepro:auth-ready',dpCloudHandleReady);
 window.addEventListener('drivepro:auth-logout',dpCloudHandleLogout);
-window.addEventListener('online',()=>{if(dpCloudReady)dpCloudLoad().then(()=>dpCloudStartRealtime()).catch(e=>console.error('DrivePro reconnect-sync:',e))});
+window.addEventListener('online',()=>{if(dpCloudReady)dpCloudLoad().catch(e=>console.error('DrivePro reconnect-sync:',e))});
 document.addEventListener('visibilitychange',()=>{
  if(document.visibilityState==='visible' && dpCloudReady && !dpCloudBusy){
   dpCloudLoad().catch(e=>console.error('DrivePro visibility-sync:',e));
