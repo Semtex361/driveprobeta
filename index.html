@@ -1127,6 +1127,27 @@ body{overflow-x:hidden}
 .studentCompleteBtn:hover{transform:translateY(-1px);filter:brightness(1.03)}
 @media(max-width:650px){.profileHeader{align-items:flex-start!important}.profileActions{width:100%}.profileActions button{flex:1}.studentCompleteBtn{min-width:100%}}
 
+/* V90.20 – iPad calendar layout: keep the navigation compact and the calendar readable */
+body.dpTouchTablet .side{width:82px!important;padding:22px 8px!important}
+body.dpTouchTablet .main{margin-left:82px!important}
+body.dpTouchTablet .brand{justify-content:center!important;padding:6px 0 25px!important}
+body.dpTouchTablet .brand > div:not(.logo){display:none!important}
+body.dpTouchTablet .nav button{font-size:0!important;text-align:center!important;padding:12px 6px!important}
+body.dpTouchTablet .nav button span,body.dpTouchTablet .nav button .icon{margin:0!important;width:auto!important;font-size:19px!important}
+body.dpTouchTablet .sidefoot{display:none!important}
+body.dpTouchTablet .content{padding:24px 18px 42px!important}
+body.dpTouchTablet .dpTimelineWrap{overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;scrollbar-width:thin}
+body.dpTouchTablet .dpTimelineGrid{min-width:1080px!important;width:1080px!important;grid-template-columns:repeat(7,minmax(145px,1fr))!important;gap:8px!important}
+body.dpTouchTablet .dpWeekHead{padding:11px 9px!important}
+body.dpTouchTablet .dpWeekHead span{font-size:10px!important}
+body.dpTouchTablet .dpWeekHead b{font-size:19px!important}
+body.dpTouchTablet .dpTimelineEvent{left:31px!important;right:6px!important;padding:8px 8px!important}
+body.dpTouchTablet .dpTimelineEvent b{font-size:9px!important}
+body.dpTouchTablet .dpTimelineEvent strong{font-size:10px!important}
+body.dpTouchTablet .dpTimelineEvent small{font-size:8px!important}
+body.dpTouchTablet .dpTimelineLine span{left:4px!important;font-size:8px!important}
+body.dpTouchTablet .dpTimelineEmpty{left:31px!important;font-size:8px!important}
+
 /* V69 – Wochenkalender mit Tages-Timeline */
 .dpTimelineWrap{position:relative;overflow-x:auto;padding-bottom:4px}
 .dpTimelineGrid{display:grid;grid-template-columns:repeat(7,minmax(150px,1fr));gap:8px;min-width:980px}
@@ -1714,7 +1735,7 @@ function applyTheme(){
 }
 applyTheme();
 const DEFAULT_AREAS=["Fahrzeugbedienung","Anfahren / Anhalten","Blickführung","Verkehrsbeobachtung","Geschwindigkeit","Abbiegen","Spurwechsel","Fahrstreifenwahl","Abstände","Verkehrszeichen / Ampeln","Kreuzungen","Kreisverkehr","Rückwärtsfahren","Einparken","Grundfahraufgaben","Landstraße","Autobahn","Nachtfahrt","Prüfungsreife"];
-const state={page:'dashboard',studentId:null,month:new Date(),calendarView:'week',calendarWeekDate:null};
+const state={page:'dashboard',studentId:null,month:new Date(),calendarView:'week',calendarWeekDate:null,calendarScrollLeft:0};
 let students=[];
 try{students=JSON.parse(localStorage.getItem(KEY)||'[]')||[]}catch(e){students=[]}
 function getActivityLog(){try{return JSON.parse(localStorage.getItem('drivepro_activity_log')||'[]')}catch(e){return[]}}
@@ -1918,7 +1939,7 @@ function saveLesson(oldStudentId,lessonId){
    changedLesson={id:id(),...data,signature:null};
    s.lessons.push(changedLesson);notificationAction='added';
  }
- dpCloudMarkLessonPending(changedLesson.id);save();closeModal();render();
+ dpCloudMarkLessonPending(changedLesson.id,changedLesson);save();closeModal();render();
  const actionText=notificationAction==='added'?'Neue Fahrstunde angelegt':`Fahrstunde geändert: ${changedLesson.startTime||'—'} – ${endTime(changedLesson.startTime,changedLesson.duration)} · ${changedLesson.special||'Übungsfahrt'}`;
  logActivity(notificationAction,s,changedLesson,actionText);
  notifyLessonChange(notificationAction,s,changedLesson);
@@ -1962,7 +1983,7 @@ function clearLessonSignature(sid,lid){
 function saveLessonSignature(sid,lid){
  const c=document.getElementById('lessonSignatureCanvas');if(!c)return;
  const s=getStudent(sid),l=s?.lessons.find(x=>x.id===lid);if(!l)return;
- l.signature=c.toDataURL('image/png');dpCloudMarkLessonPending(l.id);save();if(dpCloudReady)dpCloudUpsertLesson(s,l).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Unterschrift konnte nicht synchronisiert werden')});
+ l.signature=c.toDataURL('image/png');dpCloudMarkLessonPending(l.id,l);save();if(dpCloudReady)dpCloudUpsertLesson(s,l).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Unterschrift konnte nicht synchronisiert werden')});
  const btn=document.querySelector('.lessonSignature .primary');if(btn){const old=btn.textContent;btn.textContent='✓ Gespeichert';setTimeout(()=>btn.textContent=old,1200)}
 }
 function signature(s){return `<h3>Unterschrift des Fahrschülers</h3><div class="hint">Mit Maus, Touchscreen oder Stift unterschreiben.</div><div class="sigwrap" style="margin-top:10px"><div class="sighead"><span>${esc(s.firstName+' '+s.lastName)}</span><button onclick="clearSignature()">Löschen</button></div><canvas id="signatureCanvas" class="signature" width="700" height="180"></canvas></div><div class="actions"><button class="primary" onclick="saveSignature('${s.id}')">Unterschrift speichern</button></div>`}
@@ -2163,6 +2184,8 @@ function endTime(start,duration){
  return String(Math.floor(mins/60)).padStart(2,'0')+':'+String(mins%60).padStart(2,'0');
 }
 function calendarPage(){
+ const oldWrap=document.querySelector('.dpTimelineWrap');
+ if(oldWrap)state.calendarScrollLeft=oldWrap.scrollLeft;
  const now=new Date();
  const view=state.calendarView||'week';
  const fmt=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -2246,6 +2269,11 @@ function calendarPage(){
    </div>
    <div class="dpTimelineWrap"><div class="dpTimelineGrid">${cells}</div>${currentTimeHtml}</div>
  </div>`;
+ const newWrap=document.querySelector('.dpTimelineWrap');
+ if(newWrap){
+   newWrap.scrollLeft=Math.max(0,Math.min(state.calendarScrollLeft,newWrap.scrollWidth-newWrap.clientWidth));
+   newWrap.addEventListener('scroll',()=>{state.calendarScrollLeft=newWrap.scrollLeft},{passive:true});
+ }
  initTimelineDrag();
  initTimelineContextMenu();
  initTimelineLongPress();
@@ -2378,7 +2406,7 @@ function initTimelineDrag(){
        showConflictOverlay({newTime:`${data.startTime} – ${endTime(data.startTime,data.duration)}`,oldTime:`${conflict.lesson.startTime||'--:--'} – ${endTime(conflict.lesson.startTime,conflict.lesson.duration)}`,name:esc(conflict.student.firstName+' '+conflict.student.lastName)});
        return;
      }
-     const previousDate=lesson.date,previousTime=lesson.startTime;lesson.date=data.date;lesson.startTime=data.startTime;dpCloudMarkLessonPending(lesson.id);dpCloudBackupLocal();save();state.calendarWeekDate=data.date;render();logActivity('moved',getStudent(d.sid),lesson,`Verschoben von ${fmtDate(previousDate)} ${previousTime||'—'} nach ${fmtDate(lesson.date)} ${lesson.startTime||'—'}`);notifyLessonChange('edited',getStudent(d.sid),lesson);if(dpCloudReady)dpCloudUpsertLesson(getStudent(d.sid),lesson).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Verschieben konnte nicht synchronisiert werden')});
+     const previousDate=lesson.date,previousTime=lesson.startTime;lesson.date=data.date;lesson.startTime=data.startTime;dpCloudMarkLessonPending(lesson.id,lesson);dpCloudBackupLocal();save();state.calendarWeekDate=data.date;render();logActivity('moved',getStudent(d.sid),lesson,`Verschoben von ${fmtDate(previousDate)} ${previousTime||'—'} nach ${fmtDate(lesson.date)} ${lesson.startTime||'—'}`);notifyLessonChange('edited',getStudent(d.sid),lesson);if(dpCloudReady)dpCloudUpsertLesson(getStudent(d.sid),lesson).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Verschieben konnte nicht synchronisiert werden')});
    });
    el.addEventListener('pointercancel',()=>{if(drag){drag=null;el.classList.remove('dragging');el.style.transform=''}document.querySelector('.dpDragPreview')?.remove()});
  });
@@ -2474,6 +2502,7 @@ let dpCloudLoadQueued=false;
 let dpCloudLastLessonWriteAt=0;
 let dpCloudKnownStudentIds=new Set();
 let dpCloudPendingLessonIds=new Set();
+let dpCloudPendingLessonSnapshots=new Map();
 let dpCloudPendingProgressStudentIds=new Set();
 let dpCloudDeletingStudentIds=new Set();
 let dpCloudPendingStudentIds=new Set();
@@ -2488,8 +2517,20 @@ function dpCloudQueue(task){
 }
 function dpCloudMarkPending(sid){if(sid)dpCloudPendingStudentIds.add(sid)}
 function dpCloudClearPending(sid){if(sid)dpCloudPendingStudentIds.delete(sid)}
-function dpCloudMarkLessonPending(lid){if(lid)dpCloudPendingLessonIds.add(lid)}
-function dpCloudClearLessonPending(lid){if(lid)dpCloudPendingLessonIds.delete(lid)}
+function dpCloudMarkLessonPending(lid,lesson){
+ if(!lid)return;
+ dpCloudPendingLessonIds.add(lid);
+ if(lesson)dpCloudPendingLessonSnapshots.set(lid,JSON.parse(JSON.stringify(lesson)));
+ else{
+  for(const s of (students||[])){const l=(s.lessons||[]).find(x=>x.id===lid);if(l){dpCloudPendingLessonSnapshots.set(lid,JSON.parse(JSON.stringify(l)));break}}
+ }
+}
+function dpCloudClearLessonPending(lid){if(lid){dpCloudPendingLessonIds.delete(lid);dpCloudPendingLessonSnapshots.delete(lid)}}
+function dpCloudLessonMatchesSnapshot(row,snap){
+ if(!row||!snap)return false;
+ const clean=v=>v==null?'':String(v);
+ return clean(row.lesson_date)===clean(snap.date) && clean(row.start_time).slice(0,5)===clean(snap.startTime).slice(0,5) && Number(row.duration_minutes||0)===Number(snap.duration||0) && clean(row.special_type)===clean(snap.special) && clean(row.notes)===clean(snap.note||snap.notes);
+}
 function dpCloudMarkProgressPending(sid){if(sid)dpCloudPendingProgressStudentIds.add(sid)}
 function dpCloudClearProgressPending(sid){if(sid)dpCloudPendingProgressStudentIds.delete(sid)}
 
@@ -2587,7 +2628,7 @@ async function dpCloudUpsertLesson(s,l,silent=false,alreadyQueued=false){
   if(r.error)throw r.error;
  };
  if(!silent)dpCloudStatus('syncing','Fahrstunde wird gespeichert …');
- try{await (alreadyQueued?work():dpCloudQueue(work));dpCloudClearLessonPending(l.id);if(!silent)dpCloudStatus('ok','Fahrstunde in der Cloud gespeichert.')}catch(e){if(!silent)dpCloudStatus('error',e?.message||'Fahrstunde konnte nicht synchronisiert werden.');throw e}
+ try{await (alreadyQueued?work():dpCloudQueue(work));if(!silent)dpCloudStatus('ok','Fahrstunde in der Cloud gespeichert.');/* Keep the pending snapshot until a later cloud read confirms it. This prevents a fast polling cycle from replacing a just-saved lesson with stale data. */}catch(e){if(!silent)dpCloudStatus('error',e?.message||'Fahrstunde konnte nicht synchronisiert werden.');throw e}
 }
 async function dpCloudDeleteLesson(lid){
  const client=dpCloudClient(),uid=dpCloudUserId();if(!client||!uid||!lid)return;
@@ -2701,6 +2742,16 @@ async function dpCloudLoad(){
    console.warn('DrivePro: Fahrstunden konnten nicht geladen werden:',e);
   }
 
+  /* A successful REST upsert can be followed by a poll before the UI's read
+     sees the newest row. Keep the exact local snapshot until the cloud read
+     confirms the same values. */
+  const lessonRowsById=new Map(lessonRows.map(x=>[x.id,x]));
+  for(const lid of [...dpCloudPendingLessonIds]){
+   const snap=dpCloudPendingLessonSnapshots.get(lid);
+   const row=lessonRowsById.get(lid);
+   if(row && dpCloudLessonMatchesSnapshot(row,snap)) dpCloudClearLessonPending(lid);
+  }
+
   let cloudStudents=(sr.data||[]).filter(r=>!deletedIds.has(String(r.id))&&!dpCloudDeletingStudentIds.has(String(r.id)));
 
   const hasOwner=localStorage.getItem(DP_CLOUD_OWNER_KEY)===uid;
@@ -2772,8 +2823,19 @@ async function dpCloudLoad(){
    const localStudent=(students||[]).find(s=>s.id===row.id);
    if(localStudent){
     const cloudLessonIds=new Set(mappedLessons.map(x=>x.id));
+    /* Pending snapshots win over stale cloud rows until the cloud read has
+       positively acknowledged the write. */
+    for(const [lid,snap] of dpCloudPendingLessonSnapshots){
+     const owner=(students||[]).find(st=>(st.lessons||[]).some(ll=>ll.id===lid));
+     if(!owner || owner.id!==row.id)continue;
+     if(!cloudLessonIds.has(lid))mappedLessons.push({...snap});
+     else{
+      const idx=mappedLessons.findIndex(x=>x.id===lid);
+      if(idx>=0)mappedLessons[idx]={...snap};
+     }
+    }
     for(const localLesson of (localStudent.lessons||[])){
-     if(dpCloudPendingLessonIds.has(localLesson.id) && !cloudLessonIds.has(localLesson.id))mappedLessons.push({...localLesson});
+     if(dpCloudPendingLessonIds.has(localLesson.id) && !cloudLessonIds.has(localLesson.id) && !mappedLessons.some(x=>x.id===localLesson.id))mappedLessons.push({...localLesson});
     }
    }
    return {
@@ -2839,12 +2901,23 @@ function dpCloudStartPolling(){
 }
 function dpCloudStopPolling(){if(dpCloudPollTimer){clearInterval(dpCloudPollTimer);dpCloudPollTimer=null}}
 function dpCloudHandleReady(){setTimeout(async()=>{await dpCloudLoad();dpCloudStartPolling()},0)}
-function dpCloudHandleLogout(){dpCloudStopPolling();dpCloudReady=false;dpCloudBusy=false;dpCloudKnownStudentIds=new Set();dpCloudDeletingStudentIds=new Set();dpCloudPendingStudentIds=new Set();dpCloudPendingLessonIds=new Set();dpCloudPendingProgressStudentIds=new Set();dpCloudStatus('','')}
+function dpCloudHandleLogout(){dpCloudStopPolling();dpCloudReady=false;dpCloudBusy=false;dpCloudKnownStudentIds=new Set();dpCloudDeletingStudentIds=new Set();dpCloudPendingStudentIds=new Set();dpCloudPendingLessonIds=new Set();dpCloudPendingLessonSnapshots=new Map();dpCloudPendingProgressStudentIds=new Set();dpCloudStatus('','')}
 window.addEventListener('drivepro:auth-ready',dpCloudHandleReady);
 window.addEventListener('drivepro:auth-logout',dpCloudHandleLogout);
 window.addEventListener('online',()=>{if(dpCloudReady)dpCloudLoad().catch(e=>console.error('DrivePro reconnect-sync:',e))});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&dpCloudReady&&!dpCloudBusy)dpCloudLoad().catch(e=>console.error('DrivePro visibility-sync:',e))});
 window.addEventListener('focus',()=>{if(dpCloudReady&&!dpCloudBusy)dpCloudLoad().catch(e=>console.error('DrivePro focus-sync:',e))});
+
+/* iPad/tablet layout: use touch capability rather than fragile browser UA
+   detection. This keeps the sidebar compact so the calendar gets real width. */
+(function(){
+ const touch=('ontouchstart' in window)||(navigator.maxTouchPoints>0);
+ if(touch && window.innerWidth>=701 && window.innerWidth<=1400) document.body.classList.add('dpTouchTablet');
+})();
+window.addEventListener('resize',()=>{
+ const touch=('ontouchstart' in window)||(navigator.maxTouchPoints>0);
+ document.body.classList.toggle('dpTouchTablet',touch && window.innerWidth>=701 && window.innerWidth<=1400);
+});
 
 render()
 </script>
