@@ -1985,7 +1985,18 @@ function openLessonDetail(sid,lid){
  <div class="actions"><button class="danger" onclick="deleteLesson('${sid}','${lid}')">Löschen</button><button class="secondary" onclick="closeModal();openLessonForm('${sid}','${lid}')">Bearbeiten</button></div>`);
  setTimeout(()=>initLessonSignature(sid,lid),30);
 }
-function deleteLesson(sid,lid){if(!confirm('Fahrstunde wirklich löschen?'))return;const s=getStudent(sid),lesson=s.lessons.find(l=>l.id===lid);if(!lesson)return;dpCloudMarkLessonPending(lid);s.lessons=s.lessons.filter(l=>l.id!==lid);save();closeModal();render();logActivity('deleted',s,lesson,`Fahrstunde gelöscht: ${lesson.startTime||'—'} – ${endTime(lesson.startTime,lesson.duration)} · ${lesson.special||'Übungsfahrt'}`);notifyLessonChange('deleted',s,lesson);if(dpCloudReady)dpCloudDeleteLesson(lid).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Löschen konnte nicht synchronisiert werden')})}
+async function deleteLesson(sid,lid){
+ if(!confirm('Fahrstunde wirklich löschen?'))return;
+ const s=getStudent(sid),lesson=s?.lessons?.find(l=>l.id===lid);if(!lesson)return;
+ dpCloudDeletingLessonIds.add(String(lid));
+ s.lessons=s.lessons.filter(l=>l.id!==lid);save();closeModal();render();
+ logActivity('deleted',s,lesson,`Fahrstunde gelöscht: ${lesson.startTime||'—'} – ${endTime(lesson.startTime,lesson.duration)} · ${lesson.special||'Übungsfahrt'}`);
+ notifyLessonChange('deleted',s,lesson);
+ if(!dpCloudReady){dpCloudDeletingLessonIds.delete(String(lid));return}
+ try{await dpCloudDeleteLesson(lid);dpCloudRememberDeletedLesson(lid);dpCloudStatus('ok','Fahrstunde dauerhaft gelöscht.');}
+ catch(e){dpCloudDeletingLessonIds.delete(String(lid));s.lessons.push(lesson);save();render();console.error('DrivePro: Fahrstunde konnte nicht gelöscht werden',lid,e);dpCloudStatus('error',e.message||'Löschen konnte nicht synchronisiert werden');alert(`Die Fahrstunde konnte nicht vollständig gelöscht werden.\n\n${e.message||'Unbekannter Cloud-Fehler'}\n\nSie wurde lokal wiederhergestellt.`)}
+ finally{dpCloudDeletingLessonIds.delete(String(lid))}
+}
 function initLessonSignature(sid,lid){
  const c=document.getElementById('lessonSignatureCanvas'); if(!c)return;
  const ctx=c.getContext('2d'); ctx.lineWidth=3; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#173b69';
@@ -2532,6 +2543,9 @@ let dpCloudPendingLessonIds=new Set();
 let dpCloudPendingLessonSnapshots=new Map();
 let dpCloudPendingProgressStudentIds=new Set();
 let dpCloudDeletingStudentIds=new Set();
+let dpCloudDeletingLessonIds=new Set();
+let dpCloudDeletedLessonIds=new Set();
+try{dpCloudDeletedLessonIds=new Set(JSON.parse(localStorage.getItem('drivepro_deleted_lessons_v930')||'[]').map(String))}catch(e){}
 let dpCloudPendingStudentIds=new Set();
 let dpCloudWriteQueue=Promise.resolve();
 
@@ -2544,6 +2558,12 @@ function dpCloudQueue(task){
 }
 function dpCloudMarkPending(sid){if(sid)dpCloudPendingStudentIds.add(sid)}
 function dpCloudClearPending(sid){if(sid)dpCloudPendingStudentIds.delete(sid)}
+function dpCloudRememberDeletedLesson(lid){
+ if(!lid)return;
+ dpCloudDeletedLessonIds.add(String(lid));
+ try{localStorage.setItem('drivepro_deleted_lessons_v930',JSON.stringify([...dpCloudDeletedLessonIds]))}catch(e){}
+ dpCloudClearLessonPending(lid);
+}
 function dpCloudMarkLessonPending(lid,lesson){
  if(!lid)return;
  dpCloudPendingLessonIds.add(lid);
@@ -2656,7 +2676,7 @@ async function dpCloudUpsertStudent(s){
    const r=await client.from('students').upsert(dpCloudStudentRow(s,uid),{onConflict:'id'});
    if(r.error)throw r.error;
    await dpCloudSyncProgress(s,true);
-   for(const l of (s.lessons||[]))await dpCloudUpsertLesson(s,l,true,true);
+   for(const l of (s.lessons||[])){if(dpCloudDeletedLessonIds.has(String(l.id))||dpCloudDeletingLessonIds.has(String(l.id)))continue;await dpCloudUpsertLesson(s,l,true,true);}
   });
   dpCloudReady=true;dpCloudClearPending(s.id);dpCloudStatus('ok','Fahrschüler und Ausbildungsstand sind in der Cloud gespeichert.');
  }catch(e){dpCloudStatus('error',e?.message||'Fahrschüler konnte nicht synchronisiert werden.');throw e}
@@ -2674,25 +2694,9 @@ async function dpCloudUpsertLesson(s,l,silent=false,alreadyQueued=false){
 }
 async function dpCloudDeleteLesson(lid){
  const client=dpCloudClient(),uid=dpCloudUserId();if(!client||!uid||!lid)return;
- dpCloudStatus('syncing','Fahrstunde wird gelöscht …');
- try{
-  await dpCloudQueue(async()=>{
-   let r=await client.rpc('drivepro_delete_lesson',{p_lesson_id:lid});
-   if(r.error)throw r.error;
-   /* Verify the authoritative cloud state. This prevents a successful-looking
-      UI delete when the database row is still present. */
-   let check=await client.from('lessons').select('id').eq('id',lid).eq('user_id',uid).maybeSingle();
-   if(check.error)throw check.error;
-   if(check.data){
-    const fallback=await client.from('lessons').delete().eq('id',lid).eq('user_id',uid).select('id').maybeSingle();
-    if(fallback.error)throw fallback.error;
-    if(fallback.data) check=await client.from('lessons').select('id').eq('id',lid).eq('user_id',uid).maybeSingle();
-    if(check.error)throw check.error;
-    if(check.data)throw new Error('Supabase hat die Fahrstunde nach dem Löschen weiterhin gespeichert.');
-   }
-  });
-  dpCloudClearLessonPending(lid);dpCloudStatus('ok','Fahrstunde dauerhaft aus der Cloud gelöscht.');
- }catch(e){dpCloudStatus('error',e?.message||'Fahrstunde konnte nicht gelöscht werden.');throw e}
+ dpCloudStatus('syncing','Fahrstunde wird dauerhaft gelöscht …');
+ await dpCloudQueue(async()=>{const r=await client.rpc('drivepro_delete_lesson',{p_lesson_id:lid});if(r.error)throw r.error;const check=await client.from('lessons').select('id').eq('id',lid).eq('user_id',uid).maybeSingle();if(check.error)throw check.error;if(check.data)throw new Error('Supabase hat die Fahrstunde nach dem Löschen weiterhin gespeichert.');});
+ dpCloudClearLessonPending(lid);
 }
 async function dpCloudCreateDeleteTombstone(sid,name){
 /* IMPORTANT: activity_log's CHECK constraint accepts the normal action
@@ -2717,6 +2721,11 @@ async function dpCloudGetDeletedIds(){
   if(sid)set.add(String(sid));
  }
  return set;
+}
+async function dpCloudGetDeletedLessonIds(){
+ const client=dpCloudClient(),uid=dpCloudUserId();if(!client||!uid)return new Set();
+ const r=await client.from('activity_log').select('metadata,action,created_at').eq('user_id',uid).eq('action','deleted').order('created_at',{ascending:false});if(r.error)throw r.error;
+ const set=new Set();for(const row of (r.data||[])){const lid=row?.metadata?.deleted_lesson_id;if(lid)set.add(String(lid))}return set;
 }
 async function dpCloudDeleteStudent(sid,name){
  const client=dpCloudClient(),uid=dpCloudUserId();if(!client||!uid||!sid)return;
@@ -2795,11 +2804,13 @@ async function dpCloudLoad(){
    dpCloudStatus('syncing','Fahrschüler werden synchronisiert …');
   }
 
+  let deletedLessonIds=new Set(dpCloudDeletedLessonIds);
+  try{const dl=await dpCloudGetDeletedLessonIds();for(const lid of dl)deletedLessonIds.add(String(lid))}catch(e){console.warn('DrivePro: Löschvermerke für Fahrstunden konnten nicht geladen werden:',e)}
   let lessonRows=[];
   try{
    const lr=await client.from('lessons').select('id,user_id,student_id,lesson_date,start_time,end_time,lesson_type,special_type,duration_minutes,kilometers,notes,color,signature,created_at,updated_at').eq('user_id',uid).order('lesson_date',{ascending:true}).order('start_time',{ascending:true});
    if(lr.error)throw lr.error;
-   lessonRows=lr.data||[];
+   lessonRows=(lr.data||[]).filter(x=>!deletedLessonIds.has(String(x.id))&&!dpCloudDeletingLessonIds.has(String(x.id)));
   }catch(e){
    console.warn('DrivePro: Fahrstunden konnten nicht geladen werden:',e);
   }
@@ -2860,6 +2871,7 @@ async function dpCloudLoad(){
     try{await dpCloudSyncProgress(s);dpCloudClearProgressPending(s.id)}catch(e){console.warn('DrivePro: Fortschritt wartet noch',s.id,e)}
    }
    for(const l of (s.lessons||[])){
+    if(dpCloudDeletedLessonIds.has(String(l.id))||dpCloudDeletingLessonIds.has(String(l.id)))continue;
     if(!dpCloudPendingLessonIds.has(l.id))continue;
     try{await dpCloudUpsertLesson(s,l,true);dpCloudClearLessonPending(l.id)}catch(e){console.warn('DrivePro: Fahrstunde wartet noch',l.id,e)}
    }
@@ -2888,6 +2900,7 @@ async function dpCloudLoad(){
     /* Pending snapshots win over stale cloud rows until the cloud read has
        positively acknowledged the write. */
     for(const [lid,snap] of dpCloudPendingLessonSnapshots){
+      if(deletedLessonIds.has(String(lid))||dpCloudDeletedLessonIds.has(String(lid)))continue;
      const owner=(students||[]).find(st=>(st.lessons||[]).some(ll=>ll.id===lid));
      if(!owner || owner.id!==row.id)continue;
      if(!cloudLessonIds.has(lid))mappedLessons.push({...snap});
@@ -2897,7 +2910,7 @@ async function dpCloudLoad(){
      }
     }
     for(const localLesson of (localStudent.lessons||[])){
-     if(dpCloudPendingLessonIds.has(localLesson.id) && !cloudLessonIds.has(localLesson.id) && !mappedLessons.some(x=>x.id===localLesson.id))mappedLessons.push({...localLesson});
+     if(!deletedLessonIds.has(String(localLesson.id)) && !dpCloudDeletedLessonIds.has(String(localLesson.id)) && dpCloudPendingLessonIds.has(localLesson.id) && !cloudLessonIds.has(localLesson.id) && !mappedLessons.some(x=>x.id===localLesson.id))mappedLessons.push({...localLesson});
     }
    }
    return {
@@ -2984,6 +2997,7 @@ async function dpCloudRealtimeApplyStudent(id){
 }
 async function dpCloudRealtimeApplyLesson(p){
  const row=p?.new||p?.old||{},lid=row.id;if(!lid)return;
+ if(dpCloudDeletedLessonIds.has(String(lid))||dpCloudDeletingLessonIds.has(String(lid))){if(p.eventType==='DELETE')dpCloudClearLessonPending(lid);return}
  let sid=row.student_id;
  if(!sid){for(const s of students)if((s.lessons||[]).some(l=>l.id===lid)){sid=s.id;break}}
  if(!sid)return;
@@ -3101,7 +3115,7 @@ async function dpCloudRetryPendingWrites(){
 function dpCloudHandleLogout(){
  dpCloudRealtimeStop();
  dpCloudStopPolling();dpCloudReady=false;dpCloudBusy=false;dpCloudInitialLoadDone=false;
- dpCloudKnownStudentIds=new Set();dpCloudDeletingStudentIds=new Set();
+ dpCloudKnownStudentIds=new Set();dpCloudDeletingStudentIds=new Set();dpCloudDeletingLessonIds=new Set();
  dpCloudPendingStudentIds=new Set();dpCloudPendingLessonIds=new Set();
  dpCloudPendingLessonSnapshots=new Map();dpCloudPendingProgressStudentIds=new Set();
  dpCloudStatus('','')
