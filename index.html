@@ -1878,8 +1878,16 @@ function diagram(s){return `<div class="diagramHead"><div><h3>Ausbildungsdiagram
  <button type="button" class="statusDot statusPractice ${a.level==='Übung'?'selected':''}" title="Üben" aria-label="Üben" onclick="setArea('${s.id}',${i},'Übung')"></button>
  <button type="button" class="statusDot statusSafe ${a.level==='Sicher'?'selected':''}" title="Sicher" aria-label="Sicher" onclick="setArea('${s.id}',${i},'Sicher')"></button>
  </div><input value="${esc(a.note)}" placeholder="Notiz…" onchange="setAreaNote('${s.id}',${i},this.value)"></div>`).join('')}`}
-function setArea(sid,i,v){const s=getStudent(sid);s.areas[i].level=v;dpCloudMarkPending(sid);dpCloudMarkProgressPending(sid);save();if(dpCloudReady)dpCloudSyncProgress(s).then(()=>{dpCloudStatus('ok','Ausbildungsstand gespeichert.')}).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')});const active=document.querySelector('.tabs .sel');studentTab('diagram',sid,active)}
-function setAreaNote(sid,i,v){const s=getStudent(sid);s.areas[i].note=v;dpCloudMarkPending(sid);dpCloudMarkProgressPending(sid);save();if(dpCloudReady)dpCloudSyncProgress(s).then(()=>{dpCloudStatus('ok','Ausbildungsnotiz gespeichert.')}).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}
+function setArea(sid,i,v){
+ const s=getStudent(sid);if(!s?.areas?.[i])return;
+ s.areas[i].level=v;dpCloudMarkPending(sid);dpCloudMarkProgressPending(sid);save();
+ if(dpCloudReady)dpCloudSyncProgressArea(s,s.areas[i].name).then(()=>{dpCloudStatus('ok','Ausbildungsstand gespeichert.')}).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')});
+}
+function setAreaNote(sid,i,v){
+ const s=getStudent(sid);if(!s?.areas?.[i])return;
+ s.areas[i].note=v;dpCloudMarkPending(sid);dpCloudMarkProgressPending(sid);save();
+ if(dpCloudReady)dpCloudSyncProgressArea(s,s.areas[i].name).then(()=>{dpCloudStatus('ok','Ausbildungsnotiz gespeichert.')}).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')});
+}
 function studentLessons(s){return `<div style="display:flex;justify-content:space-between;align-items:center"><h3>Gespeicherte Fahrstunden</h3><button class="primary" onclick="openLessonForm('${s.id}')">+ Fahrstunde</button></div>${s.lessons.slice().sort((a,b)=>(b.date+' '+b.startTime).localeCompare(a.date+' '+a.startTime)).map(l=>lessonRow(s,l,true)).join('')||'<div class="empty">Noch keine Fahrstunden.</div>'}`}
 function lessonRow(s,l,clickable=false){return `<div class="lesson ${clickable?'clickable':''}" ${clickable?`onclick="openLessonDetail('${s.id}','${l.id}')"`:''}><b>${fmtDate(l.date)} · ${fmtTime(l.startTime)}${l.endTime?'–'+l.endTime:''} · ${l.duration} Min.</b><div class="muted">${esc(l.special||'Übungsfahrt')} · ${esc(s.firstName+' '+s.lastName)}${l.km?' · '+l.km+' km':''}</div>${l.note?`<div class="small" style="margin-top:5px">${esc(l.note)}</div>`:''}</div>`}
 function openLessonForm(studentId='',lessonId='',presetDate='',presetTime=''){let s=studentId?getStudent(studentId):null,l=lessonId?s.lessons.find(x=>x.id===lessonId):null;const baseDate=new Date().toISOString().slice(0,10);openModal(`<h2>${l?'Fahrstunde bearbeiten':'Fahrstunde dokumentieren'}</h2><div class="row"><div class="field"><label>Fahrschüler</label><select id="ls">${students.map(x=>`<option value="${x.id}" ${x.id===(s?.id||'')?'selected':''}>${esc(x.firstName+' '+x.lastName)}</option>`).join('')}</select></div><div class="field"><label>Datum</label><input id="ld" type="date" value="${l?.date||presetDate||baseDate}"></div></div><div class="row"><div class="field"><label>Beginn</label><input id="lt" type="time" value="${l?.startTime||presetTime||'09:00'}"></div><div class="field"><label>Dauer (Minuten)</label><input id="lm" type="number" value="${l?.duration||appSettings.durations['Übungsfahrt']}"></div></div><div class="field"><label>Art</label><select id="lsp" onchange="setLessonDuration(this.value)">${['Übungsfahrt','B197 Fahrstunde','Überlandfahrt','Autobahnfahrt','Beleuchtungsfahrt','Prüfungsfahrt'].map(x=>`<option ${x===(l?.special||'Übungsfahrt')?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Bemerkung</label><textarea id="ln" rows="4">${esc(l?.note||'')}</textarea></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveLesson('${studentId}','${lessonId}')">${l?'Änderungen speichern':'Speichern'}</button></div>`)}
@@ -2587,6 +2595,27 @@ async function dpCloudProgressWrite(payload){
  }
  throw r.error;
 }
+async function dpCloudSyncProgressArea(s,areaName,alreadyQueued=false){
+ const client=dpCloudClient(),uid=dpCloudUserId(),area=(areaName||'').trim();
+ const a=(s?.areas||[]).find(x=>x.name===area);
+ if(!client||!uid||!s||!area||!a)return;
+ const work=async()=>{
+  let r=await client.from('training_progress').update({level:a.level||'Offen',note:a.note||''})
+   .eq('user_id',uid).eq('student_id',s.id).eq('area_name',area).select('id').maybeSingle();
+  if(r.error)throw r.error;
+  if(r.data)return;
+  r=await client.from('training_progress').insert({user_id:uid,student_id:s.id,area_name:area,level:a.level||'Offen',note:a.note||''}).select('id').maybeSingle();
+  if(r.error && r.error.code==='23505'){
+   const retry=await client.from('training_progress').update({level:a.level||'Offen',note:a.note||''})
+    .eq('user_id',uid).eq('student_id',s.id).eq('area_name',area);
+   if(!retry.error)return;
+  }else if(!r.error)return;
+  if(r.error)throw r.error;
+ };
+ const result=alreadyQueued?await work():await dpCloudQueue(work);
+ setTimeout(()=>dpCloudClearProgressPending(s.id),10000);
+ return result;
+}
 async function dpCloudSyncProgress(s,alreadyQueued=false){
  const client=dpCloudClient(),uid=dpCloudUserId();
  if(!client||!uid||!s)return;
@@ -2610,7 +2639,7 @@ async function dpCloudSyncProgress(s,alreadyQueued=false){
  /* Keep the local-change guard alive long enough for all Realtime events
     generated by this write to arrive. Otherwise our own writes can trigger
     a read/render loop on the same device. */
- setTimeout(()=>dpCloudClearProgressPending(s.id),1500);
+ setTimeout(()=>dpCloudClearProgressPending(s.id),10000);
  return result;
 }
 async function dpCloudUpsertStudent(s){
@@ -2643,9 +2672,9 @@ async function dpCloudDeleteLesson(lid){
  dpCloudStatus('syncing','Fahrstunde wird gelöscht …');
  try{
   await dpCloudQueue(async()=>{
-   const r=await client.from('lessons').delete().eq('id',lid).eq('user_id',uid).select('id');
+   const r=await client.rpc('drivepro_delete_lesson',{p_lesson_id:lid});
    if(r.error)throw r.error;
-   if(!r.data?.length)throw new Error('Die Fahrstunde konnte in Supabase nicht gelöscht werden. Prüfe die DELETE-RLS-Regel für lessons.');
+   if(!r.data)throw new Error('Supabase hat die Fahrstunde nicht gelöscht.');
   });
   dpCloudClearLessonPending(lid);dpCloudStatus('ok','Fahrstunde aus der Cloud gelöscht.');
  }catch(e){dpCloudStatus('error',e?.message||'Fahrstunde konnte nicht gelöscht werden.');throw e}
@@ -2680,12 +2709,9 @@ async function dpCloudDeleteStudent(sid,name){
  dpCloudDeletingStudentIds.add(sid);dpCloudStatus('syncing','Fahrschüler wird dauerhaft gelöscht …');
  try{
   await dpCloudQueue(async()=>{
-   /* Tombstone first. Other devices will see this marker and will never
-      re-upload their stale local copy. */
-   await dpCloudCreateDeleteTombstone(sid,name);
-   let r=await client.from('training_progress').delete().eq('user_id',uid).eq('student_id',sid);if(r.error)throw r.error;
-   r=await client.from('lessons').delete().eq('user_id',uid).eq('student_id',sid);if(r.error)throw r.error;
-   r=await client.from('students').delete().eq('user_id',uid).eq('id',sid);if(r.error)throw r.error;
+   const r=await client.rpc('drivepro_delete_student',{p_student_id:sid,p_student_name:name||''});
+   if(r.error)throw r.error;
+   if(!r.data)throw new Error('Supabase hat den Fahrschüler nicht gelöscht.');
   });
   dpCloudKnownStudentIds.delete(sid);dpCloudClearPending(sid);dpCloudStatus('ok','Fahrschüler dauerhaft aus der Cloud gelöscht.');
  }catch(e){dpCloudStatus('error',e?.message||'Fahrschüler konnte nicht gelöscht werden.');throw e}
@@ -2955,18 +2981,24 @@ async function dpCloudRealtimeApplyLesson(p){
 }
 let dpCloudProgressRenderTimers=new Map();
 async function dpCloudRealtimeApplyProgress(p){
- const sid=(p?.new||p?.old||{}).student_id;if(!sid||dpCloudPendingProgressStudentIds.has(sid))return;
- const s=students.find(x=>x.id===sid);if(!s)return;const c=dpCloudClient(),uid=dpCloudUserId();if(!c||!uid)return;
- const q=await c.from('training_progress').select('*').eq('user_id',uid).eq('student_id',sid);if(q.error)throw q.error;
- const m=new Map((q.data||[]).map(x=>[x.area_name,x]));s.areas=DEFAULT_AREAS.map(name=>{const x=m.get(name);return{name,level:x?.level||'Offen',note:x?.note||''}});save();
- /* Realtime may emit several rows for one logical progress change. Coalesce
-    them so the UI is rendered at most once, and never rebuild it for every
-    individual area row. */
+ const row=p?.new||p?.old||{},sid=row.student_id,area=String(row.area_name||'').trim();
+ if(!sid||!area||dpCloudPendingProgressStudentIds.has(sid))return;
+ const s=students.find(x=>x.id===sid);if(!s)return;
+ const a=(s.areas||[]).find(x=>x.name===area);
+ if(a){
+  if(p.eventType==='DELETE'){a.level='Offen';a.note=''}
+  else {a.level=row.level||'Offen';a.note=row.note||''}
+ }else if(p.eventType!=='DELETE'){
+  s.areas.push({name:area,level:row.level||'Offen',note:row.note||''});
+ }
+ save();
+ /* Many area rows can arrive for one logical save. Coalesce them into one
+    UI update instead of rebuilding the page for every row. */
  if(dpCloudProgressRenderTimers.has(sid))return;
  const t=setTimeout(()=>{
   dpCloudProgressRenderTimers.delete(sid);
   if(['calendar','dashboard','students','stats'].includes(state.page))render();
- },120);
+ },200);
  dpCloudProgressRenderTimers.set(sid,t);
 }
 async function dpCloudRealtimeStart(){
