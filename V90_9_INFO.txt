@@ -1,0 +1,21 @@
+DrivePro V90.9 – TRAINING_PROGRESS SYNC FIX
+
+Behoben:
+1. Der Fehler 409 / 23505 "duplicate key value violates unique constraint
+   training_progress_student_id_area_name_key" wurde behoben.
+2. training_progress wird jetzt per UPSERT über den eindeutigen Schlüssel
+   student_id + area_name gespeichert.
+3. Gleichzeitige Synchronisationen desselben Fahrschülers werden in eine
+   Warteschlange gelegt, damit Realtime, Hintergrund-Retry und manuelle
+   Änderungen sich nicht gegenseitig überschreiben.
+4. Doppelte area_name-Einträge im lokalen Datensatz werden vor dem Speichern
+   zusammengefasst.
+5. Die bestehende Realtime-Synchronisation bleibt erhalten.
+6. Beim Abmelden werden die internen Sync-Sperren zurückgesetzt.
+
+Dadurch sollte der bisherige Ablauf
+Synchronisieren -> Cloud-Fehler -> Synchronisieren
+aufgrund des training_progress-409 nicht mehr auftreten.
+
+Die Datenbankstruktur muss dafür NICHT geändert werden.
+Kein Service-Role-/Secret-Key wird verwendet.

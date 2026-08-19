@@ -2428,27 +2428,70 @@ function dpCloudLessonRow(s,l,uid){
   notes:l.note||l.notes||'',color:l.color||null
  };
 }
+/* V90.9 – robust training_progress sync
+   The previous version did SELECT -> INSERT. Two simultaneous syncs could
+   both see "no row yet" and then both INSERT, causing the unique-key 409:
+   training_progress_student_id_area_name_key.
+   We now use a real UPSERT on the same unique key and serialize syncs per
+   student so background/realtime/manual syncs cannot race each other. */
+const dpCloudProgressLocks=new Map();
+
+async function dpCloudSyncProgressLocked(s){
+ const client=dpCloudClient(),uid=dpCloudUserId();
+ if(!client||!uid||!s)return;
+
+ /* Remove duplicate area names from the local array before writing. */
+ const areasByName=new Map();
+ for(const a of (s.areas||[])){
+  if(a && a.name) areasByName.set(a.name,a);
+ }
+ const areas=[...areasByName.values()];
+ const wanted=new Set(areas.map(a=>a.name));
+
+ /* One UPSERT request is atomic and matches the database's unique key. */
+ if(areas.length){
+  const payload=areas.map(a=>({
+   user_id:uid,
+   student_id:s.id,
+   area_name:a.name,
+   level:a.level||'Offen',
+   note:a.note||''
+  }));
+  const r=await client
+    .from('training_progress')
+    .upsert(payload,{onConflict:'student_id,area_name'});
+  if(r.error)throw r.error;
+ }
+
+ /* Only remove progress areas that were intentionally removed locally. */
+ const q=await client.from('training_progress')
+   .select('id,area_name')
+   .eq('user_id',uid)
+   .eq('student_id',s.id);
+ if(q.error)throw q.error;
+ for(const old of (q.data||[])){
+  if(!wanted.has(old.area_name)){
+   const r=await client.from('training_progress')
+     .delete().eq('id',old.id).eq('user_id',uid).eq('student_id',s.id);
+   if(r.error)throw r.error;
+  }
+ }
+}
+
 async function dpCloudSyncProgress(s){
  const client=dpCloudClient(),uid=dpCloudUserId();
  if(!client||!uid||!s)return;
- const q=await client.from('training_progress').select('id,area_name').eq('user_id',uid).eq('student_id',s.id);
- if(q.error)throw q.error;
- const existing=q.data||[];
- const wanted=new Set();
- for(const a of (s.areas||[])){
-  wanted.add(a.name);
-  const old=existing.find(x=>x.area_name===a.name);
-  const payload={user_id:uid,student_id:s.id,area_name:a.name,level:a.level||'Offen',note:a.note||''};
-  const r=old
-    ?await client.from('training_progress').update({level:payload.level,note:payload.note}).eq('id',old.id).eq('user_id',uid)
-    :await client.from('training_progress').insert(payload);
-  if(r.error)throw r.error;
- }
- for(const old of existing){
-  if(!wanted.has(old.area_name)){
-   const r=await client.from('training_progress').delete().eq('id',old.id).eq('user_id',uid);
-   if(r.error)throw r.error;
-  }
+
+ /* Serialize all progress writes for this student. This protects against
+    save + realtime + fallback retries running at the same time. */
+ const key=`${uid}:${s.id}`;
+ const previous=dpCloudProgressLocks.get(key)||Promise.resolve();
+ const current=previous.catch(()=>{}).then(()=>dpCloudSyncProgressLocked(s));
+ dpCloudProgressLocks.set(key,current);
+ try{
+  return await current;
+ }finally{
+  if(dpCloudProgressLocks.get(key)===current)dpCloudProgressLocks.delete(key);
  }
 }
 async function dpCloudUpsertStudent(s){
@@ -2699,7 +2742,7 @@ function dpCloudStopRealtime(){
 }
 
 function dpCloudHandleReady(){setTimeout(async()=>{await dpCloudLoad();await dpCloudStartRealtime()},0)}
-function dpCloudHandleLogout(){dpCloudStopRealtime();dpCloudReady=false;dpCloudBusy=false;dpCloudKnownStudentIds=new Set();dpCloudStatus('','')}
+function dpCloudHandleLogout(){dpCloudStopRealtime();dpCloudReady=false;dpCloudBusy=false;dpCloudKnownStudentIds=new Set();dpCloudProgressLocks.clear();dpCloudStatus('','')}
 window.addEventListener('drivepro:auth-ready',dpCloudHandleReady);
 window.addEventListener('drivepro:auth-logout',dpCloudHandleLogout);
 window.addEventListener('online',()=>{if(dpCloudReady)dpCloudLoad().then(()=>dpCloudStartRealtime()).catch(e=>console.error('DrivePro reconnect-sync:',e))});
