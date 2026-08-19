@@ -1576,6 +1576,8 @@ body.auth-locked #driveProAuth{display:flex}
 .dp-logout:hover{border-color:#b7c9df;background:var(--primary-soft)}
 @media(max-width:700px){.dp-cloud-status{display:none}.dp-auth-card{padding:27px 22px;border-radius:20px}.dp-user-info,.dp-admin-badge{display:none!important}.dp-logout{padding:8px 9px}}
 
+
+.dp-jwt-diagnostic{display:none;margin-top:14px;padding:12px 13px;border:1px solid var(--line);border-radius:12px;background:var(--surface2);font-size:12px;line-height:1.5}.dp-jwt-diagnostic.show{display:block}.dp-jwt-diagnostic strong{display:block;margin-bottom:5px}.dp-jwt-diagnostic code{font-size:11px;word-break:break-word}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -1612,7 +1614,7 @@ body.auth-locked #driveProAuth{display:flex}
         <input id="dpLoginPassword" name="password" type="password" autocomplete="current-password" placeholder="Passwort" required>
       </div>
       <button id="dpLoginButton" class="primary dp-auth-submit" type="submit">Anmelden</button>
-      <div id="dpLoginMessage" class="dp-auth-message" role="alert"></div>
+      <div id="dpLoginMessage" class="dp-auth-message" role="alert"></div><div id="dpJwtDiagnostic" class="dp-jwt-diagnostic" aria-live="polite"></div>
     </form>
   </div>
 </div>
@@ -2771,16 +2773,22 @@ async function dpHandleSession(session){
  try{await dpLoadProfile(session.user);}
  catch(err){
   console.error('DrivePro Profilfehler:',err);
+  const msg=err?.message||'Das DrivePro-Profil konnte nicht geladen werden.';
+  if(/JWT issued at future|PGRST303/i.test(msg)){const current=(await dpClient.auth.getSession()).data?.session;dpShowJwtDiagnostic(current,'Der Fehler wurde beim Zugriff auf das DrivePro-Profil erkannt.')}
   await dpClient.auth.signOut();
   document.body.classList.add('auth-locked');
-  dpMessage(err?.message||'Das DrivePro-Profil konnte nicht geladen werden.');
+  dpMessage(msg);
  }
 }
+function dpDecodeJwtTiming(token){
+ try{const part=token.split('.')[1];const b64=part.replace(/-/g,'+').replace(/_/g,'/');const json=decodeURIComponent(atob(b64.padEnd(b64.length+((4-b64.length%4)%4),'=')).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));const p=JSON.parse(json),now=Math.floor(Date.now()/1000),iat=Number(p.iat);return {issuedAt:new Date(iat*1000).toLocaleString(),deviceNow:new Date(now*1000).toLocaleString(),differenceSeconds:iat-now};}catch(e){return {error:e?.message||String(e)}}
+}
+function dpShowJwtDiagnostic(sessionOrToken,extra){const box=document.getElementById('dpJwtDiagnostic');if(!box)return;const token=typeof sessionOrToken==='string'?sessionOrToken:sessionOrToken?.access_token;const d=token?dpDecodeJwtTiming(token):{error:'Kein Access-Token verfügbar'};box.innerHTML='<strong>JWT-Diagnose</strong>'+(d.error?'<div>'+d.error+'</div>':'<div>Token ausgestellt: <code>'+d.issuedAt+'</code></div><div>Gerätezeit: <code>'+d.deviceNow+'</code></div><div>Zeitdifferenz: <code>'+d.differenceSeconds+' Sekunden</code></div>')+(extra?'<div style="margin-top:5px">'+String(extra).replace(/</g,'&lt;')+'</div>':'');box.classList.add('show')}
 async function dpLogin(email,password){
  dpBusy(true);dpMessage('','info');
  try{
   const r=await dpClient.auth.signInWithPassword({email:email.trim(),password});
-  if(r.error)throw r.error;
+  if(r.error){if(/JWT issued at future|PGRST303/i.test(r.error.message||''))dpShowJwtDiagnostic(r.data?.session,r.error.message);throw r.error;}
   await dpHandleSession(r.data.session);
  }catch(err){
   console.error('DrivePro Login:',err);

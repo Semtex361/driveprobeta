@@ -1,4 +1,4 @@
-const CACHE='drivepro-beta-v90-13-delete-race-fix';
+const CACHE='drivepro-beta-v90-14-jwt-diagnostic';
 const APP_SHELL=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png'];
 
 self.addEventListener('install',event=>{
