@@ -1533,6 +1533,49 @@ body{overflow-x:hidden}
   border-color:#693a46!important;
   color:#ff9eaa!important;
 }
+
+/* V89 – Supabase Login */
+body.auth-locked .app,body.auth-locked #modal{display:none!important}
+#driveProAuth{
+ position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;
+ padding:24px;background:radial-gradient(circle at 15% 15%,rgba(47,128,237,.18),transparent 32%),
+ radial-gradient(circle at 85% 85%,rgba(23,105,210,.14),transparent 34%),var(--bg)
+}
+body.auth-locked #driveProAuth{display:flex}
+.dp-auth-card{width:min(430px,100%);background:var(--surface);border:1px solid var(--line);
+ border-radius:24px;box-shadow:0 24px 70px rgba(23,53,93,.18);padding:34px}
+.dp-auth-brand{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.dp-auth-logo{width:50px;height:50px;border-radius:15px;display:grid;place-items:center;
+ background:linear-gradient(145deg,var(--primary2),var(--primary));color:#fff;
+ box-shadow:0 10px 24px rgba(23,105,210,.25)}
+.dp-auth-logo svg{width:30px;height:30px}
+.dp-auth-brand strong{display:block;font-size:21px;letter-spacing:-.4px}
+.dp-auth-brand small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.dp-auth-card h1{margin:0 0 7px;font-size:27px;letter-spacing:-.7px}
+.dp-auth-sub{margin:0 0 25px;color:var(--muted);font-size:14px;line-height:1.5}
+.dp-auth-field{margin-bottom:15px}
+.dp-auth-field label{display:block;font-size:13px;font-weight:700;margin-bottom:7px}
+.dp-auth-field input{height:46px}
+.dp-auth-submit{width:100%;height:46px;margin-top:6px;font-weight:750}
+.dp-auth-message{display:none;margin-top:14px;padding:11px 13px;border-radius:11px;font-size:13px;line-height:1.45}
+.dp-auth-message.error{display:block;background:#fff1f1;border:1px solid #f1caca;color:#a72e2e}
+.dp-auth-message.info{display:block;background:var(--primary-soft);border:1px solid #cfe1fb;color:#245c9d}
+[data-theme="dark"] #driveProAuth{background:radial-gradient(circle at 15% 15%,rgba(47,128,237,.18),transparent 32%),
+ radial-gradient(circle at 85% 85%,rgba(23,105,210,.12),transparent 34%),#0b1220}
+[data-theme="dark"] .dp-auth-card{box-shadow:0 24px 70px rgba(0,0,0,.38)}
+[data-theme="dark"] .dp-auth-message.error{background:#351b20;border-color:#71303a;color:#ffb8c0}
+[data-theme="dark"] .dp-auth-message.info{background:#132844;border-color:#254c7d;color:#b9d7ff}
+.dp-userbar{display:flex;align-items:center;gap:9px}
+.dp-user-info{display:flex;flex-direction:column;align-items:flex-end;line-height:1.1}
+.dp-user-name{font-size:12px;font-weight:750}
+.dp-user-role{font-size:10px;color:var(--muted);margin-top:3px}
+.dp-admin-badge{display:none;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:800;
+ background:#fff4d8;border:1px solid #f2d58a;color:#9a6a00}
+.dp-logout{background:var(--surface2);color:var(--text);border:1px solid var(--line);
+ border-radius:10px;padding:9px 11px;font-weight:700;font-size:12px}
+.dp-logout:hover{border-color:#b7c9df;background:var(--primary-soft)}
+@media(max-width:700px){.dp-auth-card{padding:27px 22px;border-radius:20px}.dp-user-info,.dp-admin-badge{display:none!important}.dp-logout{padding:8px 9px}}
+
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -1540,8 +1583,40 @@ body{overflow-x:hidden}
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="DrivePro Beta">
 <link rel="apple-touch-icon" href="icon-192.png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body data-drivepro-version="V88"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V89"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+
+<div id="driveProAuth" aria-label="DrivePro Anmeldung">
+  <div class="dp-auth-card">
+    <div class="dp-auth-brand">
+      <div class="dp-auth-logo" aria-hidden="true">
+        <svg viewBox="0 0 48 48">
+          <path d="M9 28.5 12.8 17c.7-2.1 2.7-3.5 4.9-3.5h12.6c2.2 0 4.2 1.4 4.9 3.5L39 28.5v7.2c0 1.7-1.3 3-3 3h-2.2c-1.7 0-3-1.3-3-3v-1.2H17.2v1.2c0 1.7-1.3 3-3 3H12c-1.7 0-3-1.3-3-3v-7.2Z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/>
+          <circle cx="15.2" cy="29" r="2.4" fill="currentColor"/>
+          <circle cx="32.8" cy="29" r="2.4" fill="currentColor"/>
+          <path d="M21 29h6" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div><strong>Drive<span>Pro</span></strong><small>Fahrschulverwaltung</small></div>
+    </div>
+    <h1>Willkommen zurück</h1>
+    <p class="dp-auth-sub">Melde dich an, um deine DrivePro-Verwaltung zu öffnen.</p>
+    <form id="driveProLoginForm" autocomplete="on">
+      <div class="dp-auth-field">
+        <label for="dpLoginEmail">E-Mail-Adresse</label>
+        <input id="dpLoginEmail" name="email" type="email" autocomplete="username" placeholder="name@beispiel.de" required>
+      </div>
+      <div class="dp-auth-field">
+        <label for="dpLoginPassword">Passwort</label>
+        <input id="dpLoginPassword" name="password" type="password" autocomplete="current-password" placeholder="Passwort" required>
+      </div>
+      <button id="dpLoginButton" class="primary dp-auth-submit" type="submit">Anmelden</button>
+      <div id="dpLoginMessage" class="dp-auth-message" role="alert"></div>
+    </form>
+  </div>
+</div>
+
 <div class="app">
 <aside class="side">
   <div class="brand" role="button" tabindex="0" title="Zur Startseite" onclick="page('dashboard')" onkeydown="if(event.key==='Enter'||event.key===' ')page('dashboard')">
@@ -1564,10 +1639,18 @@ body{overflow-x:hidden}
     <button id="nav-logbook" onclick="page('logbook')"><span>📖</span>Logbuch</button>
     <button id="nav-settings" onclick="page('settings')"><span>⚙</span>Einstellungen</button>
   </nav>
-  <div class="sidefoot">Windows-Testversion<br>Fahrstunden je Fahrschüler<br>Lokale Speicherung</div>
+  <div class="sidefoot">V89 · Login aktiv<br>Fahrstunden je Fahrschüler<br>Datenmigration folgt</div>
 </aside>
 <main class="main">
-<header class="top"><h1 id="pageTitle">Dashboard</h1><button class="primary" onclick="openStudentForm()">+ Fahrschüler</button></header>
+<header class="top">
+<h1 id="pageTitle">Dashboard</h1>
+<div class="dp-userbar">
+<div id="dpAdminBadge" class="dp-admin-badge">ADMIN</div>
+<div class="dp-user-info"><span id="dpUserName" class="dp-user-name">—</span><span id="dpUserRole" class="dp-user-role">Angemeldet</span></div>
+<button id="dpLogoutButton" class="dp-logout" type="button">Abmelden</button>
+<button class="primary" onclick="openStudentForm()">+ Fahrschüler</button>
+</div>
+</header>
 <div class="content" id="content"></div>
 </main>
 </div>
@@ -2339,5 +2422,95 @@ if ('serviceWorker' in navigator) {
  setTimeout(bindDriveProLogo,100);
 })();
 </script>
+<script>
+(function(){
+'use strict';
+const DP_SUPABASE_URL="https://vkxxfdcmnxmafymqnhjo.supabase.co";
+const DP_SUPABASE_PUBLISHABLE_KEY="sb_publishable_Jl75XMA0ARRBkpaBI6f6VQ_KboxAwc-";
+let dpClient=null,dpProfile=null;
+const $=id=>document.getElementById(id);
+
+function dpMessage(text,type='error'){
+ const box=$('dpLoginMessage'); if(!box)return;
+ box.textContent=text||''; box.className='dp-auth-message'+(text?' '+type:'');
+}
+function dpBusy(busy){
+ const b=$('dpLoginButton'); if(!b)return;
+ b.disabled=busy; b.textContent=busy?'Anmeldung läuft …':'Anmelden';
+}
+function dpName(p,u){
+ return p?.display_name||[p?.first_name,p?.last_name].filter(Boolean).join(' ')||u?.email||'DrivePro Benutzer';
+}
+async function dpLoadProfile(user){
+ const r=await dpClient.from('profiles').select('id,first_name,last_name,display_name,role,is_active').eq('id',user.id).maybeSingle();
+ if(r.error)throw r.error;
+ if(!r.data)throw new Error('Für diesen Account wurde kein DrivePro-Profil gefunden.');
+ if(r.data.is_active!==true)throw new Error('Dieser DrivePro-Account ist deaktiviert.');
+ dpProfile=r.data;
+ $('dpUserName').textContent=dpName(r.data,user);
+ $('dpUserRole').textContent=r.data.role==='admin'?'Administrator':'Fahrlehrer';
+ $('dpAdminBadge').style.display=r.data.role==='admin'?'inline-flex':'none';
+ window.driveProAuth={client:dpClient,user,profile:r.data,isAdmin:r.data.role==='admin',signOut:()=>dpClient.auth.signOut()};
+ document.body.classList.remove('auth-locked');
+}
+async function dpHandleSession(session){
+ if(!session?.user){
+  dpProfile=null;window.driveProAuth=null;document.body.classList.add('auth-locked');return;
+ }
+ try{await dpLoadProfile(session.user);}
+ catch(err){
+  console.error('DrivePro Profilfehler:',err);
+  await dpClient.auth.signOut();
+  document.body.classList.add('auth-locked');
+  dpMessage(err?.message||'Das DrivePro-Profil konnte nicht geladen werden.');
+ }
+}
+async function dpLogin(email,password){
+ dpBusy(true);dpMessage('','info');
+ try{
+  const r=await dpClient.auth.signInWithPassword({email:email.trim(),password});
+  if(r.error)throw r.error;
+  await dpHandleSession(r.data.session);
+ }catch(err){
+  console.error('DrivePro Login:',err);
+  let msg='Anmeldung fehlgeschlagen. Bitte E-Mail-Adresse und Passwort prüfen.';
+  if(err?.message?.toLowerCase().includes('email not confirmed'))msg='Die E-Mail-Adresse wurde in Supabase noch nicht bestätigt.';
+  else if(err?.message)msg=err.message;
+  dpMessage(msg);
+ }finally{dpBusy(false);}
+}
+async function dpLogout(){
+ try{await dpClient.auth.signOut();}catch(err){console.error(err);}
+ dpProfile=null;window.driveProAuth=null;document.body.classList.add('auth-locked');dpMessage('','info');
+ $('driveProLoginForm')?.reset();
+}
+async function dpInit(){
+ if(!window.supabase||typeof window.supabase.createClient!=='function'){
+  dpMessage('Die Verbindungskomponente konnte nicht geladen werden. Bitte Seite neu laden.');return;
+ }
+ dpClient=window.supabase.createClient(DP_SUPABASE_URL,DP_SUPABASE_PUBLISHABLE_KEY,{
+  auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+ });
+ $('driveProLoginForm')?.addEventListener('submit',e=>{
+  e.preventDefault();
+  const email=$('dpLoginEmail')?.value||'',password=$('dpLoginPassword')?.value||'';
+  if(!email||!password){dpMessage('Bitte E-Mail-Adresse und Passwort eingeben.');return;}
+  dpLogin(email,password);
+ });
+ $('dpLogoutButton')?.addEventListener('click',dpLogout);
+ dpClient.auth.onAuthStateChange((event,session)=>setTimeout(()=>dpHandleSession(session),0));
+ try{
+  const r=await dpClient.auth.getSession();
+  if(r.error)throw r.error;
+  await dpHandleSession(r.data.session);
+ }catch(err){
+  console.error('DrivePro Session:',err);
+  dpMessage('Die Anmeldung konnte nicht geprüft werden. Bitte Seite neu laden.');
+ }
+}
+window.addEventListener('DOMContentLoaded',dpInit);
+})();
+</script>
+
 </body>
 </html>

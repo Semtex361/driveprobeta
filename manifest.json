@@ -1,11 +1,11 @@
 {
-  "name": "DrivePro Beta",
-  "short_name": "DrivePro Beta",
+  "name": "DrivePro",
+  "short_name": "DrivePro",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f4f7fc",
   "theme_color": "#1769d2",
-  "description": "DrivePro Beta – Fahrschulverwaltung",
+  "description": "DrivePro – Fahrschulverwaltung mit sicherem Login",
   "icons": [
     {
       "src": "icon-192.png",
