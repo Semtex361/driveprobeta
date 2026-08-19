@@ -1639,7 +1639,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-logbook" onclick="page('logbook')"><span>📖</span>Logbuch</button>
     <button id="nav-settings" onclick="page('settings')"><span>⚙</span>Einstellungen</button>
   </nav>
-  <div class="sidefoot">V90.12 · Login & Cloud-Sync aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V90.13 · Login & Cloud-Sync aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -2401,15 +2401,15 @@ function openModal(content){document.getElementById('modalBody').innerHTML=conte
 function closeModal(){document.getElementById('modal').classList.remove('open')}
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()})
 
-/* V90.12 – Stable Cloud Sync + Delete Fix
+/* V90.13 – Stable Cloud Sync + Delete Race Fix
    - No Supabase Realtime/WebSocket is used. Polling is the reliable fallback.
    - All cloud writes are serialized to prevent concurrent 409 conflicts.
    - training_progress is written with update-first / insert-fallback logic.
    - Deletions create a cloud tombstone in activity_log before the student row is removed.
    - A tombstoned student can never be resurrected by another device's local cache.
 */
-const DP_CLOUD_OWNER_KEY='drivepro_cloud_owner_v912';
-const DP_CLOUD_BACKUP_KEY='drivepro_local_backup_v912';
+const DP_CLOUD_OWNER_KEY='drivepro_cloud_owner_v913';
+const DP_CLOUD_BACKUP_KEY='drivepro_local_backup_v913';
 const DP_CLOUD_TOMBSTONE_ACTION='deleted';
 const DP_CLOUD_POLL_MS=4000;
 let dpCloudReady=false;
@@ -2608,10 +2608,12 @@ async function dpCloudLoad(){
   if(sr.error)throw new Error('students: '+sr.error.message);
   if(pr.error)throw new Error('training_progress: '+pr.error.message);
   if(lr.error)throw new Error('lessons: '+lr.error.message);
-  let cloudStudents=(sr.data||[]).filter(r=>!deletedIds.has(String(r.id)));
+  let cloudStudents=(sr.data||[]).filter(r=>!deletedIds.has(String(r.id))&&!dpCloudDeletingStudentIds.has(String(r.id)));
   /* On first setup, migrate local data. After setup, only local records that
      are genuinely missing from the cloud are candidates. Tombstoned IDs are
-     never candidates, so deletes cannot be resurrected. */
+     never candidates, so deletes cannot be resurrected. While a delete is in
+     progress, its ID is also excluded from cloudStudents so the polling loop
+     cannot reinsert the still-present cloud row into the local list. */
   const hasOwner=localStorage.getItem(DP_CLOUD_OWNER_KEY)===uid;
   const cloudIds=new Set(cloudStudents.map(c=>c.id));
   const candidates=(students||[]).filter(s=>!dpCloudDeletingStudentIds.has(s.id)&&!deletedIds.has(String(s.id))&&(!hasOwner||!cloudIds.has(s.id))&&(!hasOwner||dpCloudPendingStudentIds.has(s.id)));
@@ -2620,11 +2622,11 @@ async function dpCloudLoad(){
    const result=await dpCloudMigrateLocal(students);
    if(result.failed.length)throw new Error(`${result.failed.length} lokale Fahrschüler konnten nicht übertragen werden.`);
    const again=await client.from('students').select('*').eq('user_id',uid).order('last_name',{ascending:true});if(again.error)throw again.error;
-   cloudStudents=(again.data||[]).filter(r=>!deletedIds.has(String(r.id)));
+   cloudStudents=(again.data||[]).filter(r=>!deletedIds.has(String(r.id))&&!dpCloudDeletingStudentIds.has(String(r.id)));
   }else if(candidates.length){
    for(const s of candidates){try{await dpCloudUpsertStudent(s);dpCloudClearPending(s.id)}catch(e){console.error('DrivePro: ausstehender Schüler',s.id,e)}}
    const again=await client.from('students').select('*').eq('user_id',uid).order('last_name',{ascending:true});if(again.error)throw again.error;
-   cloudStudents=(again.data||[]).filter(r=>!deletedIds.has(String(r.id)));
+   cloudStudents=(again.data||[]).filter(r=>!deletedIds.has(String(r.id))&&!dpCloudDeletingStudentIds.has(String(r.id)));
   }
   const progressByStudent={};for(const x of (pr.data||[])){(progressByStudent[x.student_id]||(progressByStudent[x.student_id]=[])).push(x)}
   const lessonsByStudent={};for(const x of (lr.data||[])){(lessonsByStudent[x.student_id]||(lessonsByStudent[x.student_id]=[])).push(x)}
