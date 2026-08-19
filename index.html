@@ -2375,6 +2375,8 @@ let dpCloudReady=false;
 let dpCloudBusy=false;
 let dpCloudChannel=null;
 let dpCloudRealtimeTimer=null;
+let dpCloudRealtimeConnected=false;
+let dpCloudFallbackTimer=null;
 let dpCloudKnownStudentIds=new Set();
 
 function dpCloudClient(){return window.driveProAuth?.client||null}
@@ -2594,6 +2596,7 @@ async function dpCloudLoad(){
 
   localStorage.setItem(DP_CLOUD_OWNER_KEY,uid);
   dpCloudReady=true;
+  if(!dpCloudRealtimeConnected)dpCloudStartFallback();
   if(stillLocal.length){
    dpCloudStatus('error',`${cloudMapped.length} Cloud-Fahrschüler geladen; ${stillLocal.length} lokale Daten warten noch auf Synchronisation.`);
   }else{
@@ -2601,8 +2604,11 @@ async function dpCloudLoad(){
   }
  }catch(err){
   console.error('DrivePro Cloud-Sync:',err);
-  dpCloudReady=false;
+  console.error('DrivePro Cloud-Sync details:',err);
+  /* Keep the authenticated cloud state alive after a transient read error.
+     Realtime/fallback sync will retry without requiring a page reload. */
   dpCloudStatus('error',err?.message||'Die Cloud-Daten konnten nicht geladen werden.');
+  dpCloudStartFallback();
  }finally{dpCloudBusy=false}
 }
 
@@ -2613,7 +2619,17 @@ function dpCloudScheduleReload(reason){
   if(!dpCloudBusy && dpCloudReady){
    dpCloudLoad().catch(e=>console.error('DrivePro Realtime-Sync:',e));
   }
- },250);
+ },350);
+}
+function dpCloudStartFallback(){
+ if(dpCloudFallbackTimer||!dpCloudReady)return;
+ dpCloudFallbackTimer=setInterval(()=>{
+  if(!dpCloudReady||dpCloudRealtimeConnected||dpCloudBusy)return;
+  dpCloudLoad().catch(e=>console.error('DrivePro Fallback-Sync:',e));
+ },5000);
+}
+function dpCloudStopFallback(){
+ if(dpCloudFallbackTimer){clearInterval(dpCloudFallbackTimer);dpCloudFallbackTimer=null}
 }
 
 async function dpCloudStartRealtime(){
@@ -2644,16 +2660,22 @@ async function dpCloudStartRealtime(){
       ()=>dpCloudScheduleReload('training_progress'))
    .subscribe(status=>{
       if(status==='SUBSCRIBED'){
+       dpCloudRealtimeConnected=true;
+       dpCloudStopFallback();
        dpCloudStatus('ok','Cloud-Synchronisation aktiv');
-      }else if(status==='CHANNEL_ERROR' || status==='TIMED_OUT'){
+      }else if(status==='CHANNEL_ERROR' || status==='TIMED_OUT' || status==='CLOSED'){
        console.warn('DrivePro Realtime:',status);
-       dpCloudStatus('error','Cloud-Synchronisation wartet auf Verbindung …');
+       dpCloudRealtimeConnected=false;
+       dpCloudStatus('ok','Cloud gespeichert – Live-Sync versucht Verbindung herzustellen');
+       dpCloudStartFallback();
       }
    });
 }
 
 function dpCloudStopRealtime(){
  if(dpCloudRealtimeTimer){clearTimeout(dpCloudRealtimeTimer);dpCloudRealtimeTimer=null}
+ dpCloudStopFallback();
+ dpCloudRealtimeConnected=false;
  const client=dpCloudClient();
  if(client&&dpCloudChannel){
   try{client.removeChannel(dpCloudChannel)}catch(e){}
