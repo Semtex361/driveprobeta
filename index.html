@@ -1639,7 +1639,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-logbook" onclick="page('logbook')"><span>📖</span>Logbuch</button>
     <button id="nav-settings" onclick="page('settings')"><span>⚙</span>Einstellungen</button>
   </nav>
-  <div class="sidefoot">V90.9 · Login V90.9 · Login & Cloud-Sync aktiv Cloud-Sync aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V90.12 · Login & Cloud-Sync aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -2401,16 +2401,16 @@ function openModal(content){document.getElementById('modalBody').innerHTML=conte
 function closeModal(){document.getElementById('modal').classList.remove('open')}
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()})
 
-/* V90.11 – Stable Cloud Sync
+/* V90.12 – Stable Cloud Sync + Delete Fix
    - No Supabase Realtime/WebSocket is used. Polling is the reliable fallback.
    - All cloud writes are serialized to prevent concurrent 409 conflicts.
    - training_progress is written with update-first / insert-fallback logic.
    - Deletions create a cloud tombstone in activity_log before the student row is removed.
    - A tombstoned student can never be resurrected by another device's local cache.
 */
-const DP_CLOUD_OWNER_KEY='drivepro_cloud_owner_v911';
-const DP_CLOUD_BACKUP_KEY='drivepro_local_backup_v911';
-const DP_CLOUD_TOMBSTONE_ACTION='student_deleted';
+const DP_CLOUD_OWNER_KEY='drivepro_cloud_owner_v912';
+const DP_CLOUD_BACKUP_KEY='drivepro_local_backup_v912';
+const DP_CLOUD_TOMBSTONE_ACTION='deleted';
 const DP_CLOUD_POLL_MS=4000;
 let dpCloudReady=false;
 let dpCloudBusy=false;
@@ -2530,16 +2530,27 @@ async function dpCloudDeleteLesson(lid){
 }
 async function dpCloudCreateDeleteTombstone(sid,name){
  const client=dpCloudClient(),uid=dpCloudUserId();
- const payload={id:id(),user_id:uid,student_id:null,student_name:name||'',action:DP_CLOUD_TOMBSTONE_ACTION,details:`Fahrschüler gelöscht: ${name||sid}`,metadata:{deleted_student_id:sid,deleted_at:new Date().toISOString()}};
+ /* IMPORTANT: activity_log's CHECK constraint accepts the normal action
+    'deleted', not the custom 'student_deleted' value. The student id is
+    stored in metadata so other devices can recognize the tombstone. */
+ const payload={id:id(),user_id:uid,student_id:null,student_name:name||'',action:'deleted',details:`Fahrschüler gelöscht: ${name||sid}`,metadata:{deleted_student_id:sid,deleted_at:new Date().toISOString(),tombstone_type:'student'}};
  const r=await client.from('activity_log').insert(payload);
  if(r.error)throw r.error;
 }
 async function dpCloudGetDeletedIds(){
  const client=dpCloudClient(),uid=dpCloudUserId();
- const r=await client.from('activity_log').select('metadata,action,created_at').eq('user_id',uid).eq('action',DP_CLOUD_TOMBSTONE_ACTION).order('created_at',{ascending:false});
+ /* activity_log only permits its normal action values (including 'deleted').
+    Student tombstones are therefore stored as a normal 'deleted' log entry,
+    with the deleted_student_id carried in metadata. We intentionally fetch
+    all deleted log entries and only treat rows with deleted_student_id as
+    student tombstones, so lesson deletions remain harmless. */
+ const r=await client.from('activity_log').select('metadata,action,created_at').eq('user_id',uid).eq('action','deleted').order('created_at',{ascending:false});
  if(r.error)throw r.error;
  const set=new Set();
- for(const row of (r.data||[])){const sid=row?.metadata?.deleted_student_id;if(sid)set.add(String(sid));}
+ for(const row of (r.data||[])){
+  const sid=row?.metadata?.deleted_student_id;
+  if(sid)set.add(String(sid));
+ }
  return set;
 }
 async function dpCloudDeleteStudent(sid,name){

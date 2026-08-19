@@ -1,10 +1,11 @@
-DrivePro V90.11 – Stabiler Cloud-Sync
+DrivePro V90.12 – Stabiler Cloud-Sync + Lösch-Fix
 
-- Supabase Realtime/WebSocket vollständig entfernt; dadurch keine 403-/postgres_changes-Fehler mehr.
-- Synchronisation läuft automatisch alle 4 Sekunden und zusätzlich beim Öffnen/Zurückkehren zur App.
+- Supabase Realtime/WebSocket bleibt vollständig entfernt; Synchronisation läuft per Polling.
+- Synchronisation automatisch alle 4 Sekunden sowie bei Öffnen/Zurückkehren zur App.
 - Cloud-Schreibvorgänge werden serialisiert.
 - training_progress: Update zuerst, Insert nur wenn der Datensatz noch nicht existiert; 409-Rennen werden abgefangen.
-- Löschungen erzeugen zuerst einen Cloud-Tombstone in activity_log. Dadurch kann ein anderer Rechner einen gelöschten Fahrschüler nicht wieder hochladen.
-- Löschfunktion bleibt vorhanden.
+- Löschungen erzeugen einen Cloud-Tombstone in activity_log mit dem von der Datenbank erlaubten action-Wert „deleted“. Die gelöschte student_id steht in metadata.
+- Andere Geräte erkennen diesen Tombstone und laden den gelöschten Fahrschüler nicht wieder hoch.
+- Kein neues SQL nötig.
 
-Wichtig: Alle Geräte müssen V90.11 verwenden. Einmalig ist kein neues SQL nötig, weil activity_log bereits vorhanden ist.
+Wichtig: Alle Geräte müssen V90.12 verwenden. Nach dem Update einmal STRG+F5 bzw. die PWA komplett schließen und neu öffnen.
