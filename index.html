@@ -2465,7 +2465,7 @@ function dpCloudStudentRow(s,uid){
  return {id:s.id,user_id:uid,first_name:s.firstName||'',last_name:s.lastName||'',birth_date:s.birthDate||null,phone:s.phone||'',email:s.email||'',address:s.address||'',license_class:s.license||'B',training_start:s.start||null,vision_aid:s.visionAid===true,theory_passed:s.theoryPassed===true,practice_exam_date:s.practiceExamDate||null,license_received_date:s.licenseReceivedDate||null,notes:s.notes||''};
 }
 function dpCloudLessonRow(s,l,uid){
- return {id:l.id,user_id:uid,student_id:s.id,lesson_date:l.date,start_time:l.startTime,end_time:endTime(l.startTime,Number(l.duration)||0),lesson_type:l.lessonType||'Fahrstunde',special_type:l.special||null,duration_minutes:Number(l.duration)||0,kilometers:l.kilometers===''||l.kilometers==null?null:Number(l.kilometers),notes:l.note||l.notes||'',color:l.color||null};
+ return {id:l.id,user_id:uid,student_id:s.id,lesson_date:l.date,start_time:l.startTime,end_time:endTime(l.startTime,Number(l.duration)||0),lesson_type:l.lessonType||'Fahrstunde',special_type:l.special||null,duration_minutes:Number(l.duration)||0,kilometers:l.kilometers===''||l.kilometers==null?null:Number(l.kilometers),notes:l.note||l.notes||'',color:l.color||null,signature:l.signature||null};
 }
 async function dpCloudProgressWrite(payload){
  const client=dpCloudClient();
@@ -2636,7 +2636,7 @@ async function dpCloudLoad(){
 
   let lessonRows=[];
   try{
-   const lr=await client.from('lessons').select('id,user_id,student_id,lesson_date,start_time,end_time,lesson_type,special_type,duration_minutes,kilometers,notes,color,created_at,updated_at').eq('user_id',uid).order('lesson_date',{ascending:true}).order('start_time',{ascending:true});
+   const lr=await client.from('lessons').select('id,user_id,student_id,lesson_date,start_time,end_time,lesson_type,special_type,duration_minutes,kilometers,notes,color,signature,created_at,updated_at').eq('user_id',uid).order('lesson_date',{ascending:true}).order('start_time',{ascending:true});
    if(lr.error)throw lr.error;
    lessonRows=lr.data||[];
   }catch(e){
@@ -2709,7 +2709,7 @@ async function dpCloudLoad(){
     id:x.id,date:x.lesson_date,startTime:(x.start_time||'').slice(0,5),
     duration:Number(x.duration_minutes)||0,special:x.special_type||'',
     lessonType:x.lesson_type||'Fahrstunde',note:x.notes||'',
-    kilometers:x.kilometers==null?'':x.kilometers,color:x.color||null
+    kilometers:x.kilometers==null?'':x.kilometers,color:x.color||null,signature:x.signature||null
    }));
    return {
     id:row.id,firstName:row.first_name||'',lastName:row.last_name||'',
