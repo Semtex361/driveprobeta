@@ -2381,15 +2381,29 @@ let dpCloudKnownStudentIds=new Set();
 
 function dpCloudClient(){return window.driveProAuth?.client||null}
 function dpCloudUserId(){return window.driveProAuth?.user?.id||null}
+window.driveProCloudDiagnostics=async function(){
+ const c=dpCloudClient(),u=dpCloudUserId();
+ if(!c||!u)return {ok:false,error:'Nicht eingeloggt'};
+ const out={user_id:u};
+ for(const t of ['students','training_progress','lessons']){
+  try{
+   const r=await c.from(t).select('*',{count:'exact',head:true}).eq('user_id',u);
+   out[t]=r.error?{ok:false,error:r.error.message,code:r.error.code}:{ok:true,count:r.count};
+  }catch(e){out[t]={ok:false,error:e?.message||String(e)}}
+ }
+ console.table(out); return out;
+};
 function dpCloudStatus(state,text){
  const el=document.getElementById('dpCloudStatus');
  if(!el)return;
  el.className='dp-cloud-status '+(state||'');
- el.innerHTML=state==='syncing'?'<span class="dp-cloud-dot"></span>Synchronisiere …':
-   state==='ok'?'<span class="dp-cloud-dot"></span>Cloud gespeichert':
-   state==='error'?'<span class="dp-cloud-dot"></span>Cloud-Fehler':
-   '<span class="dp-cloud-dot"></span>Cloud';
+ const label=state==='syncing'?'Synchronisiere …':
+   state==='ok'?'Cloud gespeichert':
+   state==='error'?'Cloud-Fehler':
+   'Cloud';
+ el.innerHTML='<span class="dp-cloud-dot"></span>'+label;
  el.title=text||'';
+ el.setAttribute('aria-label',text||label);
 }
 function dpCloudBackupLocal(){
  try{
@@ -2518,14 +2532,12 @@ async function dpCloudLoad(){
  dpCloudBusy=true;
  try{
   dpCloudStatus('syncing','Cloud-Daten werden geladen …');
-  const [sr,pr,lr]=await Promise.all([
-   client.from('students').select('*').eq('user_id',uid).order('last_name',{ascending:true}),
-   client.from('training_progress').select('*').eq('user_id',uid),
-   client.from('lessons').select('id,user_id,student_id,lesson_date,start_time,end_time,lesson_type,special_type,duration_minutes,kilometers,notes,color,created_at,updated_at').eq('user_id',uid).order('lesson_date',{ascending:true}).order('start_time',{ascending:true})
-  ]);
-  if(sr.error)throw sr.error;
-  if(pr.error)throw pr.error;
-  if(lr.error)throw lr.error;
+  const sr=await client.from('students').select('*').eq('user_id',uid).order('last_name',{ascending:true});
+  if(sr.error)throw new Error('students: '+(sr.error.message||'Lesefehler'));
+  const pr=await client.from('training_progress').select('*').eq('user_id',uid);
+  if(pr.error)throw new Error('training_progress: '+(pr.error.message||'Lesefehler'));
+  const lr=await client.from('lessons').select('id,user_id,student_id,lesson_date,start_time,end_time,lesson_type,special_type,duration_minutes,kilometers,notes,color,created_at,updated_at').eq('user_id',uid).order('lesson_date',{ascending:true}).order('start_time',{ascending:true});
+  if(lr.error)throw new Error('lessons: '+(lr.error.message||'Lesefehler'));
 
   let cloudStudents=sr.data||[];
   const localById=new Map((students||[]).map(s=>[s.id,s]));
@@ -2603,11 +2615,12 @@ async function dpCloudLoad(){
    dpCloudStatus('ok',`${students.length} Fahrschüler mit der Cloud synchronisiert.`);
   }
  }catch(err){
-  console.error('DrivePro Cloud-Sync:',err);
-  console.error('DrivePro Cloud-Sync details:',err);
-  /* Keep the authenticated cloud state alive after a transient read error.
-     Realtime/fallback sync will retry without requiring a page reload. */
-  dpCloudStatus('error',err?.message||'Die Cloud-Daten konnten nicht geladen werden.');
+  const msg=err?.message||'Unbekannter Cloud-Lesefehler';
+  console.error('DrivePro Cloud-Sync:',msg,err);
+  /* Do not overwrite working local/cloud data on a transient read error.
+     Keep retrying in the background, but expose the exact failing table
+     in the status tooltip so the problem can be fixed instead of guessed. */
+  dpCloudStatus('error','Cloud-Lesefehler: '+msg);
   dpCloudStartFallback();
  }finally{dpCloudBusy=false}
 }
@@ -2621,15 +2634,17 @@ function dpCloudScheduleReload(reason){
   }
  },350);
 }
+let dpCloudRetryDelay=5000;
 function dpCloudStartFallback(){
  if(dpCloudFallbackTimer||!dpCloudReady)return;
  dpCloudFallbackTimer=setInterval(()=>{
   if(!dpCloudReady||dpCloudRealtimeConnected||dpCloudBusy)return;
   dpCloudLoad().catch(e=>console.error('DrivePro Fallback-Sync:',e));
- },5000);
+ },dpCloudRetryDelay);
 }
 function dpCloudStopFallback(){
  if(dpCloudFallbackTimer){clearInterval(dpCloudFallbackTimer);dpCloudFallbackTimer=null}
+ dpCloudRetryDelay=5000;
 }
 
 async function dpCloudStartRealtime(){

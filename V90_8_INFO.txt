@@ -1,0 +1,20 @@
+V90.8 – SYNCHRONISATION DIAGNOSE
+
+Die Supabase-Realtime-Konfiguration ist bereits korrekt: students, lessons und
+training_progress stehen in supabase_realtime.
+
+Diese Version macht den verbleibenden Fehler sichtbar:
+- jeder Cloud-Lesezugriff wird einzeln geprüft
+- Fehler werden mit dem betroffenen Tabellennamen angezeigt
+- ein temporärer Fehler überschreibt nicht mehr die funktionierenden Daten
+- Hintergrund-Retry bleibt aktiv, ohne das UI ständig zwischen Synchronisation
+  und Cloud-Fehler umzuschalten
+- Realtime bleibt unabhängig davon aktiv
+
+Wenn "Cloud-Fehler" erscheint, mit der Maus darüberfahren: Der Tooltip enthält
+jetzt z.B. "training_progress: ...". Genau diese Meldung ist entscheidend.
+
+Zusätzlich steht im Browser-Console-Kontext:
+window.driveProCloudDiagnostics()
+Das Ergebnis zeigt für students, training_progress und lessons jeweils ok/count
+oder den exakten Supabase-Fehler.
