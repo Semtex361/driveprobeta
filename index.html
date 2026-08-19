@@ -2356,7 +2356,7 @@ function openModal(content){document.getElementById('modalBody').innerHTML=conte
 function closeModal(){document.getElementById('modal').classList.remove('open')}
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()})
 
-/* V90 – Supabase Cloud Data Sync */
+/* V90.1 – Supabase Cloud Data Sync Fix */
 const DP_CLOUD_OWNER_KEY='drivepro_cloud_owner_v90';
 const DP_CLOUD_BACKUP_KEY='drivepro_local_backup_v90';
 let dpCloudReady=false;
@@ -2652,6 +2652,7 @@ async function dpLoadProfile(user){
  $('dpAdminBadge').style.display=r.data.role==='admin'?'inline-flex':'none';
  window.driveProAuth={client:dpClient,user,profile:r.data,isAdmin:r.data.role==='admin',signOut:()=>dpClient.auth.signOut()};
  document.body.classList.remove('auth-locked');
+ window.dispatchEvent(new CustomEvent('drivepro:auth-ready'));
 }
 async function dpHandleSession(session){
  if(!session?.user){
