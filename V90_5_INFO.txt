@@ -1,0 +1,17 @@
+V90.5 – SOFORTIGE CLOUD-SYNCHRONISATION
+
+Neu:
+- Supabase Realtime wird verwendet.
+- Änderungen auf einem anderen Gerät werden ohne manuelles Reload empfangen.
+- Änderungen an Fahrschülern, Fahrstunden und Ausbildungsstand lösen automatisch
+  eine Cloud-Aktualisierung aus.
+- Eine kleine Verzögerung von ca. 250 ms bündelt mehrere gleichzeitige Änderungen.
+- Die bisherige Cloud-Wiederherstellung bleibt erhalten.
+- ENABLE_REALTIME.sql aktiviert die benötigten Supabase-Realtime-Tabellen,
+  falls sie noch nicht aktiviert sind.
+
+Wichtig:
+1. V90.5 zuerst auf dem Gerät installieren, das die ursprünglichen lokalen Daten hat.
+2. Danach die beiden Geräte öffnen.
+3. Falls Änderungen noch nicht sofort erscheinen, ENABLE_REALTIME.sql einmal
+   im Supabase SQL Editor ausführen.

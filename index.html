@@ -1766,7 +1766,7 @@ document.getElementById('content').innerHTML=`<div class="toolbar"><div class="m
 function filterStudents(){let q=(document.getElementById('studentSearch')?.value||'').toLowerCase();let list=students.filter(s=>(s.firstName+' '+s.lastName+' '+s.license).toLowerCase().includes(q));document.getElementById('studentList').innerHTML=list.map(studentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Keine Treffer.</div>'}
 function openStudentForm(studentId=''){let s=studentId?getStudent(studentId):null;openModal(`<h2>${s?'Fahrschüler bearbeiten':'Neuer Fahrschüler'}</h2><div class="row"><div class="field"><label>Vorname</label><input id="sf" value="${esc(s?.firstName||'')}"></div><div class="field"><label>Nachname</label><input id="sl" value="${esc(s?.lastName||'')}"></div></div><div class="row"><div class="field"><label>Klasse</label><select id="sc">${['B','B78','B197'].map(x=>`<option ${x===(s?.license||'B')?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Ausbildungsbeginn</label><input id="sd" type="date" value="${s?.start||new Date().toISOString().slice(0,10)}"></div></div><div class="row"><div class="field"><label>Geburtsdatum</label><input id="sb" type="date" value="${s?.birthDate||''}"></div><div class="field"><label>Telefon</label><input id="sphone" type="tel" value="${esc(s?.phone||'')}" placeholder="z. B. 0176 12345678"></div></div><div class="row"><div class="field"><label>E-Mail</label><input id="semail" type="email" value="${esc(s?.email||'')}" placeholder="name@example.de"></div><div class="field"><label>Adresse</label><input id="saddress" value="${esc(s?.address||'')}" placeholder="Straße, Hausnummer, PLZ Ort"></div></div><div class="studentChecks"><label><input type="checkbox" id="sv" ${s?.visionAid===true?'checked':''}> Sehhilfe</label><label><input type="checkbox" id="st" ${s?.theoryPassed===true?'checked':''}> Theorie bestanden</label></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveStudent('${studentId}')">Speichern</button></div>`)}
 function saveStudent(sid){const f=document.getElementById('sf').value.trim(),l=document.getElementById('sl').value.trim();if(!f||!l){alert('Bitte Vor- und Nachnamen eingeben.');return}const personal={firstName:f,lastName:l,license:document.getElementById('sc').value,start:document.getElementById('sd').value,birthDate:document.getElementById('sb').value,phone:document.getElementById('sphone').value.trim(),email:document.getElementById('semail').value.trim(),address:document.getElementById('saddress').value.trim(),visionAid:document.getElementById('sv').checked,theoryPassed:document.getElementById('st').checked};
-if(sid){const s=getStudent(sid);Object.assign(s,personal);save();closeModal();render();if(dpCloudReady)dpCloudUpsertStudent(s).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}else{const s={id:id(),...personal,areas:DEFAULT_AREAS.map(name=>({name,level:'Offen',note:''})),lessons:[],signature:null};students.push(s);save();closeModal();render();if(dpCloudReady)dpCloudUpsertStudent(s).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}
+if(sid){const s=getStudent(sid);Object.assign(s,personal);dpCloudBackupLocal();save();closeModal();render();if(dpCloudReady)dpCloudUpsertStudent(s).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}else{const s={id:id(),...personal,areas:DEFAULT_AREAS.map(name=>({name,level:'Offen',note:''})),lessons:[],signature:null};students.push(s);dpCloudBackupLocal();save();closeModal();render();if(dpCloudReady)dpCloudUpsertStudent(s).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}
 }
 function openStudent(sid){const s=getStudent(sid);state.studentId=sid;openModal(`<div class="profileHeader"><div><h2>${esc(s.firstName+' '+s.lastName)}</h2></div><div class="profileActions"><button class="studentCompleteBtn" onclick="licenseReceivedReport('${sid}')">✓ Führerschein erhalten</button><button class="secondary" onclick="closeModal();openStudentForm('${sid}')">✎ Bearbeiten</button></div></div><div class="tabs"><button class="sel" onclick="studentTab('overview','${sid}',this)">Übersicht</button><button onclick="studentTab('diagram','${sid}',this)">Ausbildungsdiagramm</button><button onclick="studentTab('lessons','${sid}',this)">Fahrstunden</button><button onclick="studentTab('signature','${sid}',this)">Unterschrift</button></div><div id="studentBody">${studentOverview(s)}</div>`)}
 function studentTab(tab,sid,btn){document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');const s=getStudent(sid),body=document.getElementById('studentBody');if(tab==='overview')body.innerHTML=studentOverview(s);if(tab==='diagram')body.innerHTML=diagram(s);if(tab==='lessons')body.innerHTML=studentLessons(s);if(tab==='signature')body.innerHTML=signature(s)}
@@ -2361,6 +2361,9 @@ const DP_CLOUD_OWNER_KEY='drivepro_cloud_owner_v90';
 const DP_CLOUD_BACKUP_KEY='drivepro_local_backup_v90';
 let dpCloudReady=false;
 let dpCloudBusy=false;
+let dpCloudChannel=null;
+let dpCloudRealtimeTimer=null;
+let dpCloudKnownStudentIds=new Set();
 
 function dpCloudClient(){return window.driveProAuth?.client||null}
 function dpCloudUserId(){return window.driveProAuth?.user?.id||null}
@@ -2568,6 +2571,8 @@ async function dpCloudLoad(){
    };
   });
 
+  dpCloudKnownStudentIds=new Set(cloudMapped.map(s=>s.id));
+
   /* Keep any local-only records whose cloud upload failed, instead of
      silently deleting them from the UI. */
   const syncedIds=new Set(cloudMapped.map(s=>s.id));
@@ -2588,8 +2593,64 @@ async function dpCloudLoad(){
   dpCloudStatus('error',err?.message||'Die Cloud-Daten konnten nicht geladen werden.');
  }finally{dpCloudBusy=false}
 }
-function dpCloudHandleReady(){setTimeout(()=>dpCloudLoad(),0)}
-function dpCloudHandleLogout(){dpCloudReady=false;dpCloudBusy=false;dpCloudStatus('','')}
+
+function dpCloudScheduleReload(reason){
+ if(dpCloudRealtimeTimer)clearTimeout(dpCloudRealtimeTimer);
+ dpCloudRealtimeTimer=setTimeout(()=>{
+  dpCloudRealtimeTimer=null;
+  if(!dpCloudBusy && dpCloudReady){
+   dpCloudLoad().catch(e=>console.error('DrivePro Realtime-Sync:',e));
+  }
+ },250);
+}
+
+async function dpCloudStartRealtime(){
+ const client=dpCloudClient(),uid=dpCloudUserId();
+ if(!client||!uid)return;
+
+ if(dpCloudChannel){
+  try{await client.removeChannel(dpCloudChannel)}catch(e){}
+  dpCloudChannel=null;
+ }
+
+ /* Supabase Realtime: changes made on another device are pushed here
+    immediately. The small debounce groups multiple changes together. */
+ dpCloudChannel=client.channel('drivepro-cloud-sync-'+uid)
+   .on('postgres_changes',{event:'*',schema:'public',table:'students',filter:`user_id=eq.${uid}`},
+      payload=>{
+       if(payload.eventType==='DELETE' && payload.old?.id && dpCloudKnownStudentIds.has(payload.old.id)){
+        students=students.filter(s=>s.id!==payload.old.id);
+        save();
+        dpCloudKnownStudentIds.delete(payload.old.id);
+        render();
+       }
+       dpCloudScheduleReload('students');
+      })
+   .on('postgres_changes',{event:'*',schema:'public',table:'lessons',filter:`user_id=eq.${uid}`},
+      ()=>dpCloudScheduleReload('lessons'))
+   .on('postgres_changes',{event:'*',schema:'public',table:'training_progress',filter:`user_id=eq.${uid}`},
+      ()=>dpCloudScheduleReload('training_progress'))
+   .subscribe(status=>{
+      if(status==='SUBSCRIBED'){
+       dpCloudStatus('ok','Cloud-Synchronisation aktiv');
+      }else if(status==='CHANNEL_ERROR' || status==='TIMED_OUT'){
+       console.warn('DrivePro Realtime:',status);
+       dpCloudStatus('error','Cloud-Synchronisation wartet auf Verbindung …');
+      }
+   });
+}
+
+function dpCloudStopRealtime(){
+ if(dpCloudRealtimeTimer){clearTimeout(dpCloudRealtimeTimer);dpCloudRealtimeTimer=null}
+ const client=dpCloudClient();
+ if(client&&dpCloudChannel){
+  try{client.removeChannel(dpCloudChannel)}catch(e){}
+ }
+ dpCloudChannel=null;
+}
+
+function dpCloudHandleReady(){setTimeout(async()=>{await dpCloudLoad();await dpCloudStartRealtime()},0)}
+function dpCloudHandleLogout(){dpCloudStopRealtime();dpCloudReady=false;dpCloudBusy=false;dpCloudKnownStudentIds=new Set();dpCloudStatus('','')}
 window.addEventListener('drivepro:auth-ready',dpCloudHandleReady);
 window.addEventListener('drivepro:auth-logout',dpCloudHandleLogout);
 
