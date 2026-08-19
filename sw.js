@@ -1,4 +1,4 @@
-const CACHE='drivepro-beta-v90-18-calendar-sync-ipad';
+const CACHE='drivepro-beta-v90-19-calendar-ipad-touch';
 const APP_SHELL=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png'];
 
 self.addEventListener('install',event=>{

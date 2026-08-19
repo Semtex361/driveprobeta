@@ -1144,33 +1144,29 @@ body{overflow-x:hidden}
 [data-theme="dark"] .dpTimelineLine span{background:#0f1b29;color:#8296aa}
 [data-theme="dark"] .dpTimelineEvent{background:#183451!important;color:#eaf3ff}
 @media (pointer:coarse) and (min-width:701px) and (max-width:1200px){
- /* iPad/tablet: show the complete Monday–Sunday week without horizontal
-    overflow. The previous 1100px minimum forced only ~3–4 days into view. */
- .dpTimelineWrap{overflow-x:hidden!important}
- .dpTimelineGrid{
-   min-width:0!important;
-   width:100%!important;
-   grid-template-columns:repeat(7,minmax(0,1fr))!important;
-   gap:4px!important;
- }
+ .side{width:76px!important;padding:22px 8px!important}
+ .main{margin-left:76px!important}
+ .brand{justify-content:center!important;padding:6px 0 25px!important}
+ .brand > div:not(.logo){display:none!important}
+ .nav button{font-size:0!important;text-align:center!important;padding:12px 6px!important}
+ .nav button span,.nav button .icon{margin:0!important;width:auto!important;font-size:19px!important}
+ .sidefoot{display:none!important}
+ .content{padding:24px 18px 42px!important}
+ .dpCalendarCard{padding:18px!important}
+ .dpTimelineWrap{overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;scrollbar-width:thin}
+ .dpTimelineGrid{min-width:980px!important;width:980px!important;grid-template-columns:repeat(7,minmax(128px,1fr))!important;gap:7px!important}
  .dpWeekDay{min-width:0!important}
- .dpWeekHead{padding:9px 5px!important}
- .dpWeekHead span{font-size:8px!important}
- .dpWeekHead b{font-size:16px!important}
- .dpTimelineEvent{
-   left:25px!important;
-   right:3px!important;
-   padding:5px 4px!important;
-   border-left-width:3px!important;
-   border-radius:7px!important;
- }
- .dpTimelineEvent b{font-size:7px!important}
- .dpTimelineEvent strong{font-size:8px!important}
- .dpTimelineEvent small{font-size:7px!important}
- .dpTimelineLine span{left:3px!important;font-size:7px!important;padding-right:2px!important}
- .dpTimelineEmpty{left:25px!important;right:2px!important;font-size:7px!important}
- .dpCalendarHeader{gap:8px!important}
- .dpCalendarHeader h2{font-size:20px!important}
+ .dpWeekHead{padding:10px 8px!important}
+ .dpWeekHead span{font-size:9px!important}
+ .dpWeekHead b{font-size:18px!important}
+ .dpTimelineEvent{left:28px!important;right:5px!important;padding:6px 6px!important;border-radius:8px!important}
+ .dpTimelineEvent b{font-size:8px!important}
+ .dpTimelineEvent strong{font-size:9px!important}
+ .dpTimelineEvent small{font-size:7.5px!important}
+ .dpTimelineLine span{left:3px!important;font-size:7.5px!important}
+ .dpTimelineEmpty{left:28px!important;right:3px!important;font-size:7.5px!important}
+ .dpCalendarHeader{gap:10px!important}
+ .dpCalendarHeader h2{font-size:21px!important}
  .dpCalendarHeader p{font-size:10px!important}
 }
 
@@ -2252,6 +2248,7 @@ function calendarPage(){
  </div>`;
  initTimelineDrag();
  initTimelineContextMenu();
+ initTimelineLongPress();
 }
 
 
@@ -2306,6 +2303,33 @@ function showCalendarContextMenu(x,y,date,time){
 },0);
 }
 function closeCalendarContext(){document.querySelector('.dpCalendarContext')?.remove();}
+function initTimelineLongPress(){
+ document.querySelectorAll('.dpTimelineBody').forEach(body=>{
+  let timer=null,startX=0,startY=0,active=false;
+  const clear=()=>{if(timer){clearTimeout(timer);timer=null}active=false};
+  body.addEventListener('touchstart',e=>{
+   if(e.touches.length!==1 || e.target.closest('.dpTimelineEvent'))return;
+   const t=e.touches[0]; startX=t.clientX; startY=t.clientY; active=true;
+   timer=setTimeout(()=>{
+    if(!active)return;
+    const rect=body.getBoundingClientRect(),dayEl=body.closest('.dpWeekDay');
+    const days=[...document.querySelectorAll('.dpWeekDay')],dayIndex=days.indexOf(dayEl);
+    if(dayIndex<0){clear();return}
+    const d=new Date(state.calendarWeekDate||new Date()); d.setHours(12,0,0,0);
+    d.setDate(d.getDate()-((d.getDay()+6)%7)+dayIndex);
+    const date=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    let minute=Math.round((((t.clientY-rect.top)/58)*60+360)/5)*5;
+    minute=Math.max(360,Math.min(1315,minute));
+    const time=String(Math.floor(minute/60)).padStart(2,'0')+':'+String(minute%60).padStart(2,'0');
+    showCalendarContextMenu(t.clientX,t.clientY,date,time);
+    if(navigator.vibrate)navigator.vibrate(20); active=false;
+   },650);
+  },{passive:true});
+  body.addEventListener('touchmove',e=>{if(!active||!e.touches.length)return;const t=e.touches[0];if(Math.hypot(t.clientX-startX,t.clientY-startY)>12)clear()},{passive:true});
+  body.addEventListener('touchend',clear,{passive:true});
+  body.addEventListener('touchcancel',clear,{passive:true});
+ });
+}
 function initTimelineDrag(){
  const events=document.querySelectorAll('.dpTimelineEvent');
  events.forEach(el=>{
@@ -2447,6 +2471,7 @@ let dpCloudReady=false;
 let dpCloudBusy=false;
 let dpCloudPollTimer=null;
 let dpCloudLoadQueued=false;
+let dpCloudLastLessonWriteAt=0;
 let dpCloudKnownStudentIds=new Set();
 let dpCloudPendingLessonIds=new Set();
 let dpCloudPendingProgressStudentIds=new Set();
@@ -2553,6 +2578,7 @@ async function dpCloudUpsertStudent(s){
  }catch(e){dpCloudStatus('error',e?.message||'Fahrschüler konnte nicht synchronisiert werden.');throw e}
 }
 async function dpCloudUpsertLesson(s,l,silent=false,alreadyQueued=false){
+ dpCloudLastLessonWriteAt=Date.now();
  const client=dpCloudClient(),uid=dpCloudUserId();
  if(!client||!uid||!s||!l)return;
  const work=async()=>{
@@ -2635,6 +2661,7 @@ async function dpCloudMigrateLocal(sourceStudents=students){
 }
 async function dpCloudLoad(){
  const client=dpCloudClient(),uid=dpCloudUserId();if(!client||!uid)return;
+ if(Date.now()-dpCloudLastLessonWriteAt<1500){dpCloudLoadQueued=true;setTimeout(()=>{if(!dpCloudBusy)dpCloudLoad()},1600);return;}
  if(dpCloudBusy){dpCloudLoadQueued=true;return}
  dpCloudBusy=true;
  try{
@@ -2742,6 +2769,13 @@ async function dpCloudLoad(){
     lessonType:x.lesson_type||'Fahrstunde',note:x.notes||'',
     kilometers:x.kilometers==null?'':x.kilometers,color:x.color||null,signature:x.signature||null
    }));
+   const localStudent=(students||[]).find(s=>s.id===row.id);
+   if(localStudent){
+    const cloudLessonIds=new Set(mappedLessons.map(x=>x.id));
+    for(const localLesson of (localStudent.lessons||[])){
+     if(dpCloudPendingLessonIds.has(localLesson.id) && !cloudLessonIds.has(localLesson.id))mappedLessons.push({...localLesson});
+    }
+   }
    return {
     id:row.id,firstName:row.first_name||'',lastName:row.last_name||'',
     license:row.license_class||'B',start:row.training_start||'',
