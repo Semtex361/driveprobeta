@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta</title>
+<title>DrivePro Beta V90</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -1566,7 +1566,7 @@ body.auth-locked #driveProAuth{display:flex}
 [data-theme="dark"] .dp-auth-message.error{background:#351b20;border-color:#71303a;color:#ffb8c0}
 [data-theme="dark"] .dp-auth-message.info{background:#132844;border-color:#254c7d;color:#b9d7ff}
 .dp-userbar{display:flex;align-items:center;gap:9px}
-.dp-user-info{display:flex;flex-direction:column;align-items:flex-end;line-height:1.1}
+.dp-cloud-status{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:750;background:var(--surface2);border:1px solid var(--line);color:var(--muted);white-space:nowrap}.dp-cloud-status.syncing{color:#1769d2;background:#eaf3ff;border-color:#c9ddf7}.dp-cloud-status.ok{color:#24764f;background:#edf9f2;border-color:#cfeadb}.dp-cloud-status.error{color:#b33b3b;background:#fff0f0;border-color:#f1caca}.dp-cloud-dot{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block}.dp-user-info{display:flex;flex-direction:column;align-items:flex-end;line-height:1.1}
 .dp-user-name{font-size:12px;font-weight:750}
 .dp-user-role{font-size:10px;color:var(--muted);margin-top:3px}
 .dp-admin-badge{display:none;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:800;
@@ -1574,7 +1574,7 @@ body.auth-locked #driveProAuth{display:flex}
 .dp-logout{background:var(--surface2);color:var(--text);border:1px solid var(--line);
  border-radius:10px;padding:9px 11px;font-weight:700;font-size:12px}
 .dp-logout:hover{border-color:#b7c9df;background:var(--primary-soft)}
-@media(max-width:700px){.dp-auth-card{padding:27px 22px;border-radius:20px}.dp-user-info,.dp-admin-badge{display:none!important}.dp-logout{padding:8px 9px}}
+@media(max-width:700px){.dp-cloud-status{display:none}.dp-auth-card{padding:27px 22px;border-radius:20px}.dp-user-info,.dp-admin-badge{display:none!important}.dp-logout{padding:8px 9px}}
 
 </style>
 <link rel="manifest" href="manifest.json">
@@ -1585,7 +1585,7 @@ body.auth-locked #driveProAuth{display:flex}
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="auth-locked" data-drivepro-version="V89"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V90"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 
 <div id="driveProAuth" aria-label="DrivePro Anmeldung">
   <div class="dp-auth-card">
@@ -1645,7 +1645,7 @@ body.auth-locked #driveProAuth{display:flex}
 <header class="top">
 <h1 id="pageTitle">Dashboard</h1>
 <div class="dp-userbar">
-<div id="dpAdminBadge" class="dp-admin-badge">ADMIN</div>
+<div id="dpCloudStatus" class="dp-cloud-status"><span class="dp-cloud-dot"></span>Cloud</div><div id="dpAdminBadge" class="dp-admin-badge">ADMIN</div>
 <div class="dp-user-info"><span id="dpUserName" class="dp-user-name">—</span><span id="dpUserRole" class="dp-user-role">Angemeldet</span></div>
 <button id="dpLogoutButton" class="dp-logout" type="button">Abmelden</button>
 <button class="primary" onclick="openStudentForm()">+ Fahrschüler</button>
@@ -1766,7 +1766,8 @@ document.getElementById('content').innerHTML=`<div class="toolbar"><div class="m
 function filterStudents(){let q=(document.getElementById('studentSearch')?.value||'').toLowerCase();let list=students.filter(s=>(s.firstName+' '+s.lastName+' '+s.license).toLowerCase().includes(q));document.getElementById('studentList').innerHTML=list.map(studentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Keine Treffer.</div>'}
 function openStudentForm(studentId=''){let s=studentId?getStudent(studentId):null;openModal(`<h2>${s?'Fahrschüler bearbeiten':'Neuer Fahrschüler'}</h2><div class="row"><div class="field"><label>Vorname</label><input id="sf" value="${esc(s?.firstName||'')}"></div><div class="field"><label>Nachname</label><input id="sl" value="${esc(s?.lastName||'')}"></div></div><div class="row"><div class="field"><label>Klasse</label><select id="sc">${['B','B78','B197'].map(x=>`<option ${x===(s?.license||'B')?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Ausbildungsbeginn</label><input id="sd" type="date" value="${s?.start||new Date().toISOString().slice(0,10)}"></div></div><div class="row"><div class="field"><label>Geburtsdatum</label><input id="sb" type="date" value="${s?.birthDate||''}"></div><div class="field"><label>Telefon</label><input id="sphone" type="tel" value="${esc(s?.phone||'')}" placeholder="z. B. 0176 12345678"></div></div><div class="row"><div class="field"><label>E-Mail</label><input id="semail" type="email" value="${esc(s?.email||'')}" placeholder="name@example.de"></div><div class="field"><label>Adresse</label><input id="saddress" value="${esc(s?.address||'')}" placeholder="Straße, Hausnummer, PLZ Ort"></div></div><div class="studentChecks"><label><input type="checkbox" id="sv" ${s?.visionAid===true?'checked':''}> Sehhilfe</label><label><input type="checkbox" id="st" ${s?.theoryPassed===true?'checked':''}> Theorie bestanden</label></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveStudent('${studentId}')">Speichern</button></div>`)}
 function saveStudent(sid){const f=document.getElementById('sf').value.trim(),l=document.getElementById('sl').value.trim();if(!f||!l){alert('Bitte Vor- und Nachnamen eingeben.');return}const personal={firstName:f,lastName:l,license:document.getElementById('sc').value,start:document.getElementById('sd').value,birthDate:document.getElementById('sb').value,phone:document.getElementById('sphone').value.trim(),email:document.getElementById('semail').value.trim(),address:document.getElementById('saddress').value.trim(),visionAid:document.getElementById('sv').checked,theoryPassed:document.getElementById('st').checked};
-if(sid){const s=getStudent(sid);Object.assign(s,personal)}else{students.push({id:id(),...personal,areas:DEFAULT_AREAS.map(name=>({name,level:'Offen',note:''})),lessons:[],signature:null})}save();closeModal();render()}
+if(sid){const s=getStudent(sid);Object.assign(s,personal);save();closeModal();render();if(dpCloudReady)dpCloudUpsertStudent(s).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}else{const s={id:id(),...personal,areas:DEFAULT_AREAS.map(name=>({name,level:'Offen',note:''})),lessons:[],signature:null};students.push(s);save();closeModal();render();if(dpCloudReady)dpCloudUpsertStudent(s).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}
+}
 function openStudent(sid){const s=getStudent(sid);state.studentId=sid;openModal(`<div class="profileHeader"><div><h2>${esc(s.firstName+' '+s.lastName)}</h2></div><div class="profileActions"><button class="studentCompleteBtn" onclick="licenseReceivedReport('${sid}')">✓ Führerschein erhalten</button><button class="secondary" onclick="closeModal();openStudentForm('${sid}')">✎ Bearbeiten</button></div></div><div class="tabs"><button class="sel" onclick="studentTab('overview','${sid}',this)">Übersicht</button><button onclick="studentTab('diagram','${sid}',this)">Ausbildungsdiagramm</button><button onclick="studentTab('lessons','${sid}',this)">Fahrstunden</button><button onclick="studentTab('signature','${sid}',this)">Unterschrift</button></div><div id="studentBody">${studentOverview(s)}</div>`)}
 function studentTab(tab,sid,btn){document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');const s=getStudent(sid),body=document.getElementById('studentBody');if(tab==='overview')body.innerHTML=studentOverview(s);if(tab==='diagram')body.innerHTML=diagram(s);if(tab==='lessons')body.innerHTML=studentLessons(s);if(tab==='signature')body.innerHTML=signature(s)}
 function studentOverview(s){
@@ -1796,8 +1797,8 @@ function diagram(s){return `<div class="diagramHead"><div><h3>Ausbildungsdiagram
  <button type="button" class="statusDot statusPractice ${a.level==='Übung'?'selected':''}" title="Üben" aria-label="Üben" onclick="setArea('${s.id}',${i},'Übung')"></button>
  <button type="button" class="statusDot statusSafe ${a.level==='Sicher'?'selected':''}" title="Sicher" aria-label="Sicher" onclick="setArea('${s.id}',${i},'Sicher')"></button>
  </div><input value="${esc(a.note)}" placeholder="Notiz…" onchange="setAreaNote('${s.id}',${i},this.value)"></div>`).join('')}`}
-function setArea(sid,i,v){const s=getStudent(sid);s.areas[i].level=v;save();const active=document.querySelector('.tabs .sel');studentTab('diagram',sid,active)}
-function setAreaNote(sid,i,v){const s=getStudent(sid);s.areas[i].note=v;save()}
+function setArea(sid,i,v){const s=getStudent(sid);s.areas[i].level=v;save();if(dpCloudReady)dpCloudSyncProgress(s).then(()=>dpCloudStatus('ok','Ausbildungsstand gespeichert.')).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')});const active=document.querySelector('.tabs .sel');studentTab('diagram',sid,active)}
+function setAreaNote(sid,i,v){const s=getStudent(sid);s.areas[i].note=v;save();if(dpCloudReady)dpCloudSyncProgress(s).then(()=>dpCloudStatus('ok','Ausbildungsnotiz gespeichert.')).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}
 function studentLessons(s){return `<div style="display:flex;justify-content:space-between;align-items:center"><h3>Gespeicherte Fahrstunden</h3><button class="primary" onclick="openLessonForm('${s.id}')">+ Fahrstunde</button></div>${s.lessons.slice().sort((a,b)=>(b.date+' '+b.startTime).localeCompare(a.date+' '+a.startTime)).map(l=>lessonRow(s,l,true)).join('')||'<div class="empty">Noch keine Fahrstunden.</div>'}`}
 function lessonRow(s,l,clickable=false){return `<div class="lesson ${clickable?'clickable':''}" ${clickable?`onclick="openLessonDetail('${s.id}','${l.id}')"`:''}><b>${fmtDate(l.date)} · ${fmtTime(l.startTime)}${l.endTime?'–'+l.endTime:''} · ${l.duration} Min.</b><div class="muted">${esc(l.special||'Übungsfahrt')} · ${esc(s.firstName+' '+s.lastName)}${l.km?' · '+l.km+' km':''}</div>${l.note?`<div class="small" style="margin-top:5px">${esc(l.note)}</div>`:''}</div>`}
 function openLessonForm(studentId='',lessonId='',presetDate='',presetTime=''){let s=studentId?getStudent(studentId):null,l=lessonId?s.lessons.find(x=>x.id===lessonId):null;const baseDate=new Date().toISOString().slice(0,10);openModal(`<h2>${l?'Fahrstunde bearbeiten':'Fahrstunde dokumentieren'}</h2><div class="row"><div class="field"><label>Fahrschüler</label><select id="ls">${students.map(x=>`<option value="${x.id}" ${x.id===(s?.id||'')?'selected':''}>${esc(x.firstName+' '+x.lastName)}</option>`).join('')}</select></div><div class="field"><label>Datum</label><input id="ld" type="date" value="${l?.date||presetDate||baseDate}"></div></div><div class="row"><div class="field"><label>Beginn</label><input id="lt" type="time" value="${l?.startTime||presetTime||'09:00'}"></div><div class="field"><label>Dauer (Minuten)</label><input id="lm" type="number" value="${l?.duration||appSettings.durations['Übungsfahrt']}"></div></div><div class="field"><label>Art</label><select id="lsp" onchange="setLessonDuration(this.value)">${['Übungsfahrt','B197 Fahrstunde','Überlandfahrt','Autobahnfahrt','Beleuchtungsfahrt','Prüfungsfahrt'].map(x=>`<option ${x===(l?.special||'Übungsfahrt')?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Bemerkung</label><textarea id="ln" rows="4">${esc(l?.note||'')}</textarea></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveLesson('${studentId}','${lessonId}')">${l?'Änderungen speichern':'Speichern'}</button></div>`)}
@@ -1861,6 +1862,7 @@ function saveLesson(oldStudentId,lessonId){
  const actionText=notificationAction==='added'?'Neue Fahrstunde angelegt':`Fahrstunde geändert: ${changedLesson.startTime||'—'} – ${endTime(changedLesson.startTime,changedLesson.duration)} · ${changedLesson.special||'Übungsfahrt'}`;
  logActivity(notificationAction,s,changedLesson,actionText);
  notifyLessonChange(notificationAction,s,changedLesson);
+ if(dpCloudReady)dpCloudUpsertLesson(s,changedLesson).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Fahrstunde konnte nicht synchronisiert werden')});
 }
 function openLessonDetail(sid,lid){
  const s=getStudent(sid),l=s.lessons.find(x=>x.id===lid);
@@ -1881,7 +1883,7 @@ function openLessonDetail(sid,lid){
  <div class="actions"><button class="danger" onclick="deleteLesson('${sid}','${lid}')">Löschen</button><button class="secondary" onclick="closeModal();openLessonForm('${sid}','${lid}')">Bearbeiten</button></div>`);
  setTimeout(()=>initLessonSignature(sid,lid),30);
 }
-function deleteLesson(sid,lid){if(!confirm('Fahrstunde wirklich löschen?'))return;const s=getStudent(sid),lesson=s.lessons.find(l=>l.id===lid);if(!lesson)return;s.lessons=s.lessons.filter(l=>l.id!==lid);save();closeModal();render();logActivity('deleted',s,lesson,`Fahrstunde gelöscht: ${lesson.startTime||'—'} – ${endTime(lesson.startTime,lesson.duration)} · ${lesson.special||'Übungsfahrt'}`);notifyLessonChange('deleted',s,lesson)}
+function deleteLesson(sid,lid){if(!confirm('Fahrstunde wirklich löschen?'))return;const s=getStudent(sid),lesson=s.lessons.find(l=>l.id===lid);if(!lesson)return;s.lessons=s.lessons.filter(l=>l.id!==lid);save();closeModal();render();logActivity('deleted',s,lesson,`Fahrstunde gelöscht: ${lesson.startTime||'—'} – ${endTime(lesson.startTime,lesson.duration)} · ${lesson.special||'Übungsfahrt'}`);notifyLessonChange('deleted',s,lesson);if(dpCloudReady)dpCloudDeleteLesson(lid).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Löschen konnte nicht synchronisiert werden')})}
 function initLessonSignature(sid,lid){
  const c=document.getElementById('lessonSignatureCanvas'); if(!c)return;
  const ctx=c.getContext('2d'); ctx.lineWidth=3; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#173b69';
@@ -1900,7 +1902,7 @@ function clearLessonSignature(sid,lid){
 function saveLessonSignature(sid,lid){
  const c=document.getElementById('lessonSignatureCanvas');if(!c)return;
  const s=getStudent(sid),l=s?.lessons.find(x=>x.id===lid);if(!l)return;
- l.signature=c.toDataURL('image/png');save();
+ l.signature=c.toDataURL('image/png');save();if(dpCloudReady)dpCloudUpsertLesson(s,l).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Unterschrift konnte nicht synchronisiert werden')});
  const btn=document.querySelector('.lessonSignature .primary');if(btn){const old=btn.textContent;btn.textContent='✓ Gespeichert';setTimeout(()=>btn.textContent=old,1200)}
 }
 function signature(s){return `<h3>Unterschrift des Fahrschülers</h3><div class="hint">Mit Maus, Touchscreen oder Stift unterschreiben.</div><div class="sigwrap" style="margin-top:10px"><div class="sighead"><span>${esc(s.firstName+' '+s.lastName)}</span><button onclick="clearSignature()">Löschen</button></div><canvas id="signatureCanvas" class="signature" width="700" height="180"></canvas></div><div class="actions"><button class="primary" onclick="saveSignature('${s.id}')">Unterschrift speichern</button></div>`}
@@ -2053,6 +2055,7 @@ function importDriveProData(event){
    students=data.students;
    if(data.settings)appSettings={...DEFAULT_SETTINGS,...data.settings,durations:{...DEFAULT_SETTINGS.durations,...(data.settings.durations||{})}};
    save();saveSettings();applyTheme();render();
+   if(dpCloudReady)dpCloudMigrateLocal().catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Import konnte nicht synchronisiert werden')});
    alert('✓ Sicherung erfolgreich wiederhergestellt.');
   }catch(e){alert('Die Datei konnte nicht als DrivePro-Sicherung erkannt werden.')}
  };
@@ -2061,7 +2064,7 @@ function importDriveProData(event){
 function resetDriveProData(){
  if(!confirm('Möchtest du wirklich ALLE Fahrschüler und Fahrstunden löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.'))return;
  if(!confirm('Letzte Sicherheitsabfrage: Wirklich alle Daten löschen?'))return;
- students=[];save();render();
+ students=[];save();render();if(dpCloudReady)dpCloudDeleteAll().catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Cloud-Löschen fehlgeschlagen')});
 }
 
 function licenseReceivedReport(sid){
@@ -2352,6 +2355,203 @@ function chooseNewLessonTime(){
 function openModal(content){document.getElementById('modalBody').innerHTML=content;document.getElementById('modal').classList.add('open');setTimeout(()=>initSignature(),20)}
 function closeModal(){document.getElementById('modal').classList.remove('open')}
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()})
+
+/* V90 – Supabase Cloud Data Sync */
+const DP_CLOUD_OWNER_KEY='drivepro_cloud_owner_v90';
+const DP_CLOUD_BACKUP_KEY='drivepro_local_backup_v90';
+let dpCloudReady=false;
+let dpCloudBusy=false;
+
+function dpCloudClient(){return window.driveProAuth?.client||null}
+function dpCloudUserId(){return window.driveProAuth?.user?.id||null}
+function dpCloudStatus(state,text){
+ const el=document.getElementById('dpCloudStatus');
+ if(!el)return;
+ el.className='dp-cloud-status '+(state||'');
+ el.innerHTML=state==='syncing'?'<span class="dp-cloud-dot"></span>Synchronisiere …':
+   state==='ok'?'<span class="dp-cloud-dot"></span>Cloud gespeichert':
+   state==='error'?'<span class="dp-cloud-dot"></span>Cloud-Fehler':
+   '<span class="dp-cloud-dot"></span>Cloud';
+ el.title=text||'';
+}
+function dpCloudBackupLocal(){
+ try{
+  if(students.length) localStorage.setItem(DP_CLOUD_BACKUP_KEY,JSON.stringify({savedAt:new Date().toISOString(),students}));
+ }catch(e){console.warn('DrivePro Cloud-Backup konnte nicht erstellt werden:',e)}
+}
+function dpCloudStudentRow(s,uid){
+ return {
+  id:s.id,user_id:uid,first_name:s.firstName||'',last_name:s.lastName||'',
+  birth_date:s.birthDate||null,phone:s.phone||'',email:s.email||'',address:s.address||'',
+  license_class:s.license||'B',training_start:s.start||null,vision_aid:s.visionAid===true,
+  theory_passed:s.theoryPassed===true,practice_exam_date:s.practiceExamDate||null,
+  license_received_date:s.licenseReceivedDate||null,notes:s.notes||''
+ };
+}
+function dpCloudLessonRow(s,l,uid){
+ return {
+  id:l.id,user_id:uid,student_id:s.id,lesson_date:l.date,start_time:l.startTime,
+  end_time:endTime(l.startTime,Number(l.duration)||0),lesson_type:l.lessonType||'Fahrstunde',
+  special_type:l.special||null,duration_minutes:Number(l.duration)||0,
+  kilometers:l.kilometers===''||l.kilometers==null?null:Number(l.kilometers),
+  notes:l.note||l.notes||'',color:l.color||null,signature:l.signature||null
+ };
+}
+async function dpCloudSyncProgress(s){
+ const client=dpCloudClient(),uid=dpCloudUserId();
+ if(!client||!uid||!s)return;
+ const q=await client.from('training_progress').select('id,area_name').eq('user_id',uid).eq('student_id',s.id);
+ if(q.error)throw q.error;
+ const existing=q.data||[];
+ const wanted=new Set();
+ for(const a of (s.areas||[])){
+  wanted.add(a.name);
+  const old=existing.find(x=>x.area_name===a.name);
+  const payload={user_id:uid,student_id:s.id,area_name:a.name,level:a.level||'Offen',note:a.note||''};
+  const r=old
+    ?await client.from('training_progress').update({level:payload.level,note:payload.note}).eq('id',old.id).eq('user_id',uid)
+    :await client.from('training_progress').insert(payload);
+  if(r.error)throw r.error;
+ }
+ for(const old of existing){
+  if(!wanted.has(old.area_name)){
+   const r=await client.from('training_progress').delete().eq('id',old.id).eq('user_id',uid);
+   if(r.error)throw r.error;
+  }
+ }
+}
+async function dpCloudUpsertStudent(s){
+ const client=dpCloudClient(),uid=dpCloudUserId();
+ if(!client||!uid||!s)return;
+ dpCloudStatus('syncing','Fahrschüler wird gespeichert …');
+ const r=await client.from('students').upsert(dpCloudStudentRow(s,uid),{onConflict:'id'});
+ if(r.error)throw r.error;
+ await dpCloudSyncProgress(s);
+ for(const l of (s.lessons||[]))await dpCloudUpsertLesson(s,l,true);
+ dpCloudReady=true;dpCloudStatus('ok','Fahrschüler und Ausbildungsstand sind in Supabase gespeichert.');
+}
+async function dpCloudUpsertLesson(s,l,silent=false){
+ const client=dpCloudClient(),uid=dpCloudUserId();
+ if(!client||!uid||!s||!l)return;
+ if(!silent)dpCloudStatus('syncing','Fahrstunde wird gespeichert …');
+ const payload=dpCloudLessonRow(s,l,uid);
+ let r=await client.from('lessons').upsert(payload,{onConflict:'id'});
+ if(r.error && /signature/i.test(r.error.message||'')){
+   const {signature,...withoutSignature}=payload;
+   r=await client.from('lessons').upsert(withoutSignature,{onConflict:'id'});
+ }
+ if(r.error)throw r.error;
+ if(!silent)dpCloudStatus('ok','Fahrstunde in der Cloud gespeichert.');
+}
+async function dpCloudDeleteLesson(lid){
+ const client=dpCloudClient(),uid=dpCloudUserId();
+ if(!client||!uid||!lid)return;
+ dpCloudStatus('syncing','Fahrstunde wird gelöscht …');
+ const r=await client.from('lessons').delete().eq('id',lid).eq('user_id',uid);
+ if(r.error)throw r.error;
+ dpCloudStatus('ok','Fahrstunde aus der Cloud gelöscht.');
+}
+async function dpCloudDeleteAll(){
+ const client=dpCloudClient(),uid=dpCloudUserId();
+ if(!client||!uid)return;
+ dpCloudStatus('syncing','Cloud-Daten werden gelöscht …');
+ const s=await client.from('students').select('id').eq('user_id',uid);
+ if(s.error)throw s.error;
+ const ids=(s.data||[]).map(x=>x.id);
+ if(ids.length){
+  let r=await client.from('training_progress').delete().eq('user_id',uid);
+  if(r.error)throw r.error;
+  r=await client.from('lessons').delete().eq('user_id',uid);
+  if(r.error)throw r.error;
+  r=await client.from('students').delete().eq('user_id',uid);
+  if(r.error)throw r.error;
+ }
+ dpCloudStatus('ok','Cloud-Daten gelöscht.');
+}
+async function dpCloudMigrateLocal(){
+ const client=dpCloudClient(),uid=dpCloudUserId();
+ if(!client||!uid)return;
+ dpCloudStatus('syncing','Vorhandene lokale Daten werden einmalig in die Cloud übertragen …');
+ for(const s of students){
+  const r=await client.from('students').upsert(dpCloudStudentRow(s,uid),{onConflict:'id'});
+  if(r.error)throw r.error;
+  await dpCloudSyncProgress(s);
+  for(const l of (s.lessons||[]))await dpCloudUpsertLesson(s,l,true);
+ }
+ localStorage.setItem(DP_CLOUD_OWNER_KEY,uid);
+ dpCloudReady=true;
+ dpCloudStatus('ok','Lokale Daten wurden erfolgreich in die Cloud übernommen.');
+}
+async function dpCloudLoad(){
+ const client=dpCloudClient(),uid=dpCloudUserId();
+ if(!client||!uid)return;
+ dpCloudBusy=true;
+ try{
+  dpCloudStatus('syncing','Cloud-Daten werden geladen …');
+  const [sr,pr,lr]=await Promise.all([
+   client.from('students').select('*').eq('user_id',uid).order('last_name',{ascending:true}),
+   client.from('training_progress').select('*').eq('user_id',uid),
+   client.from('lessons').select('*').eq('user_id',uid).order('lesson_date',{ascending:true}).order('start_time',{ascending:true})
+  ]);
+  if(sr.error)throw sr.error;
+  if(pr.error)throw pr.error;
+  if(lr.error)throw lr.error;
+
+  const cloudStudents=sr.data||[];
+  const owner=localStorage.getItem(DP_CLOUD_OWNER_KEY);
+  if(!cloudStudents.length && students.length){
+   if(!owner || owner===uid){
+    dpCloudBackupLocal();
+    await dpCloudMigrateLocal();
+    return;
+   }
+   dpCloudBackupLocal();
+   students=[];
+   save();
+  }
+
+  if(cloudStudents.length){
+   dpCloudBackupLocal();
+   const progressByStudent={};
+   for(const p of (pr.data||[])){
+    (progressByStudent[p.student_id]||(progressByStudent[p.student_id]=[])).push(p);
+   }
+   const lessonsByStudent={};
+   for(const l of (lr.data||[])){
+    (lessonsByStudent[l.student_id]||(lessonsByStudent[l.student_id]=[])).push(l);
+   }
+   students=cloudStudents.map(row=>{
+    const areas=(progressByStudent[row.id]||[]).map(p=>({name:p.area_name,level:p.level||'Offen',note:p.note||''}));
+    const lessonRows=(lessonsByStudent[row.id]||[]).map(l=>({
+      id:l.id,date:l.lesson_date,startTime:(l.start_time||'').slice(0,5),duration:Number(l.duration_minutes)||0,
+      special:l.special_type||'',lessonType:l.lesson_type||'Fahrstunde',note:l.notes||'',
+      kilometers:l.kilometers==null?'':l.kilometers,color:l.color||null,signature:l.signature||null
+    }));
+    return {
+      id:row.id,firstName:row.first_name||'',lastName:row.last_name||'',license:row.license_class||'B',
+      start:row.training_start||'',birthDate:row.birth_date||'',phone:row.phone||'',email:row.email||'',
+      address:row.address||'',visionAid:row.vision_aid===true,theoryPassed:row.theory_passed===true,
+      practiceExamDate:row.practice_exam_date||'',licenseReceivedDate:row.license_received_date||'',
+      notes:row.notes||'',areas:areas.length?areas:DEFAULT_AREAS.map(name=>({name,level:'Offen',note:''})),
+      lessons:lessonRows,signature:null
+    };
+   });
+   save();
+  }
+  localStorage.setItem(DP_CLOUD_OWNER_KEY,uid);
+  dpCloudReady=true;
+  dpCloudStatus('ok',`${students.length} Fahrschüler aus der Cloud geladen.`);
+ }catch(err){
+  console.error('DrivePro Cloud-Sync:',err);
+  dpCloudReady=false;
+  dpCloudStatus('error',err?.message||'Die Cloud-Daten konnten nicht geladen werden.');
+ }finally{dpCloudBusy=false}
+}
+function dpCloudHandleReady(){setTimeout(()=>dpCloudLoad(),0)}
+function dpCloudHandleLogout(){dpCloudReady=false;dpCloudBusy=false;dpCloudStatus('','')}
+window.addEventListener('drivepro:auth-ready',dpCloudHandleReady);
+window.addEventListener('drivepro:auth-logout',dpCloudHandleLogout);
+
 render()
 </script>
 <script>
@@ -2481,7 +2681,7 @@ async function dpLogin(email,password){
 }
 async function dpLogout(){
  try{await dpClient.auth.signOut();}catch(err){console.error(err);}
- dpProfile=null;window.driveProAuth=null;document.body.classList.add('auth-locked');dpMessage('','info');
+ dpProfile=null;window.driveProAuth=null;document.body.classList.add('auth-locked');window.dispatchEvent(new CustomEvent('drivepro:auth-logout'));dpMessage('','info');
  $('driveProLoginForm')?.reset();
 }
 async function dpInit(){

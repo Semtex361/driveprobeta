@@ -1,4 +1,4 @@
-DRIVEPRO V89 – LOGIN
+DRIVEPRO V90 – LOGIN + CLOUD-SYNC
 
 - Supabase E-Mail/Passwort-Login
 - Session bleibt im Browser erhalten
@@ -9,9 +9,10 @@ DRIVEPRO V89 – LOGIN
 - kein Secret/Service-Role-Key in der Website
 - bestehende lokale Fahrschülerdaten bleiben vorerst unverändert
 
-V89 ist bewusst nur der erste Backend-Schritt.
-Die Migration der Fahrschüler/Fahrstunden in die Cloud erfolgt erst
-nach einem erfolgreichen Login-Test.
+V90 ist bewusst nur der erste Backend-Schritt.
+Fahrschüler, Ausbildungsstand und Fahrstunden werden nach erfolgreichem Login
+mit Supabase synchronisiert. Beim ersten Login mit leerem Cloud-Konto werden
+vorhandene lokale Daten einmalig übernommen.
 
 GitHub: alle Dateien aus diesem Paket übernehmen.
 Danach Strg+F5 bzw. installierte PWA neu öffnen.
