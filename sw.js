@@ -1,4 +1,4 @@
-const CACHE='drivepro-beta-v90-30-delete-tombstone-final';
+const CACHE='drivepro-beta-v90-31-delete-realtime';
 const APP_SHELL=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png'];
 
 self.addEventListener('install',event=>{

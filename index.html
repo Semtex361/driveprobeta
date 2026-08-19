@@ -2997,16 +2997,17 @@ async function dpCloudRealtimeApplyStudent(id){
 }
 async function dpCloudRealtimeApplyLesson(p){
  const row=p?.new||p?.old||{},lid=row.id;if(!lid)return;
- if(dpCloudDeletedLessonIds.has(String(lid))||dpCloudDeletingLessonIds.has(String(lid))){if(p.eventType==='DELETE')dpCloudClearLessonPending(lid);return}
+ /* DELETE is authoritative. Even if this device already has a tombstone,
+   the visible lesson must be removed on every other device. */
+ if(p.eventType!=='DELETE' && (dpCloudDeletedLessonIds.has(String(lid))||dpCloudDeletingLessonIds.has(String(lid))))return;
  let sid=row.student_id;
  if(!sid){for(const s of students)if((s.lessons||[]).some(l=>l.id===lid)){sid=s.id;break}}
  if(!sid)return;
  const s=students.find(x=>x.id===sid);if(!s)return;
  if(p.eventType==='DELETE'){
-  /* A DELETE event is authoritative. The local deletion has already been
-     made, so the marker must not cause the event to be ignored. */
   dpCloudClearLessonPending(lid);
-  s.lessons=(s.lessons||[]).filter(l=>l.id!==lid)
+  dpCloudRememberDeletedLesson(lid);
+  s.lessons=(s.lessons||[]).filter(l=>l.id!==lid);
  }
  else{
   if(dpCloudPendingLessonIds.has(lid)){const snap=dpCloudPendingLessonSnapshots.get(lid);if(snap&&dpCloudLessonMatchesSnapshot(row,snap))dpCloudClearLessonPending(lid);else return}
