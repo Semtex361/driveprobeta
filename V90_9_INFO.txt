@@ -1,9 +1,0 @@
-DrivePro V90.9 – Fahrschüler löschen + stabiler Cloud-Sync
-
-Änderungen:
-- Fahrschüler können über die Fahrschüler-Liste oder das Schülerprofil gelöscht werden.
-- Beim Löschen werden in der Cloud zuerst training_progress und lessons und danach der Schüler gelöscht.
-- Zwei Sicherheitsabfragen verhindern versehentliches Löschen.
-- Das bisherige Supabase-Realtime-Problem (403 / "Cannot add postgres_changes callbacks after subscribe") wird nicht mehr für die Synchronisation benötigt.
-- DrivePro verwendet stattdessen eine automatische Cloud-Abfrage im Hintergrund. Dadurch ist kein manueller Reload nötig.
-- Der lokale Datensatz wird erst nach erfolgreichem Cloud-Löschen entfernt.
