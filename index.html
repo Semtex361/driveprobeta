@@ -1772,19 +1772,30 @@ async function deleteStudent(sid,event){
  const countLessons=(s.lessons||[]).length;
  if(!confirm(`Fahrschüler „${name}“ wirklich löschen?\n\nDabei werden auch ${countLessons} Fahrstunde(n) und der Ausbildungsfortschritt dieses Fahrschülers gelöscht.\n\nDieser Vorgang kann nicht rückgängig gemacht werden.`))return;
  if(!confirm(`Letzte Sicherheitsabfrage:\n\n„${name}“ endgültig löschen?`))return;
+ const backup=students.slice();
  try{
   dpCloudBackupLocal();
-  if(dpCloudReady)await dpCloudDeleteStudent(sid);
+  /* Mark the ID before touching the cloud. Background/realtime loads must
+     never interpret the intentional delete as a missing local record and
+     upload it again. */
+  dpCloudDeletingStudentIds.add(sid);
   students=students.filter(x=>x.id!==sid);
   save();
+  render();
+  if(dpCloudReady)await dpCloudDeleteStudent(sid);
+  dpCloudDeletingStudentIds.delete(sid);
   logActivity('student_deleted',s,null,`Fahrschüler gelöscht: ${name}`);
   closeModal();
   render();
-  dpCloudStatus('ok',`Fahrschüler „${name}“ gelöscht.`);
+  dpCloudStatus('ok',`Fahrschüler „${name}“ dauerhaft gelöscht.`);
  }catch(e){
+  dpCloudDeletingStudentIds.delete(sid);
+  students=backup;
+  save();
+  render();
   console.error('DrivePro: Fahrschüler konnte nicht gelöscht werden',sid,e);
   dpCloudStatus('error',e?.message||'Fahrschüler konnte nicht aus der Cloud gelöscht werden.');
-  alert(`Der Fahrschüler konnte nicht vollständig gelöscht werden.\n\n${e?.message||'Unbekannter Cloud-Fehler'}\n\nDie lokalen Daten wurden zur Sicherheit nicht entfernt.`);
+  alert(`Der Fahrschüler konnte nicht vollständig gelöscht werden.\n\n${e?.message||'Unbekannter Cloud-Fehler'}\n\nDer Fahrschüler wurde lokal wiederhergestellt.`);
  }
 }
 function saveStudent(sid){const f=document.getElementById('sf').value.trim(),l=document.getElementById('sl').value.trim();if(!f||!l){alert('Bitte Vor- und Nachnamen eingeben.');return}const personal={firstName:f,lastName:l,license:document.getElementById('sc').value,start:document.getElementById('sd').value,birthDate:document.getElementById('sb').value,phone:document.getElementById('sphone').value.trim(),email:document.getElementById('semail').value.trim(),address:document.getElementById('saddress').value.trim(),visionAid:document.getElementById('sv').checked,theoryPassed:document.getElementById('st').checked};
@@ -2401,6 +2412,7 @@ let dpCloudRealtimeConnected=false;
 let dpCloudFallbackTimer=null;
 let dpCloudKnownStudentIds=new Set();
 let dpCloudRealtimeStarting=false;
+let dpCloudDeletingStudentIds=new Set();
 
 function dpCloudClient(){return window.driveProAuth?.client||null}
 function dpCloudUserId(){return window.driveProAuth?.user?.id||null}
@@ -2459,12 +2471,14 @@ async function dpCloudSyncProgress(s){
  const existing=q.data||[];
  const wanted=new Set();
  for(const a of (s.areas||[])){
-  wanted.add(a.name);
-  const old=existing.find(x=>x.area_name===a.name);
-  const payload={user_id:uid,student_id:s.id,area_name:a.name,level:a.level||'Offen',note:a.note||''};
-  const r=old
-    ?await client.from('training_progress').update({level:payload.level,note:payload.note}).eq('id',old.id).eq('user_id',uid)
-    :await client.from('training_progress').insert(payload);
+  const areaName=(a.name||'').trim();
+  if(!areaName)continue;
+  wanted.add(areaName);
+  const payload={user_id:uid,student_id:s.id,area_name:areaName,level:a.level||'Offen',note:a.note||''};
+  /* Use the database's unique key (student_id, area_name) as the source
+     of truth. This removes the SELECT -> INSERT race that caused 409
+     duplicate-key errors when two syncs ran at the same time. */
+  const r=await client.from('training_progress').upsert(payload,{onConflict:'student_id,area_name'});
   if(r.error)throw r.error;
  }
  for(const old of existing){
@@ -2508,15 +2522,23 @@ async function dpCloudDeleteLesson(lid){
 async function dpCloudDeleteStudent(sid){
  const client=dpCloudClient(),uid=dpCloudUserId();
  if(!client||!uid||!sid)return;
+ dpCloudDeletingStudentIds.add(sid);
  dpCloudStatus('syncing','Fahrschüler wird aus der Cloud gelöscht …');
- let r=await client.from('training_progress').delete().eq('user_id',uid).eq('student_id',sid);
- if(r.error)throw r.error;
- r=await client.from('lessons').delete().eq('user_id',uid).eq('student_id',sid);
- if(r.error)throw r.error;
- r=await client.from('students').delete().eq('user_id',uid).eq('id',sid);
- if(r.error)throw r.error;
- dpCloudKnownStudentIds.delete(sid);
- dpCloudStatus('ok','Fahrschüler aus der Cloud gelöscht.');
+ try{
+  let r=await client.from('training_progress').delete().eq('user_id',uid).eq('student_id',sid);
+  if(r.error)throw r.error;
+  r=await client.from('lessons').delete().eq('user_id',uid).eq('student_id',sid);
+  if(r.error)throw r.error;
+  r=await client.from('students').delete().eq('user_id',uid).eq('id',sid);
+  if(r.error)throw r.error;
+  dpCloudKnownStudentIds.delete(sid);
+  dpCloudStatus('ok','Fahrschüler aus der Cloud gelöscht.');
+ }finally{
+  /* Keep this ID protected until the delete request has completely
+     finished. Otherwise a simultaneous background load can see the
+     temporarily missing cloud row and upload the local student again. */
+  dpCloudDeletingStudentIds.delete(sid);
+ }
 }
 async function dpCloudDeleteAll(){
  const client=dpCloudClient(),uid=dpCloudUserId();
@@ -2580,7 +2602,7 @@ async function dpCloudLoad(){
 
   /* Never discard local-only records just because another device has
      already created some cloud records. Upload the missing local records. */
-  const missingLocal=(students||[]).filter(s=>!cloudStudents.some(c=>c.id===s.id));
+  const missingLocal=(students||[]).filter(s=>!dpCloudDeletingStudentIds.has(s.id) && !cloudStudents.some(c=>c.id===s.id));
   if(missingLocal.length){
    dpCloudBackupLocal();
    const result=await dpCloudMigrateLocal(missingLocal);
@@ -2638,7 +2660,7 @@ async function dpCloudLoad(){
   /* Keep any local-only records whose cloud upload failed, instead of
      silently deleting them from the UI. */
   const syncedIds=new Set(cloudMapped.map(s=>s.id));
-  const stillLocal=(students||[]).filter(s=>!syncedIds.has(s.id));
+  const stillLocal=(students||[]).filter(s=>!dpCloudDeletingStudentIds.has(s.id) && !syncedIds.has(s.id));
   students=cloudMapped.concat(stillLocal);
   save();
 
