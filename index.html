@@ -1143,6 +1143,37 @@ body{overflow-x:hidden}
 [data-theme="dark"] .dpTimelineLine{background:#26394d}
 [data-theme="dark"] .dpTimelineLine span{background:#0f1b29;color:#8296aa}
 [data-theme="dark"] .dpTimelineEvent{background:#183451!important;color:#eaf3ff}
+@media (pointer:coarse) and (min-width:701px) and (max-width:1200px){
+ /* iPad/tablet: show the complete Monday–Sunday week without horizontal
+    overflow. The previous 1100px minimum forced only ~3–4 days into view. */
+ .dpTimelineWrap{overflow-x:hidden!important}
+ .dpTimelineGrid{
+   min-width:0!important;
+   width:100%!important;
+   grid-template-columns:repeat(7,minmax(0,1fr))!important;
+   gap:4px!important;
+ }
+ .dpWeekDay{min-width:0!important}
+ .dpWeekHead{padding:9px 5px!important}
+ .dpWeekHead span{font-size:8px!important}
+ .dpWeekHead b{font-size:16px!important}
+ .dpTimelineEvent{
+   left:25px!important;
+   right:3px!important;
+   padding:5px 4px!important;
+   border-left-width:3px!important;
+   border-radius:7px!important;
+ }
+ .dpTimelineEvent b{font-size:7px!important}
+ .dpTimelineEvent strong{font-size:8px!important}
+ .dpTimelineEvent small{font-size:7px!important}
+ .dpTimelineLine span{left:3px!important;font-size:7px!important;padding-right:2px!important}
+ .dpTimelineEmpty{left:25px!important;right:2px!important;font-size:7px!important}
+ .dpCalendarHeader{gap:8px!important}
+ .dpCalendarHeader h2{font-size:20px!important}
+ .dpCalendarHeader p{font-size:10px!important}
+}
+
 @media(max-width:700px){
  .dpTimelineGrid{min-width:1100px}
  .dpTimelineEvent{left:31px;right:5px}
@@ -2737,6 +2768,12 @@ async function dpCloudLoad(){
   students=cloudMapped.concat(stillLocal);
   save();
 
+  /* If the calendar is currently open, redraw it immediately after the
+     cloud response arrives. Without this, the data was synchronized in
+     memory but the visible calendar stayed on the old local state until
+     a manual reload. */
+  if(state.page==='calendar') render();
+
   localStorage.setItem(DP_CLOUD_OWNER_KEY,uid);
   dpCloudReady=true;
 
@@ -2773,6 +2810,7 @@ window.addEventListener('drivepro:auth-ready',dpCloudHandleReady);
 window.addEventListener('drivepro:auth-logout',dpCloudHandleLogout);
 window.addEventListener('online',()=>{if(dpCloudReady)dpCloudLoad().catch(e=>console.error('DrivePro reconnect-sync:',e))});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&dpCloudReady&&!dpCloudBusy)dpCloudLoad().catch(e=>console.error('DrivePro visibility-sync:',e))});
+window.addEventListener('focus',()=>{if(dpCloudReady&&!dpCloudBusy)dpCloudLoad().catch(e=>console.error('DrivePro focus-sync:',e))});
 
 render()
 </script>
