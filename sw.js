@@ -1,4 +1,4 @@
-const CACHE='drivepro-beta-v90-28-visual-progress-fix';
+const CACHE='drivepro-beta-v90-29-delete-final';
 const APP_SHELL=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png'];
 
 self.addEventListener('install',event=>{

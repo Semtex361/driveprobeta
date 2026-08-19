@@ -1832,7 +1832,7 @@ async function deleteStudent(sid,event){
   render();
   if(dpCloudReady)await dpCloudDeleteStudent(sid,name);
   dpCloudDeletingStudentIds.delete(sid);
-  logActivity('student_deleted',s,null,`Fahrschüler gelöscht: ${name}`);
+  logActivity('deleted',s,null,`Fahrschüler gelöscht: ${name}`);
   closeModal();
   render();
   dpCloudStatus('ok',`Fahrschüler „${name}“ dauerhaft gelöscht.`);
@@ -2677,16 +2677,25 @@ async function dpCloudDeleteLesson(lid){
  dpCloudStatus('syncing','Fahrstunde wird gelöscht …');
  try{
   await dpCloudQueue(async()=>{
-   const r=await client.rpc('drivepro_delete_lesson',{p_lesson_id:lid});
+   let r=await client.rpc('drivepro_delete_lesson',{p_lesson_id:lid});
    if(r.error)throw r.error;
-   if(!r.data)throw new Error('Supabase hat die Fahrstunde nicht gelöscht.');
+   /* Verify the authoritative cloud state. This prevents a successful-looking
+      UI delete when the database row is still present. */
+   let check=await client.from('lessons').select('id').eq('id',lid).eq('user_id',uid).maybeSingle();
+   if(check.error)throw check.error;
+   if(check.data){
+    const fallback=await client.from('lessons').delete().eq('id',lid).eq('user_id',uid).select('id').maybeSingle();
+    if(fallback.error)throw fallback.error;
+    if(fallback.data) check=await client.from('lessons').select('id').eq('id',lid).eq('user_id',uid).maybeSingle();
+    if(check.error)throw check.error;
+    if(check.data)throw new Error('Supabase hat die Fahrstunde nach dem Löschen weiterhin gespeichert.');
+   }
   });
-  dpCloudClearLessonPending(lid);dpCloudStatus('ok','Fahrstunde aus der Cloud gelöscht.');
+  dpCloudClearLessonPending(lid);dpCloudStatus('ok','Fahrstunde dauerhaft aus der Cloud gelöscht.');
  }catch(e){dpCloudStatus('error',e?.message||'Fahrstunde konnte nicht gelöscht werden.');throw e}
 }
 async function dpCloudCreateDeleteTombstone(sid,name){
- const client=dpCloudClient(),uid=dpCloudUserId();
- /* IMPORTANT: activity_log's CHECK constraint accepts the normal action
+/* IMPORTANT: activity_log's CHECK constraint accepts the normal action
     'deleted', not the custom 'student_deleted' value. The student id is
     stored in metadata so other devices can recognize the tombstone. */
  const payload={id:id(),user_id:uid,student_id:null,student_name:name||'',action:'deleted',details:`Fahrschüler gelöscht: ${name||sid}`,metadata:{deleted_student_id:sid,deleted_at:new Date().toISOString(),tombstone_type:'student'}};
@@ -2714,9 +2723,17 @@ async function dpCloudDeleteStudent(sid,name){
  dpCloudDeletingStudentIds.add(sid);dpCloudStatus('syncing','Fahrschüler wird dauerhaft gelöscht …');
  try{
   await dpCloudQueue(async()=>{
-   const r=await client.rpc('drivepro_delete_student',{p_student_id:sid,p_student_name:name||''});
+   let r=await client.rpc('drivepro_delete_student',{p_student_id:sid,p_student_name:name||''});
    if(r.error)throw r.error;
-   if(!r.data)throw new Error('Supabase hat den Fahrschüler nicht gelöscht.');
+   let check=await client.from('students').select('id').eq('id',sid).eq('user_id',uid).maybeSingle();
+   if(check.error)throw check.error;
+   if(check.data){
+    const fallback=await client.from('students').delete().eq('id',sid).eq('user_id',uid).select('id').maybeSingle();
+    if(fallback.error)throw fallback.error;
+    check=await client.from('students').select('id').eq('id',sid).eq('user_id',uid).maybeSingle();
+    if(check.error)throw check.error;
+    if(check.data)throw new Error('Supabase hat den Fahrschüler nach dem Löschen weiterhin gespeichert.');
+   }
   });
   dpCloudKnownStudentIds.delete(sid);dpCloudClearPending(sid);dpCloudStatus('ok','Fahrschüler dauerhaft aus der Cloud gelöscht.');
  }catch(e){dpCloudStatus('error',e?.message||'Fahrschüler konnte nicht gelöscht werden.');throw e}
