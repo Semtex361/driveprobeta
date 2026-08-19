@@ -2581,39 +2581,31 @@ function dpCloudLessonRow(s,l,uid){
 async function dpCloudProgressWrite(payload){
  const client=dpCloudClient();
  if(!client)throw new Error('Cloud-Verbindung nicht verfügbar.');
- /* First update the exact row. This avoids relying on PostgREST's conflict-target
-    inference and is safe when the unique constraint already exists. */
- let r=await client.from('training_progress').update({level:payload.level,note:payload.note}).eq('user_id',payload.user_id).eq('student_id',payload.student_id).eq('area_name',payload.area_name).select('id').maybeSingle();
+ const r=await client.rpc('drivepro_upsert_training_progress',{
+  p_student_id:payload.student_id,
+  p_area_name:payload.area_name,
+  p_level:payload.level||'Offen',
+  p_note:payload.note||''
+ });
  if(r.error)throw r.error;
- if((r.data||[]).length>0)return;
- /* No row existed: insert it. If another request wins the race, update it once more. */
- r=await client.from('training_progress').insert(payload).select('id').maybeSingle();
- if(!r.error)return;
- if(r.error.code==='23505'||r.status===409){
-  const retry=await client.from('training_progress').update({level:payload.level,note:payload.note,user_id:payload.user_id}).eq('user_id',payload.user_id).eq('student_id',payload.student_id).eq('area_name',payload.area_name);
-  if(!retry.error)return;
- }
- throw r.error;
+ return r.data;
 }
 async function dpCloudSyncProgressArea(s,areaName,alreadyQueued=false){
  const client=dpCloudClient(),uid=dpCloudUserId(),area=(areaName||'').trim();
  const a=(s?.areas||[]).find(x=>x.name===area);
  if(!client||!uid||!s||!area||!a)return;
  const work=async()=>{
-  let r=await client.from('training_progress').update({level:a.level||'Offen',note:a.note||''})
-   .eq('user_id',uid).eq('student_id',s.id).eq('area_name',area).select('id').maybeSingle();
+  const r=await client.rpc('drivepro_upsert_training_progress',{
+   p_student_id:s.id,
+   p_area_name:area,
+   p_level:a.level||'Offen',
+   p_note:a.note||''
+  });
   if(r.error)throw r.error;
-  if(r.data)return;
-  r=await client.from('training_progress').insert({user_id:uid,student_id:s.id,area_name:area,level:a.level||'Offen',note:a.note||''}).select('id').maybeSingle();
-  if(r.error && r.error.code==='23505'){
-   const retry=await client.from('training_progress').update({level:a.level||'Offen',note:a.note||''})
-    .eq('user_id',uid).eq('student_id',s.id).eq('area_name',area);
-   if(!retry.error)return;
-  }else if(!r.error)return;
-  if(r.error)throw r.error;
+  return r.data;
  };
  const result=alreadyQueued?await work():await dpCloudQueue(work);
- setTimeout(()=>dpCloudClearProgressPending(s.id),10000);
+ dpCloudClearProgressPending(s.id);
  return result;
 }
 async function dpCloudSyncProgress(s,alreadyQueued=false){
@@ -3002,29 +2994,50 @@ async function dpCloudRealtimeApplyProgress(p){
  dpCloudProgressRenderTimers.set(sid,t);
 }
 async function dpCloudRealtimeStart(){
- const c=dpCloudClient(),uid=dpCloudUserId();if(!c||!uid||dpCloudRealtimeStarting||dpCloudRealtimeChannel||!dpCloudReady)return;
+ const c=dpCloudClient(),uid=dpCloudUserId();
+ if(!c||!uid||dpCloudRealtimeStarting||dpCloudRealtimeChannel||!dpCloudReady)return;
  dpCloudRealtimeStarting=true;
+ const topic='drivepro-live-'+uid;
  try{
+  /* Remove stale copies of our own channel before registering callbacks.
+     This is important after service-worker updates/re-authentication: an old
+     subscribed channel must never receive new postgres_changes callbacks. */
+  if(typeof c.getChannels==='function'){
+   const stale=c.getChannels().filter(ch=>String(ch.topic||'')===('realtime:'+topic));
+   for(const ch0 of stale){try{await c.removeChannel(ch0)}catch(e){}}
+  }
   const sess=await c.auth.getSession(),token=sess.data?.session?.access_token;
   if(token&&c.realtime?.setAuth)await c.realtime.setAuth(token);
-  const ch=c.channel('drivepro-data-'+uid);
+  const ch=c.channel(topic);
+  dpCloudRealtimeChannel=ch;
   ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'students',filter:`user_id=eq.${uid}`},p=>dpCloudRealtimeApplyStudent(p.new.id).catch(dpCloudRealtimeHandleError));
   ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'students',filter:`user_id=eq.${uid}`},p=>dpCloudRealtimeApplyStudent(p.new.id).catch(dpCloudRealtimeHandleError));
-  ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'students'},p=>{const id=p.old?.id;if(id){const i=students.findIndex(s=>s.id===id);if(i>=0){students.splice(i,1);save();if(['calendar','dashboard','students','stats'].includes(state.page))render()}}});
+  ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'students'},p=>{
+   const id=p.old?.id;if(!id)return;
+   const i=students.findIndex(s=>s.id===id);
+   if(i>=0){students.splice(i,1);save();if(['calendar','dashboard','students','stats'].includes(state.page))render()}
+  });
   ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'lessons',filter:`user_id=eq.${uid}`},p=>dpCloudRealtimeApplyLesson(p).catch(dpCloudRealtimeHandleError));
   ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'lessons',filter:`user_id=eq.${uid}`},p=>dpCloudRealtimeApplyLesson(p).catch(dpCloudRealtimeHandleError));
   ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'lessons'},p=>dpCloudRealtimeApplyLesson(p).catch(dpCloudRealtimeHandleError));
   ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'training_progress',filter:`user_id=eq.${uid}`},p=>dpCloudRealtimeApplyProgress(p).catch(dpCloudRealtimeHandleError));
   ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'training_progress',filter:`user_id=eq.${uid}`},p=>dpCloudRealtimeApplyProgress(p).catch(dpCloudRealtimeHandleError));
   ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'training_progress'},p=>dpCloudRealtimeApplyProgress(p).catch(dpCloudRealtimeHandleError));
-  dpCloudRealtimeChannel=ch;
   ch.subscribe(status=>{
-   if(status==='SUBSCRIBED'){dpCloudRealtimeRetryCount=0;dpCloudStatus('ok','Cloud gespeichert · Live-Sync aktiv')}
-   else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){dpCloudRealtimeChannel=null;dpCloudRealtimeHandleError(new Error(status))}
-   else if(status==='CLOSED')dpCloudRealtimeChannel=null;
+   if(status==='SUBSCRIBED'){
+    dpCloudRealtimeRetryCount=0;
+    dpCloudStatus('ok','Cloud gespeichert · Live-Sync aktiv');
+   }else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){
+    if(dpCloudRealtimeChannel===ch)dpCloudRealtimeChannel=null;
+    dpCloudRealtimeHandleError(new Error(status));
+   }else if(status==='CLOSED'){
+    if(dpCloudRealtimeChannel===ch)dpCloudRealtimeChannel=null;
+   }
   });
- }catch(e){dpCloudRealtimeChannel=null;dpCloudRealtimeHandleError(e)}
- finally{dpCloudRealtimeStarting=false}
+ }catch(e){
+  if(dpCloudRealtimeChannel&&dpCloudRealtimeChannel!==null)dpCloudRealtimeChannel=null;
+  dpCloudRealtimeHandleError(e);
+ }finally{dpCloudRealtimeStarting=false}
 }
 function dpCloudStartPolling(){
  /* Kept as a compatibility no-op for older callers. Cloud reads are not
