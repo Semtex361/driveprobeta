@@ -1633,7 +1633,7 @@ body.auth-locked #driveProAuth{display:flex}
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="auth-locked" data-drivepro-version="V90.2"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V90.23"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 
 <div id="driveProAuth" aria-label="DrivePro Anmeldung">
   <div class="dp-auth-card">
@@ -2502,6 +2502,10 @@ let dpCloudReady=false;
 let dpCloudBusy=false;
 let dpCloudLoadQueued=false;
 let dpCloudInitialLoadDone=false;
+let dpCloudRealtimeChannel=null;
+let dpCloudRealtimeStarting=false;
+let dpCloudRealtimeRetryTimer=null;
+let dpCloudRealtimeRetryCount=0;
 let dpCloudKnownStudentIds=new Set();
 let dpCloudPendingLessonIds=new Set();
 let dpCloudPendingLessonSnapshots=new Map();
@@ -2895,6 +2899,77 @@ function dpCloudForceSync(){
  if(!dpCloudReady){dpCloudStatus('error','Cloud ist noch nicht bereit. Bitte kurz warten.');return}
  dpCloudLoad().catch(e=>console.error('DrivePro manueller Sync:',e));
 }
+
+function dpCloudRealtimeStop(){
+ if(dpCloudRealtimeRetryTimer){clearTimeout(dpCloudRealtimeRetryTimer);dpCloudRealtimeRetryTimer=null}
+ const c=dpCloudRealtimeChannel;dpCloudRealtimeChannel=null;dpCloudRealtimeStarting=false;dpCloudRealtimeRetryCount=0;
+ if(c&&dpCloudClient()){try{dpCloudClient().removeChannel(c)}catch(e){}}
+}
+function dpCloudRealtimeScheduleRetry(){
+ if(dpCloudRealtimeRetryTimer||!dpCloudReady)return;
+ const delay=Math.min(30000,1000*Math.pow(2,dpCloudRealtimeRetryCount++));
+ dpCloudRealtimeRetryTimer=setTimeout(()=>{dpCloudRealtimeRetryTimer=null;dpCloudRealtimeStart()},delay);
+}
+function dpCloudRealtimeHandleError(err){console.warn('DrivePro Realtime:',err);dpCloudRealtimeScheduleRetry()}
+async function dpCloudRealtimeApplyStudent(id){
+ const c=dpCloudClient(),uid=dpCloudUserId();if(!c||!uid||!id||dpCloudDeletingStudentIds.has(id)||dpCloudPendingStudentIds.has(id))return;
+ const sr=await c.from('students').select('*').eq('user_id',uid).eq('id',id).maybeSingle();if(sr.error)throw sr.error;
+ const idx=students.findIndex(s=>s.id===id);
+ if(!sr.data){if(idx>=0){students.splice(idx,1);save();if(['calendar','dashboard','students','stats'].includes(state.page))render()}return}
+ const pr=await c.from('training_progress').select('*').eq('user_id',uid).eq('student_id',id);if(pr.error)throw pr.error;
+ const lr=await c.from('lessons').select('id,user_id,student_id,lesson_date,start_time,end_time,lesson_type,special_type,duration_minutes,kilometers,notes,color,signature').eq('user_id',uid).eq('student_id',id).order('lesson_date').order('start_time');if(lr.error)throw lr.error;
+ const pm=new Map((pr.data||[]).map(x=>[x.area_name,x]));
+ const old=idx>=0?students[idx]:null;
+ const s={id,firstName:sr.data.first_name||'',lastName:sr.data.last_name||'',license:sr.data.license_class||'B',start:sr.data.training_start||'',birthDate:sr.data.birth_date||'',phone:sr.data.phone||'',email:sr.data.email||'',address:sr.data.address||'',visionAid:sr.data.vision_aid===true,theoryPassed:sr.data.theory_passed===true,practiceExamDate:sr.data.practice_exam_date||'',licenseReceivedDate:sr.data.license_received_date||'',notes:sr.data.notes||'',signature:old?.signature||null,areas:DEFAULT_AREAS.map(name=>{const x=pm.get(name);return{name,level:x?.level||'Offen',note:x?.note||''}}),lessons:(lr.data||[]).map(x=>({id:x.id,date:x.lesson_date,startTime:(x.start_time||'').slice(0,5),duration:Number(x.duration_minutes)||0,special:x.special_type||'',lessonType:x.lesson_type||'Fahrstunde',note:x.notes||'',kilometers:x.kilometers==null?'':x.kilometers,color:x.color||null,signature:x.signature||null}))};
+ if(idx>=0)students[idx]=s;else students.push(s);dpCloudKnownStudentIds.add(id);save();
+ if(['calendar','dashboard','students','stats'].includes(state.page))render();
+}
+async function dpCloudRealtimeApplyLesson(p){
+ const row=p?.new||p?.old||{},lid=row.id;if(!lid)return;
+ let sid=row.student_id;
+ if(!sid){for(const s of students)if((s.lessons||[]).some(l=>l.id===lid)){sid=s.id;break}}
+ if(!sid)return;
+ const s=students.find(x=>x.id===sid);if(!s)return;
+ if(p.eventType==='DELETE'){if(dpCloudPendingLessonIds.has(lid))return;s.lessons=(s.lessons||[]).filter(l=>l.id!==lid)}
+ else{
+  if(dpCloudPendingLessonIds.has(lid)){const snap=dpCloudPendingLessonSnapshots.get(lid);if(snap&&dpCloudLessonMatchesSnapshot(row,snap))dpCloudClearLessonPending(lid);else return}
+  const mapped={id:row.id,date:row.lesson_date,startTime:(row.start_time||'').slice(0,5),duration:Number(row.duration_minutes)||0,special:row.special_type||'',lessonType:row.lesson_type||'Fahrstunde',note:row.notes||'',kilometers:row.kilometers==null?'':row.kilometers,color:row.color||null,signature:row.signature||null};
+  const i=(s.lessons||[]).findIndex(l=>l.id===lid);if(i>=0)s.lessons[i]=mapped;else s.lessons.push(mapped)
+ }
+ save();if(['calendar','dashboard','students','stats'].includes(state.page))render();
+}
+async function dpCloudRealtimeApplyProgress(p){
+ const sid=(p?.new||p?.old||{}).student_id;if(!sid||dpCloudPendingProgressStudentIds.has(sid))return;
+ const s=students.find(x=>x.id===sid);if(!s)return;const c=dpCloudClient(),uid=dpCloudUserId();if(!c||!uid)return;
+ const q=await c.from('training_progress').select('*').eq('user_id',uid).eq('student_id',sid);if(q.error)throw q.error;
+ const m=new Map((q.data||[]).map(x=>[x.area_name,x]));s.areas=DEFAULT_AREAS.map(name=>{const x=m.get(name);return{name,level:x?.level||'Offen',note:x?.note||''}});save();
+ if(['calendar','dashboard','students','stats'].includes(state.page))render();
+}
+async function dpCloudRealtimeStart(){
+ const c=dpCloudClient(),uid=dpCloudUserId();if(!c||!uid||dpCloudRealtimeStarting||dpCloudRealtimeChannel||!dpCloudReady)return;
+ dpCloudRealtimeStarting=true;
+ try{
+  const sess=await c.auth.getSession(),token=sess.data?.session?.access_token;
+  if(token&&c.realtime?.setAuth)await c.realtime.setAuth(token);
+  const ch=c.channel('drivepro-data-'+uid);
+  ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'students',filter:`user_id=eq.${uid}`},p=>dpCloudRealtimeApplyStudent(p.new.id).catch(dpCloudRealtimeHandleError));
+  ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'students',filter:`user_id=eq.${uid}`},p=>dpCloudRealtimeApplyStudent(p.new.id).catch(dpCloudRealtimeHandleError));
+  ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'students'},p=>{const id=p.old?.id;if(id){const i=students.findIndex(s=>s.id===id);if(i>=0){students.splice(i,1);save();if(['calendar','dashboard','students','stats'].includes(state.page))render()}}});
+  ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'lessons',filter:`user_id=eq.${uid}`},p=>dpCloudRealtimeApplyLesson(p).catch(dpCloudRealtimeHandleError));
+  ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'lessons',filter:`user_id=eq.${uid}`},p=>dpCloudRealtimeApplyLesson(p).catch(dpCloudRealtimeHandleError));
+  ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'lessons'},p=>dpCloudRealtimeApplyLesson(p).catch(dpCloudRealtimeHandleError));
+  ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'training_progress',filter:`user_id=eq.${uid}`},p=>dpCloudRealtimeApplyProgress(p).catch(dpCloudRealtimeHandleError));
+  ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'training_progress',filter:`user_id=eq.${uid}`},p=>dpCloudRealtimeApplyProgress(p).catch(dpCloudRealtimeHandleError));
+  ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'training_progress'},p=>dpCloudRealtimeApplyProgress(p).catch(dpCloudRealtimeHandleError));
+  dpCloudRealtimeChannel=ch;
+  ch.subscribe(status=>{
+   if(status==='SUBSCRIBED'){dpCloudRealtimeRetryCount=0;dpCloudStatus('ok','Cloud gespeichert · Live-Sync aktiv')}
+   else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){dpCloudRealtimeChannel=null;dpCloudRealtimeHandleError(new Error(status))}
+   else if(status==='CLOSED')dpCloudRealtimeChannel=null;
+  });
+ }catch(e){dpCloudRealtimeChannel=null;dpCloudRealtimeHandleError(e)}
+ finally{dpCloudRealtimeStarting=false}
+}
 function dpCloudStartPolling(){
  /* Kept as a compatibility no-op for older callers. Cloud reads are not
     repeated automatically anymore. */
@@ -2904,6 +2979,7 @@ function dpCloudHandleReady(){
  setTimeout(async()=>{
   await dpCloudLoad();
   dpCloudInitialLoadDone=true;
+  await dpCloudRealtimeStart();
  },0);
 }
 async function dpCloudRetryPendingWrites(){
@@ -2924,6 +3000,7 @@ async function dpCloudRetryPendingWrites(){
  }
 }
 function dpCloudHandleLogout(){
+ dpCloudRealtimeStop();
  dpCloudStopPolling();dpCloudReady=false;dpCloudBusy=false;dpCloudInitialLoadDone=false;
  dpCloudKnownStudentIds=new Set();dpCloudDeletingStudentIds=new Set();
  dpCloudPendingStudentIds=new Set();dpCloudPendingLessonIds=new Set();
@@ -3100,7 +3177,7 @@ async function dpInit(){
   dpLogin(email,password);
  });
  $('dpLogoutButton')?.addEventListener('click',dpLogout);
- dpClient.auth.onAuthStateChange((event,session)=>setTimeout(()=>dpHandleSession(session),0));
+ dpClient.auth.onAuthStateChange((event,session)=>setTimeout(async()=>{await dpHandleSession(session);if(session?.access_token&&dpClient.realtime?.setAuth){try{await dpClient.realtime.setAuth(session.access_token)}catch(e){}}},0));
  try{
   const r=await dpClient.auth.getSession();
   if(r.error)throw r.error;
