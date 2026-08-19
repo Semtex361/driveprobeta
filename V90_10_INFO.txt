@@ -1,7 +1,0 @@
-DrivePro V90.10 – Lösch- und Sync-Fix
-
-Änderungen:
-- Fahrschüler-Löschung wird gegen parallele Hintergrund-Synchronisation geschützt.
-- Ein gelöschter Schüler kann nicht mehr durch einen gleichzeitigen Cloud-Load wieder hochgeladen werden.
-- Bei einem Cloud-Fehler wird der lokale Schüler wiederhergestellt.
-- training_progress verwendet jetzt Upsert auf (student_id, area_name), damit 409 duplicate-key Fehler bei parallelen Synchronisationen nicht mehr entstehen.
