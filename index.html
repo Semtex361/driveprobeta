@@ -1873,14 +1873,27 @@ function studentOverview(s){
  </div>
  <div class="studentFacts"><span><b>Klasse</b> ${esc(s.license)}</span><span><b>Ausbildungsbeginn</b> ${fmtDate(s.start)}</span><span><b>Geburtsdatum</b> ${s.birthDate?fmtDate(s.birthDate):'—'}</span><span><b>Telefon</b> ${esc(s.phone||'—')}</span><span><b>E-Mail</b> ${esc(s.email||'—')}</span><span><b>Adresse</b> ${esc(s.address||'—')}</span><span><b>Sehhilfe</b> ${s.visionAid?'Ja':'Nein'}</span><span><b>Theorie</b> ${s.theoryPassed?'Bestanden':'Noch nicht bestanden'}</span></div>`;
 }
-function diagram(s){return `<div class="diagramHead"><div><h3>Ausbildungsdiagramm</h3><p class="muted">Klicke auf einen Kreis, um den aktuellen Ausbildungsstand zu setzen.</p></div><div class="diagramLegend"><span><i class="legendDot open"></i>Offen</span><span><i class="legendDot practice"></i>Üben</span><span><i class="legendDot safe"></i>Sicher</span></div></div>${s.areas.map((a,i)=>`<div class="area"><b>${esc(a.name)}</b><div class="statusDots" role="group" aria-label="Ausbildungsstand">
+function diagram(s){return `<div class="diagramHead"><div><h3>Ausbildungsdiagramm</h3><p class="muted">Klicke auf einen Kreis, um den aktuellen Ausbildungsstand zu setzen.</p></div><div class="diagramLegend"><span><i class="legendDot open"></i>Offen</span><span><i class="legendDot practice"></i>Üben</span><span><i class="legendDot safe"></i>Sicher</span></div></div>${s.areas.map((a,i)=>`<div class="area" id="dp-area-${s.id}-${i}"><b>${esc(a.name)}</b><div class="statusDots" role="group" aria-label="Ausbildungsstand">
  <button type="button" class="statusDot statusOpen ${a.level==='Offen'?'selected':''}" title="Offen" aria-label="Offen" onclick="setArea('${s.id}',${i},'Offen')"></button>
  <button type="button" class="statusDot statusPractice ${a.level==='Übung'?'selected':''}" title="Üben" aria-label="Üben" onclick="setArea('${s.id}',${i},'Übung')"></button>
  <button type="button" class="statusDot statusSafe ${a.level==='Sicher'?'selected':''}" title="Sicher" aria-label="Sicher" onclick="setArea('${s.id}',${i},'Sicher')"></button>
  </div><input value="${esc(a.note)}" placeholder="Notiz…" onchange="setAreaNote('${s.id}',${i},this.value)"></div>`).join('')}`}
 function setArea(sid,i,v){
  const s=getStudent(sid);if(!s?.areas?.[i])return;
- s.areas[i].level=v;dpCloudMarkPending(sid);dpCloudMarkProgressPending(sid);save();
+ s.areas[i].level=v;
+
+ /* Update the three circles immediately in the existing DOM. Do not call
+    render()/studentTab() here: the cloud write is asynchronous and the
+    current modal/scroll position must stay untouched. */
+ const row=document.getElementById(`dp-area-${sid}-${i}`);
+ if(row){
+  row.querySelectorAll('.statusDot').forEach(btn=>btn.classList.remove('selected'));
+  const cls=v==='Sicher'?'statusSafe':(v==='Übung'?'statusPractice':'statusOpen');
+  const selected=row.querySelector('.'+cls);
+  if(selected)selected.classList.add('selected');
+ }
+
+ dpCloudMarkPending(sid);dpCloudMarkProgressPending(sid);save();
  if(dpCloudReady)dpCloudSyncProgressArea(s,s.areas[i].name).then(()=>{dpCloudStatus('ok','Ausbildungsstand gespeichert.')}).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')});
 }
 function setAreaNote(sid,i,v){
