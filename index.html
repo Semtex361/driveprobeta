@@ -2484,8 +2484,9 @@ function openModal(content){document.getElementById('modalBody').innerHTML=conte
 function closeModal(){document.getElementById('modal').classList.remove('open')}
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()})
 
-/* V90.13 – Stable Cloud Sync + Delete Race Fix
-   - No Supabase Realtime/WebSocket is used. Polling is the reliable fallback.
+/* V90.21 – Event-driven Cloud Sync
+   - No periodic cloud polling. The app does not constantly reload data from Supabase.
+   - Every local data change writes directly to Supabase through the existing write-through handlers.
    - All cloud writes are serialized to prevent concurrent 409 conflicts.
    - training_progress is written with update-first / insert-fallback logic.
    - Deletions create a cloud tombstone in activity_log before the student row is removed.
@@ -2494,7 +2495,6 @@ document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='
 const DP_CLOUD_OWNER_KEY='drivepro_cloud_owner_v913';
 const DP_CLOUD_BACKUP_KEY='drivepro_local_backup_v913';
 const DP_CLOUD_TOMBSTONE_ACTION='deleted';
-const DP_CLOUD_POLL_MS=2000;
 let dpCloudReady=false;
 let dpCloudBusy=false;
 let dpCloudPollTimer=null;
@@ -2628,7 +2628,7 @@ async function dpCloudUpsertLesson(s,l,silent=false,alreadyQueued=false){
   if(r.error)throw r.error;
  };
  if(!silent)dpCloudStatus('syncing','Fahrstunde wird gespeichert …');
- try{await (alreadyQueued?work():dpCloudQueue(work));if(!silent)dpCloudStatus('ok','Fahrstunde in der Cloud gespeichert.');/* Keep the pending snapshot until a later cloud read confirms it. This prevents a fast polling cycle from replacing a just-saved lesson with stale data. */}catch(e){if(!silent)dpCloudStatus('error',e?.message||'Fahrstunde konnte nicht synchronisiert werden.');throw e}
+ try{await (alreadyQueued?work():dpCloudQueue(work));dpCloudClearLessonPending(l.id);if(!silent)dpCloudStatus('ok','Fahrstunde in der Cloud gespeichert.');}catch(e){if(!silent)dpCloudStatus('error',e?.message||'Fahrstunde konnte nicht synchronisiert werden.');throw e}
 }
 async function dpCloudDeleteLesson(lid){
  const client=dpCloudClient(),uid=dpCloudUserId();if(!client||!uid||!lid)return;
@@ -2702,7 +2702,6 @@ async function dpCloudMigrateLocal(sourceStudents=students){
 }
 async function dpCloudLoad(){
  const client=dpCloudClient(),uid=dpCloudUserId();if(!client||!uid)return;
- if(Date.now()-dpCloudLastLessonWriteAt<1500){dpCloudLoadQueued=true;setTimeout(()=>{if(!dpCloudBusy)dpCloudLoad()},1600);return;}
  if(dpCloudBusy){dpCloudLoadQueued=true;return}
  dpCloudBusy=true;
  try{
@@ -2742,9 +2741,8 @@ async function dpCloudLoad(){
    console.warn('DrivePro: Fahrstunden konnten nicht geladen werden:',e);
   }
 
-  /* A successful REST upsert can be followed by a poll before the UI's read
-     sees the newest row. Keep the exact local snapshot until the cloud read
-     confirms the same values. */
+  /* If a manual/initial cloud read happens while a local write is pending,
+     keep the exact local snapshot until the cloud read confirms it. */
   const lessonRowsById=new Map(lessonRows.map(x=>[x.id,x]));
   for(const lid of [...dpCloudPendingLessonIds]){
    const snap=dpCloudPendingLessonSnapshots.get(lid);
@@ -2884,10 +2882,7 @@ async function dpCloudLoad(){
   dpCloudStatus('error','Cloud-Fehler: '+msg);
  }finally{
   dpCloudBusy=false;
-  if(dpCloudLoadQueued){
-   dpCloudLoadQueued=false;
-   setTimeout(()=>dpCloudLoad(),100);
-  }
+  dpCloudLoadQueued=false;
  }
 }
 
@@ -2896,17 +2891,17 @@ function dpCloudForceSync(){
  dpCloudLoad().catch(e=>console.error('DrivePro manueller Sync:',e));
 }
 function dpCloudStartPolling(){
- if(dpCloudPollTimer)clearInterval(dpCloudPollTimer);
- dpCloudPollTimer=setInterval(()=>{if(dpCloudReady&&!dpCloudBusy)dpCloudLoad().catch(e=>console.error('DrivePro Poll-Sync:',e))},DP_CLOUD_POLL_MS);
+ /* Intentionally disabled in V90.21. Cloud reads are event-driven only.
+    Local edits are pushed immediately by the write-through handlers above. */
+ if(dpCloudPollTimer){clearInterval(dpCloudPollTimer);dpCloudPollTimer=null}
 }
 function dpCloudStopPolling(){if(dpCloudPollTimer){clearInterval(dpCloudPollTimer);dpCloudPollTimer=null}}
-function dpCloudHandleReady(){setTimeout(async()=>{await dpCloudLoad();dpCloudStartPolling()},0)}
+function dpCloudHandleReady(){setTimeout(()=>{dpCloudLoad().catch(e=>console.error('DrivePro initial cloud load:',e))},0)}
 function dpCloudHandleLogout(){dpCloudStopPolling();dpCloudReady=false;dpCloudBusy=false;dpCloudKnownStudentIds=new Set();dpCloudDeletingStudentIds=new Set();dpCloudPendingStudentIds=new Set();dpCloudPendingLessonIds=new Set();dpCloudPendingLessonSnapshots=new Map();dpCloudPendingProgressStudentIds=new Set();dpCloudStatus('','')}
 window.addEventListener('drivepro:auth-ready',dpCloudHandleReady);
 window.addEventListener('drivepro:auth-logout',dpCloudHandleLogout);
-window.addEventListener('online',()=>{if(dpCloudReady)dpCloudLoad().catch(e=>console.error('DrivePro reconnect-sync:',e))});
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&dpCloudReady&&!dpCloudBusy)dpCloudLoad().catch(e=>console.error('DrivePro visibility-sync:',e))});
-window.addEventListener('focus',()=>{if(dpCloudReady&&!dpCloudBusy)dpCloudLoad().catch(e=>console.error('DrivePro focus-sync:',e))});
+/* Do not pull the entire cloud dataset on focus, visibility changes, or every few seconds. */
+window.addEventListener('online',()=>{if(dpCloudReady)dpCloudStatus('ok','Cloud-Verbindung wieder verfügbar. Änderungen werden direkt gespeichert.')});
 
 /* iPad/tablet layout: use touch capability rather than fragile browser UA
    detection. This keeps the sidebar compact so the calendar gets real width. */

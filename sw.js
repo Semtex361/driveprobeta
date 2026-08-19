@@ -1,4 +1,4 @@
-const CACHE='drivepro-beta-v90-20-calendar-sync-scroll';
+const CACHE='drivepro-beta-v90-21-event-sync';
 const APP_SHELL=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png'];
 
 self.addEventListener('install',event=>{
