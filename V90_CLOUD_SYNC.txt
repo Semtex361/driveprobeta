@@ -1,4 +1,4 @@
-DRIVEPRO V90 – CLOUD-SYNC
+DRIVEPRO V90.2 – CLOUD-SYNC
 
 Neu:
 - Supabase Login bleibt aus V89 erhalten.
@@ -15,5 +15,5 @@ Neu:
 - Kein Service-Role-/Secret-Key im Frontend.
 
 WICHTIG:
-V90 ist der erste Cloud-Daten-Schritt. Einstellungen, Logbuch und
+V90.2 ist der erste Cloud-Daten-Schritt. Einstellungen, Logbuch und
 weitere Bereiche werden in folgenden Versionen migriert.

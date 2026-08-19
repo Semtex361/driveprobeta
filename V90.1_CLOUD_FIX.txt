@@ -1,13 +1,13 @@
-DrivePro V90.1 – Cloud Sync Fix
+DrivePro V90.2.2 – Cloud Sync Fix
 
-IMPORTANT: V90 had a bug where the cloud-loading event was never fired after a successful login.
+IMPORTANT: V90.2 had a bug where the cloud-loading event was never fired after a successful login.
 Therefore the app could log in correctly but would not load/save cloud data.
 
-V90.1 fixes this by dispatching drivepro:auth-ready after the authenticated profile is loaded.
+V90.2.2 fixes this by dispatching drivepro:auth-ready after the authenticated profile is loaded.
 The existing Supabase URL, publishable key, RLS policies, and cloud sync logic are preserved.
 
 Test:
-1. Upload the V90.1 files to GitHub.
+1. Upload the V90.2.2 files to GitHub.
 2. Hard refresh (Ctrl+F5).
 3. Log in.
 4. On the first device, existing local students should migrate to Supabase.

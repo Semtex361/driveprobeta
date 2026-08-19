@@ -1585,7 +1585,7 @@ body.auth-locked #driveProAuth{display:flex}
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="auth-locked" data-drivepro-version="V90"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V90.2"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 
 <div id="driveProAuth" aria-label="DrivePro Anmeldung">
   <div class="dp-auth-card">
@@ -2356,7 +2356,7 @@ function openModal(content){document.getElementById('modalBody').innerHTML=conte
 function closeModal(){document.getElementById('modal').classList.remove('open')}
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()})
 
-/* V90.1 – Supabase Cloud Data Sync Fix */
+/* V90.2 – Supabase Cloud Data Sync Fix */
 const DP_CLOUD_OWNER_KEY='drivepro_cloud_owner_v90';
 const DP_CLOUD_BACKUP_KEY='drivepro_local_backup_v90';
 let dpCloudReady=false;
@@ -2394,7 +2394,7 @@ function dpCloudLessonRow(s,l,uid){
   end_time:endTime(l.startTime,Number(l.duration)||0),lesson_type:l.lessonType||'Fahrstunde',
   special_type:l.special||null,duration_minutes:Number(l.duration)||0,
   kilometers:l.kilometers===''||l.kilometers==null?null:Number(l.kilometers),
-  notes:l.note||l.notes||'',color:l.color||null,signature:l.signature||null
+  notes:l.note||l.notes||'',color:l.color||null
  };
 }
 async function dpCloudSyncProgress(s){
@@ -2491,7 +2491,7 @@ async function dpCloudLoad(){
   const [sr,pr,lr]=await Promise.all([
    client.from('students').select('*').eq('user_id',uid).order('last_name',{ascending:true}),
    client.from('training_progress').select('*').eq('user_id',uid),
-   client.from('lessons').select('*').eq('user_id',uid).order('lesson_date',{ascending:true}).order('start_time',{ascending:true})
+   client.from('lessons').select('id,user_id,student_id,lesson_date,start_time,end_time,lesson_type,special_type,duration_minutes,kilometers,notes,color,created_at,updated_at').eq('user_id',uid).order('lesson_date',{ascending:true}).order('start_time',{ascending:true})
   ]);
   if(sr.error)throw sr.error;
   if(pr.error)throw pr.error;
@@ -2525,7 +2525,7 @@ async function dpCloudLoad(){
     const lessonRows=(lessonsByStudent[row.id]||[]).map(l=>({
       id:l.id,date:l.lesson_date,startTime:(l.start_time||'').slice(0,5),duration:Number(l.duration_minutes)||0,
       special:l.special_type||'',lessonType:l.lesson_type||'Fahrstunde',note:l.notes||'',
-      kilometers:l.kilometers==null?'':l.kilometers,color:l.color||null,signature:l.signature||null
+      kilometers:l.kilometers==null?'':l.kilometers,color:l.color||null
     }));
     return {
       id:row.id,firstName:row.first_name||'',lastName:row.last_name||'',license:row.license_class||'B',
