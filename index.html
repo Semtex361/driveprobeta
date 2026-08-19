@@ -1847,7 +1847,7 @@ async function deleteStudent(sid,event){
  }
 }
 function saveStudent(sid){const f=document.getElementById('sf').value.trim(),l=document.getElementById('sl').value.trim();if(!f||!l){alert('Bitte Vor- und Nachnamen eingeben.');return}const personal={firstName:f,lastName:l,license:document.getElementById('sc').value,start:document.getElementById('sd').value,birthDate:document.getElementById('sb').value,phone:document.getElementById('sphone').value.trim(),email:document.getElementById('semail').value.trim(),address:document.getElementById('saddress').value.trim(),visionAid:document.getElementById('sv').checked,theoryPassed:document.getElementById('st').checked};
-if(sid){const s=getStudent(sid);Object.assign(s,personal);dpCloudMarkPending(sid);dpCloudBackupLocal();save();closeModal();render();if(dpCloudReady)dpCloudUpsertStudent(s).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}else{const s={id:id(),...personal,areas:DEFAULT_AREAS.map(name=>({name,level:'Offen',note:''})),lessons:[],signature:null};students.push(s);dpCloudMarkPending(s.id);dpCloudBackupLocal();save();closeModal();render();if(dpCloudReady)dpCloudUpsertStudent(s).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}
+if(sid){const s=getStudent(sid);Object.assign(s,personal);dpCloudMarkPending(sid);dpCloudMarkProgressPending(sid);for(const l of (s.lessons||[]))dpCloudMarkLessonPending(l.id,l);dpCloudBackupLocal();save();closeModal();render();if(dpCloudReady)dpCloudUpsertStudent(s).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}else{const s={id:id(),...personal,areas:DEFAULT_AREAS.map(name=>({name,level:'Offen',note:''})),lessons:[],signature:null};students.push(s);dpCloudMarkPending(s.id);dpCloudBackupLocal();save();closeModal();render();if(dpCloudReady)dpCloudUpsertStudent(s).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}
 }
 function openStudent(sid){const s=getStudent(sid);state.studentId=sid;openModal(`<div class="profileHeader"><div><h2>${esc(s.firstName+' '+s.lastName)}</h2></div><div class="profileActions"><button class="studentCompleteBtn" onclick="licenseReceivedReport('${sid}')">✓ Führerschein erhalten</button><button class="secondary" onclick="closeModal();openStudentForm('${sid}')">✎ Bearbeiten</button><button class="danger" onclick="deleteStudent('${sid}',event)">🗑 Löschen</button></div></div><div class="tabs"><button class="sel" onclick="studentTab('overview','${sid}',this)">Übersicht</button><button onclick="studentTab('diagram','${sid}',this)">Ausbildungsdiagramm</button><button onclick="studentTab('lessons','${sid}',this)">Fahrstunden</button><button onclick="studentTab('signature','${sid}',this)">Unterschrift</button></div><div id="studentBody">${studentOverview(s)}</div>`)}
 function studentTab(tab,sid,btn){document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');const s=getStudent(sid),body=document.getElementById('studentBody');if(tab==='overview')body.innerHTML=studentOverview(s);if(tab==='diagram')body.innerHTML=diagram(s);if(tab==='lessons')body.innerHTML=studentLessons(s);if(tab==='signature')body.innerHTML=signature(s)}
@@ -1878,7 +1878,7 @@ function diagram(s){return `<div class="diagramHead"><div><h3>Ausbildungsdiagram
  <button type="button" class="statusDot statusPractice ${a.level==='Übung'?'selected':''}" title="Üben" aria-label="Üben" onclick="setArea('${s.id}',${i},'Übung')"></button>
  <button type="button" class="statusDot statusSafe ${a.level==='Sicher'?'selected':''}" title="Sicher" aria-label="Sicher" onclick="setArea('${s.id}',${i},'Sicher')"></button>
  </div><input value="${esc(a.note)}" placeholder="Notiz…" onchange="setAreaNote('${s.id}',${i},this.value)"></div>`).join('')}`}
-function setArea(sid,i,v){const s=getStudent(sid);s.areas[i].level=v;dpCloudMarkPending(sid);save();if(dpCloudReady)dpCloudSyncProgress(s).then(()=>{dpCloudClearPending(sid);dpCloudStatus('ok','Ausbildungsstand gespeichert.')}).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')});const active=document.querySelector('.tabs .sel');studentTab('diagram',sid,active)}
+function setArea(sid,i,v){const s=getStudent(sid);s.areas[i].level=v;dpCloudMarkPending(sid);dpCloudMarkProgressPending(sid);save();if(dpCloudReady)dpCloudSyncProgress(s).then(()=>{dpCloudClearPending(sid);dpCloudStatus('ok','Ausbildungsstand gespeichert.')}).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')});const active=document.querySelector('.tabs .sel');studentTab('diagram',sid,active)}
 function setAreaNote(sid,i,v){const s=getStudent(sid);s.areas[i].note=v;dpCloudMarkPending(sid);dpCloudMarkProgressPending(sid);save();if(dpCloudReady)dpCloudSyncProgress(s).then(()=>{dpCloudClearPending(sid);dpCloudStatus('ok','Ausbildungsnotiz gespeichert.')}).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}
 function studentLessons(s){return `<div style="display:flex;justify-content:space-between;align-items:center"><h3>Gespeicherte Fahrstunden</h3><button class="primary" onclick="openLessonForm('${s.id}')">+ Fahrstunde</button></div>${s.lessons.slice().sort((a,b)=>(b.date+' '+b.startTime).localeCompare(a.date+' '+a.startTime)).map(l=>lessonRow(s,l,true)).join('')||'<div class="empty">Noch keine Fahrstunden.</div>'}`}
 function lessonRow(s,l,clickable=false){return `<div class="lesson ${clickable?'clickable':''}" ${clickable?`onclick="openLessonDetail('${s.id}','${l.id}')"`:''}><b>${fmtDate(l.date)} · ${fmtTime(l.startTime)}${l.endTime?'–'+l.endTime:''} · ${l.duration} Min.</b><div class="muted">${esc(l.special||'Übungsfahrt')} · ${esc(s.firstName+' '+s.lastName)}${l.km?' · '+l.km+' km':''}</div>${l.note?`<div class="small" style="margin-top:5px">${esc(l.note)}</div>`:''}</div>`}
@@ -1964,7 +1964,7 @@ function openLessonDetail(sid,lid){
  <div class="actions"><button class="danger" onclick="deleteLesson('${sid}','${lid}')">Löschen</button><button class="secondary" onclick="closeModal();openLessonForm('${sid}','${lid}')">Bearbeiten</button></div>`);
  setTimeout(()=>initLessonSignature(sid,lid),30);
 }
-function deleteLesson(sid,lid){if(!confirm('Fahrstunde wirklich löschen?'))return;const s=getStudent(sid),lesson=s.lessons.find(l=>l.id===lid);if(!lesson)return;s.lessons=s.lessons.filter(l=>l.id!==lid);save();closeModal();render();logActivity('deleted',s,lesson,`Fahrstunde gelöscht: ${lesson.startTime||'—'} – ${endTime(lesson.startTime,lesson.duration)} · ${lesson.special||'Übungsfahrt'}`);notifyLessonChange('deleted',s,lesson);if(dpCloudReady)dpCloudDeleteLesson(lid).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Löschen konnte nicht synchronisiert werden')})}
+function deleteLesson(sid,lid){if(!confirm('Fahrstunde wirklich löschen?'))return;const s=getStudent(sid),lesson=s.lessons.find(l=>l.id===lid);if(!lesson)return;dpCloudMarkLessonPending(lid);s.lessons=s.lessons.filter(l=>l.id!==lid);save();closeModal();render();logActivity('deleted',s,lesson,`Fahrstunde gelöscht: ${lesson.startTime||'—'} – ${endTime(lesson.startTime,lesson.duration)} · ${lesson.special||'Übungsfahrt'}`);notifyLessonChange('deleted',s,lesson);if(dpCloudReady)dpCloudDeleteLesson(lid).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Löschen konnte nicht synchronisiert werden')})}
 function initLessonSignature(sid,lid){
  const c=document.getElementById('lessonSignatureCanvas'); if(!c)return;
  const ctx=c.getContext('2d'); ctx.lineWidth=3; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#173b69';
@@ -1993,7 +1993,7 @@ function saveSignature(sid){
  const c=document.getElementById('signatureCanvas'),s=getStudent(sid);
  if(!c||!s)return;
  s.signature=c.toDataURL('image/png');
- dpCloudBackupLocal();save();
+ dpCloudMarkPending(s.id);dpCloudBackupLocal();save();
  if(dpCloudReady){
   dpCloudUpsertStudent(s).catch(e=>{
    console.error(e);
@@ -2484,9 +2484,8 @@ function openModal(content){document.getElementById('modalBody').innerHTML=conte
 function closeModal(){document.getElementById('modal').classList.remove('open')}
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()})
 
-/* V90.21 – Event-driven Cloud Sync
-   - No periodic cloud polling. The app does not constantly reload data from Supabase.
-   - Every local data change writes directly to Supabase through the existing write-through handlers.
+/* V90.13 – Stable Cloud Sync + Delete Race Fix
+   - No Supabase Realtime/WebSocket is used. Polling is the reliable fallback.
    - All cloud writes are serialized to prevent concurrent 409 conflicts.
    - training_progress is written with update-first / insert-fallback logic.
    - Deletions create a cloud tombstone in activity_log before the student row is removed.
@@ -2495,11 +2494,14 @@ document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='
 const DP_CLOUD_OWNER_KEY='drivepro_cloud_owner_v913';
 const DP_CLOUD_BACKUP_KEY='drivepro_local_backup_v913';
 const DP_CLOUD_TOMBSTONE_ACTION='deleted';
+/* Event-driven cloud sync:
+   The cloud is written immediately after a local change. We deliberately do
+   NOT poll/reload the complete database in the background, because doing so
+   can overwrite a just-created lesson and reset the calendar scroll position. */
 let dpCloudReady=false;
 let dpCloudBusy=false;
-let dpCloudPollTimer=null;
 let dpCloudLoadQueued=false;
-let dpCloudLastLessonWriteAt=0;
+let dpCloudInitialLoadDone=false;
 let dpCloudKnownStudentIds=new Set();
 let dpCloudPendingLessonIds=new Set();
 let dpCloudPendingLessonSnapshots=new Map();
@@ -2619,7 +2621,6 @@ async function dpCloudUpsertStudent(s){
  }catch(e){dpCloudStatus('error',e?.message||'Fahrschüler konnte nicht synchronisiert werden.');throw e}
 }
 async function dpCloudUpsertLesson(s,l,silent=false,alreadyQueued=false){
- dpCloudLastLessonWriteAt=Date.now();
  const client=dpCloudClient(),uid=dpCloudUserId();
  if(!client||!uid||!s||!l)return;
  const work=async()=>{
@@ -2628,7 +2629,7 @@ async function dpCloudUpsertLesson(s,l,silent=false,alreadyQueued=false){
   if(r.error)throw r.error;
  };
  if(!silent)dpCloudStatus('syncing','Fahrstunde wird gespeichert …');
- try{await (alreadyQueued?work():dpCloudQueue(work));dpCloudClearLessonPending(l.id);if(!silent)dpCloudStatus('ok','Fahrstunde in der Cloud gespeichert.');}catch(e){if(!silent)dpCloudStatus('error',e?.message||'Fahrstunde konnte nicht synchronisiert werden.');throw e}
+ try{await (alreadyQueued?work():dpCloudQueue(work));if(!silent)dpCloudStatus('ok','Fahrstunde in der Cloud gespeichert.');/* Keep the pending snapshot until a later cloud read confirms it. This prevents a fast polling cycle from replacing a just-saved lesson with stale data. */}catch(e){if(!silent)dpCloudStatus('error',e?.message||'Fahrstunde konnte nicht synchronisiert werden.');throw e}
 }
 async function dpCloudDeleteLesson(lid){
  const client=dpCloudClient(),uid=dpCloudUserId();if(!client||!uid||!lid)return;
@@ -2741,8 +2742,9 @@ async function dpCloudLoad(){
    console.warn('DrivePro: Fahrstunden konnten nicht geladen werden:',e);
   }
 
-  /* If a manual/initial cloud read happens while a local write is pending,
-     keep the exact local snapshot until the cloud read confirms it. */
+  /* A successful REST upsert can be followed by a poll before the UI's read
+     sees the newest row. Keep the exact local snapshot until the cloud read
+     confirms the same values. */
   const lessonRowsById=new Map(lessonRows.map(x=>[x.id,x]));
   for(const lid of [...dpCloudPendingLessonIds]){
    const snap=dpCloudPendingLessonSnapshots.get(lid);
@@ -2882,7 +2884,10 @@ async function dpCloudLoad(){
   dpCloudStatus('error','Cloud-Fehler: '+msg);
  }finally{
   dpCloudBusy=false;
-  dpCloudLoadQueued=false;
+  if(dpCloudLoadQueued){
+   dpCloudLoadQueued=false;
+   setTimeout(()=>dpCloudLoad(),100);
+  }
  }
 }
 
@@ -2891,18 +2896,52 @@ function dpCloudForceSync(){
  dpCloudLoad().catch(e=>console.error('DrivePro manueller Sync:',e));
 }
 function dpCloudStartPolling(){
- /* Intentionally disabled in V90.21. Cloud reads are event-driven only.
-    Local edits are pushed immediately by the write-through handlers above. */
- if(dpCloudPollTimer){clearInterval(dpCloudPollTimer);dpCloudPollTimer=null}
+ /* Kept as a compatibility no-op for older callers. Cloud reads are not
+    repeated automatically anymore. */
 }
-function dpCloudStopPolling(){if(dpCloudPollTimer){clearInterval(dpCloudPollTimer);dpCloudPollTimer=null}}
-function dpCloudHandleReady(){setTimeout(()=>{dpCloudLoad().catch(e=>console.error('DrivePro initial cloud load:',e))},0)}
-function dpCloudHandleLogout(){dpCloudStopPolling();dpCloudReady=false;dpCloudBusy=false;dpCloudKnownStudentIds=new Set();dpCloudDeletingStudentIds=new Set();dpCloudPendingStudentIds=new Set();dpCloudPendingLessonIds=new Set();dpCloudPendingLessonSnapshots=new Map();dpCloudPendingProgressStudentIds=new Set();dpCloudStatus('','')}
+function dpCloudStopPolling(){}
+function dpCloudHandleReady(){
+ setTimeout(async()=>{
+  await dpCloudLoad();
+  dpCloudInitialLoadDone=true;
+ },0);
+}
+async function dpCloudRetryPendingWrites(){
+ if(!dpCloudReady)return;
+ const uid=dpCloudUserId(); if(!uid)return;
+ for(const s of (students||[])){
+  if(dpCloudDeletingStudentIds.has(s.id))continue;
+  if(dpCloudPendingStudentIds.has(s.id)){
+   try{await dpCloudUpsertStudent(s);dpCloudClearPending(s.id)}catch(e){console.warn('DrivePro: pending Schüler-Änderung:',e)}
+  }
+  if(dpCloudPendingProgressStudentIds.has(s.id)){
+   try{await dpCloudSyncProgress(s);dpCloudClearProgressPending(s.id)}catch(e){console.warn('DrivePro: pending Ausbildungsstand:',e)}
+  }
+  for(const l of (s.lessons||[])){
+   if(!dpCloudPendingLessonIds.has(l.id))continue;
+   try{await dpCloudUpsertLesson(s,l,true);dpCloudClearLessonPending(l.id)}catch(e){console.warn('DrivePro: pending Fahrstunde:',e)}
+  }
+ }
+}
+function dpCloudHandleLogout(){
+ dpCloudStopPolling();dpCloudReady=false;dpCloudBusy=false;dpCloudInitialLoadDone=false;
+ dpCloudKnownStudentIds=new Set();dpCloudDeletingStudentIds=new Set();
+ dpCloudPendingStudentIds=new Set();dpCloudPendingLessonIds=new Set();
+ dpCloudPendingLessonSnapshots=new Map();dpCloudPendingProgressStudentIds=new Set();
+ dpCloudStatus('','')
+}
 window.addEventListener('drivepro:auth-ready',dpCloudHandleReady);
 window.addEventListener('drivepro:auth-logout',dpCloudHandleLogout);
-/* Do not pull the entire cloud dataset on focus, visibility changes, or every few seconds. */
-window.addEventListener('online',()=>{if(dpCloudReady)dpCloudStatus('ok','Cloud-Verbindung wieder verfügbar. Änderungen werden direkt gespeichert.')});
+window.addEventListener('online',()=>{if(dpCloudReady)dpCloudRetryPendingWrites().catch(e=>console.error('DrivePro reconnect-write:',e))});
+window.driveProCloudSyncNow=async function(){
+ if(!dpCloudReady)return {ok:false,error:'Cloud ist noch nicht bereit'};
+ await dpCloudLoad();
+ return {ok:true};
+};
 
+
+/* No visibility/focus polling: changing tabs/apps must never rebuild the
+   calendar or overwrite the user's current view. */
 /* iPad/tablet layout: use touch capability rather than fragile browser UA
    detection. This keeps the sidebar compact so the calendar gets real width. */
 (function(){
