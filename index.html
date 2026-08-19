@@ -2468,19 +2468,32 @@ async function dpCloudDeleteAll(){
  }
  dpCloudStatus('ok','Cloud-Daten gelöscht.');
 }
-async function dpCloudMigrateLocal(){
+async function dpCloudMigrateLocal(sourceStudents=students){
  const client=dpCloudClient(),uid=dpCloudUserId();
- if(!client||!uid)return;
- dpCloudStatus('syncing','Vorhandene lokale Daten werden einmalig in die Cloud übertragen …');
- for(const s of students){
-  const r=await client.from('students').upsert(dpCloudStudentRow(s,uid),{onConflict:'id'});
-  if(r.error)throw r.error;
-  await dpCloudSyncProgress(s);
-  for(const l of (s.lessons||[]))await dpCloudUpsertLesson(s,l,true);
+ if(!client||!uid)return {migrated:0,failed:[]};
+ dpCloudStatus('syncing','Lokale Daten werden mit der Cloud abgeglichen …');
+ const failed=[];
+ let migrated=0;
+ for(const s of (sourceStudents||[])){
+  try{
+   const r=await client.from('students').upsert(dpCloudStudentRow(s,uid),{onConflict:'id'});
+   if(r.error)throw r.error;
+   await dpCloudSyncProgress(s);
+   for(const l of (s.lessons||[]))await dpCloudUpsertLesson(s,l,true);
+   migrated++;
+  }catch(e){
+   console.error('DrivePro: Fahrschüler konnte nicht synchronisiert werden',s?.id,e);
+   failed.push({student:s,error:e});
+  }
  }
- localStorage.setItem(DP_CLOUD_OWNER_KEY,uid);
- dpCloudReady=true;
- dpCloudStatus('ok','Lokale Daten wurden erfolgreich in die Cloud übernommen.');
+ if(failed.length){
+  dpCloudStatus('error',`${migrated} gespeichert, ${failed.length} konnten nicht übertragen werden.`);
+ }else{
+  localStorage.setItem(DP_CLOUD_OWNER_KEY,uid);
+  dpCloudReady=true;
+  dpCloudStatus('ok',`${migrated} Fahrschüler mit der Cloud synchronisiert.`);
+ }
+ return {migrated,failed};
 }
 async function dpCloudLoad(){
  const client=dpCloudClient(),uid=dpCloudUserId();
@@ -2497,50 +2510,78 @@ async function dpCloudLoad(){
   if(pr.error)throw pr.error;
   if(lr.error)throw lr.error;
 
-  const cloudStudents=sr.data||[];
-  const owner=localStorage.getItem(DP_CLOUD_OWNER_KEY);
-  if(!cloudStudents.length && students.length){
-   if(!owner || owner===uid){
-    dpCloudBackupLocal();
-    await dpCloudMigrateLocal();
-    return;
-   }
+  let cloudStudents=sr.data||[];
+  const localById=new Map((students||[]).map(s=>[s.id,s]));
+
+  /* Never discard local-only records just because another device has
+     already created some cloud records. Upload the missing local records. */
+  const missingLocal=(students||[]).filter(s=>!cloudStudents.some(c=>c.id===s.id));
+  if(missingLocal.length){
    dpCloudBackupLocal();
-   students=[];
-   save();
+   const result=await dpCloudMigrateLocal(missingLocal);
+   if(result.failed.length){
+    /* Keep the local-only records visible on this device until their
+       individual sync succeeds. */
+    dpCloudReady=true;
+   }
+   const again=await client.from('students').select('*').eq('user_id',uid).order('last_name',{ascending:true});
+   if(again.error)throw again.error;
+   cloudStudents=again.data||cloudStudents;
   }
 
-  if(cloudStudents.length){
+  /* If the cloud is genuinely empty and this device has local data,
+     perform the initial migration. */
+  if(!cloudStudents.length && students.length){
    dpCloudBackupLocal();
-   const progressByStudent={};
-   for(const p of (pr.data||[])){
-    (progressByStudent[p.student_id]||(progressByStudent[p.student_id]=[])).push(p);
-   }
-   const lessonsByStudent={};
-   for(const l of (lr.data||[])){
-    (lessonsByStudent[l.student_id]||(lessonsByStudent[l.student_id]=[])).push(l);
-   }
-   students=cloudStudents.map(row=>{
-    const areas=(progressByStudent[row.id]||[]).map(p=>({name:p.area_name,level:p.level||'Offen',note:p.note||''}));
-    const lessonRows=(lessonsByStudent[row.id]||[]).map(l=>({
-      id:l.id,date:l.lesson_date,startTime:(l.start_time||'').slice(0,5),duration:Number(l.duration_minutes)||0,
-      special:l.special_type||'',lessonType:l.lesson_type||'Fahrstunde',note:l.notes||'',
-      kilometers:l.kilometers==null?'':l.kilometers,color:l.color||null
-    }));
-    return {
-      id:row.id,firstName:row.first_name||'',lastName:row.last_name||'',license:row.license_class||'B',
-      start:row.training_start||'',birthDate:row.birth_date||'',phone:row.phone||'',email:row.email||'',
-      address:row.address||'',visionAid:row.vision_aid===true,theoryPassed:row.theory_passed===true,
-      practiceExamDate:row.practice_exam_date||'',licenseReceivedDate:row.license_received_date||'',
-      notes:row.notes||'',areas:areas.length?areas:DEFAULT_AREAS.map(name=>({name,level:'Offen',note:''})),
-      lessons:lessonRows,signature:null
-    };
-   });
-   save();
+   const result=await dpCloudMigrateLocal(students);
+   if(result.failed.length)throw new Error(`${result.failed.length} lokale Fahrschüler konnten nicht übertragen werden.`);
+   const again=await client.from('students').select('*').eq('user_id',uid).order('last_name',{ascending:true});
+   if(again.error)throw again.error;
+   cloudStudents=again.data||[];
   }
+
+  const progressByStudent={};
+  for(const x of (pr.data||[])){
+   (progressByStudent[x.student_id]||(progressByStudent[x.student_id]=[])).push(x);
+  }
+  const lessonsByStudent={};
+  for(const x of (lr.data||[])){
+   (lessonsByStudent[x.student_id]||(lessonsByStudent[x.student_id]=[])).push(x);
+  }
+
+  const cloudMapped=cloudStudents.map(row=>{
+   const areas=(progressByStudent[row.id]||[]).map(x=>({name:x.area_name,level:x.level||'Offen',note:x.note||''}));
+   const lessonRows=(lessonsByStudent[row.id]||[]).map(x=>({
+    id:x.id,date:x.lesson_date,startTime:(x.start_time||'').slice(0,5),
+    duration:Number(x.duration_minutes)||0,special:x.special_type||'',
+    lessonType:x.lesson_type||'Fahrstunde',note:x.notes||'',
+    kilometers:x.kilometers==null?'':x.kilometers,color:x.color||null
+   }));
+   return {
+    id:row.id,firstName:row.first_name||'',lastName:row.last_name||'',
+    license:row.license_class||'B',start:row.training_start||'',
+    birthDate:row.birth_date||'',phone:row.phone||'',email:row.email||'',
+    address:row.address||'',visionAid:row.vision_aid===true,theoryPassed:row.theory_passed===true,
+    practiceExamDate:row.practice_exam_date||'',licenseReceivedDate:row.license_received_date||'',
+    notes:row.notes||'',areas:areas.length?areas:DEFAULT_AREAS.map(name=>({name,level:'Offen',note:''})),
+    lessons:lessonRows,signature:null
+   };
+  });
+
+  /* Keep any local-only records whose cloud upload failed, instead of
+     silently deleting them from the UI. */
+  const syncedIds=new Set(cloudMapped.map(s=>s.id));
+  const stillLocal=(students||[]).filter(s=>!syncedIds.has(s.id));
+  students=cloudMapped.concat(stillLocal);
+  save();
+
   localStorage.setItem(DP_CLOUD_OWNER_KEY,uid);
   dpCloudReady=true;
-  dpCloudStatus('ok',`${students.length} Fahrschüler aus der Cloud geladen.`);
+  if(stillLocal.length){
+   dpCloudStatus('error',`${cloudMapped.length} Cloud-Fahrschüler geladen; ${stillLocal.length} lokale Daten warten noch auf Synchronisation.`);
+  }else{
+   dpCloudStatus('ok',`${students.length} Fahrschüler mit der Cloud synchronisiert.`);
+  }
  }catch(err){
   console.error('DrivePro Cloud-Sync:',err);
   dpCloudReady=false;

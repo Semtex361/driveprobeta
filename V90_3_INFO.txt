@@ -1,0 +1,18 @@
+V90.3 – CLOUD-SYNC REPARATUR
+
+Problem behoben:
+Die vorherige Synchronisation hat lokale Fahrschüler beim ersten
+Cloud-Ladevorgang durch den Cloud-Bestand ersetzt. Wenn die erste
+Migration nur teilweise erfolgreich war, konnten dadurch lokale
+Test-Fahrschüler verschwinden.
+
+V90.3:
+- behält lokale-only Fahrschüler vorerst sichtbar
+- überträgt fehlende lokale Fahrschüler einzeln
+- ein Fehler bei einem Fahrschüler stoppt nicht mehr die komplette Migration
+- lädt nach erfolgreicher Übertragung den aktuellen Cloud-Bestand neu
+- vorhandene Cloud-Daten bleiben erhalten
+- lokale Sicherung wird vor Migration erstellt
+- Service Worker Cache aktualisiert
+
+Bitte nach GitHub-Upload STRG+F5 durchführen.
