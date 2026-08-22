@@ -1633,7 +1633,7 @@ body.auth-locked #driveProAuth{display:flex}
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="auth-locked" data-drivepro-version="V90.23"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V90.34"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 
 <div id="driveProAuth" aria-label="DrivePro Anmeldung">
   <div class="dp-auth-card">
@@ -1687,7 +1687,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-logbook" onclick="page('logbook')"><span>📖</span>Logbuch</button>
     <button id="nav-settings" onclick="page('settings')"><span>⚙</span>Einstellungen</button>
   </nav>
-  <div class="sidefoot">V90.13 · Login & Cloud-Sync aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V90.34 · Login & Cloud-Sync aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -2989,17 +2989,31 @@ async function dpCloudRealtimeApplyLesson(p){
  if(!sid)return;
  const s=students.find(x=>x.id===sid);if(!s)return;
  if(p.eventType==='DELETE'){
-  /* A DELETE event is authoritative. The local deletion has already been
-     made, so the marker must not cause the event to be ignored. */
   dpCloudClearLessonPending(lid);
-  s.lessons=(s.lessons||[]).filter(l=>l.id!==lid)
- }
- else{
+  s.lessons=(s.lessons||[]).filter(l=>l.id!==lid);
+ }else{
   if(dpCloudPendingLessonIds.has(lid)){const snap=dpCloudPendingLessonSnapshots.get(lid);if(snap&&dpCloudLessonMatchesSnapshot(row,snap))dpCloudClearLessonPending(lid);else return}
   const mapped={id:row.id,date:row.lesson_date,startTime:(row.start_time||'').slice(0,5),duration:Number(row.duration_minutes)||0,special:row.special_type||'',lessonType:row.lesson_type||'Fahrstunde',note:row.notes||'',kilometers:row.kilometers==null?'':row.kilometers,color:row.color||null,signature:row.signature||null};
   const i=(s.lessons||[]).findIndex(l=>l.id===lid);if(i>=0)s.lessons[i]=mapped;else s.lessons.push(mapped)
  }
  save();if(['calendar','dashboard','students','stats'].includes(state.page))render();
+}
+/* Database Broadcast is used for lesson deletes. The payload contains the
+   lesson id explicitly, so this path never depends on Postgres DELETE OLD
+   records, RLS payloads, or the student_id being present. */
+function dpCloudRealtimeApplyLessonDeleted(message){
+ const body=message?.payload||message||{};
+ const lid=body.lesson_id||body.id||body?.old?.id;
+ if(!lid)return;
+ let changed=false;
+ for(const s of (students||[])){
+  const before=(s.lessons||[]).length;
+  s.lessons=(s.lessons||[]).filter(l=>String(l.id)!==String(lid));
+  if(s.lessons.length!==before)changed=true;
+ }
+ dpCloudClearLessonPending(lid);
+ if(changed){save();if(['calendar','dashboard','students','stats'].includes(state.page))render();}
+ console.info('DrivePro Realtime: LESSON_DELETED',String(lid));
 }
 let dpCloudProgressRenderTimers=new Map();
 async function dpCloudRealtimeApplyProgress(p){
@@ -3038,7 +3052,7 @@ async function dpCloudRealtimeStart(){
   if(!token)throw new Error('Realtime: keine aktive Sitzung');
   if(c.realtime?.setAuth)await c.realtime.setAuth(token);
 
-  const ch=c.channel(topic,{config:{presence:{key:uid}}});
+  const ch=c.channel(topic,{config:{private:true,presence:{key:uid}}});
   dpCloudRealtimeChannel=ch;
 
   ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'students',filter:`user_id=eq.${uid}`},
@@ -3052,14 +3066,14 @@ async function dpCloudRealtimeStart(){
       if(i>=0){students.splice(i,1);save();if(['calendar','dashboard','students','stats'].includes(state.page))render()}
     });
 
-  /* Lessons DELETE intentionally has no Realtime filter. DELETE payloads can
-     contain only the primary key unless REPLICA IDENTITY FULL is enabled. */
+  /* Lesson INSERT/UPDATE keep using Postgres Changes. Lesson DELETE is
+     deliberately handled through Database Broadcast below. */
   ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'lessons',filter:`user_id=eq.${uid}`},
     p=>dpCloudRealtimeApplyLesson(p).catch(dpCloudRealtimeHandleError));
   ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'lessons',filter:`user_id=eq.${uid}`},
     p=>dpCloudRealtimeApplyLesson(p).catch(dpCloudRealtimeHandleError));
-  ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'lessons'},
-    p=>dpCloudRealtimeApplyLesson(p).catch(dpCloudRealtimeHandleError));
+  ch.on('broadcast',{event:'LESSON_DELETED'},
+    p=>dpCloudRealtimeApplyLessonDeleted(p));
 
   ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'training_progress',filter:`user_id=eq.${uid}`},
     p=>dpCloudRealtimeApplyProgress(p).catch(dpCloudRealtimeHandleError));
