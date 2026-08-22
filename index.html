@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V90.36</title>
+<title>DrivePro Beta V90.37</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -1652,7 +1652,7 @@ body.auth-locked #driveProAuth{display:flex}
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="auth-locked" data-drivepro-version="V90.34"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V90.37"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 
 <div id="driveProAuth" aria-label="DrivePro Anmeldung">
   <div class="dp-auth-card">
@@ -1706,7 +1706,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-logbook" onclick="page('logbook')"><span>📖</span>Logbuch</button>
     <button id="nav-settings" onclick="page('settings')"><span>⚙</span>Einstellungen</button>
   </nav>
-  <div class="sidefoot">V90.36 · Login & Cloud-Sync aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V90.37 · Login & Cloud-Sync aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -1832,21 +1832,77 @@ async function dpCloudLoadSettings(){
   dpCloudSettingsReady=true;
  }
 }
+function dpCloudSettingsActiveElement(){
+ const el=document.activeElement;
+ if(!el)return null;
+ return el.matches?.('input,textarea,select,[contenteditable="true"]')?el:null;
+}
+function dpCloudRefreshSettingsUI(){
+ if(state.page!=='settings')return;
+ const active=dpCloudSettingsActiveElement();
+ const setValue=(id,value)=>{
+  const el=document.getElementById(id);
+  if(el&&el!==active&&el.value!==String(value??''))el.value=String(value??'');
+ };
+ /* Never replace the settings page while the user is typing. Update only
+    controls that are not currently focused, so a remote settings event can
+    never destroy an active input or move the caret. */
+ const light=document.querySelector('.themeOption[onclick*="setTheme(\'light\')"]');
+ const dark=document.querySelector('.themeOption[onclick*="setTheme(\'dark\')"]');
+ if(light)light.classList.toggle('selected',appSettings.theme==='light');
+ if(dark)dark.classList.toggle('selected',appSettings.theme==='dark');
+ setValue('setSchoolName',appSettings.schoolName);
+ setValue('setSchoolPhone',appSettings.schoolPhone);
+ setValue('setSchoolEmail',appSettings.schoolEmail);
+ setValue('setSchoolAddress',appSettings.schoolAddress);
+ document.querySelectorAll('[data-duration]').forEach(input=>{
+  if(input===active)return;
+  const type=input.dataset.duration;
+  const value=appSettings.durations?.[type];
+  if(value!=null&&input.value!==String(value))input.value=String(value);
+ });
+ const trainingActive=!!active?.matches?.('[data-training-area-input]');
+ const list=document.getElementById('trainingAreasList');
+ if(list&&!trainingActive){
+  list.innerHTML=getTrainingAreas().map((name,i)=>trainingAreaSettingRow(name,i)).join('')+
+   `<div class="trainingAreaRow" data-training-area-row data-empty-row><div class="trainingAreaNumber">${getTrainingAreas().length+1}</div><div class="trainingAreaInputWrap"><input class="trainingAreaInput" type="text" maxlength="120" placeholder="Neuer Ausbildungsinhalt …" data-training-area-input></div><button type="button" class="trainingAreaDelete" disabled aria-label="Leeres Feld">×</button></div>`;
+  initTrainingAreaSettings();
+ }
+ const count=document.getElementById('trainingAreasCount');
+ if(count)count.textContent=`${getTrainingAreas().length} ${getTrainingAreas().length===1?'Inhalt':'Inhalte'} gespeichert`;
+}
 function dpCloudRealtimeApplySettings(message){
  const body=message?.payload||message||{};
  const incoming=body.settings||body.data;
  if(!incoming||typeof incoming!=='object')return;
  const incomingAt=String(body.updated_at||'');
  if(incomingAt&&dpCloudSettingsLastUpdatedAt&&incomingAt<dpCloudSettingsLastUpdatedAt)return;
+ /* The database broadcast also reaches the device that performed the write.
+    If the payload is already identical to our local settings, do not touch
+    the DOM at all. This prevents the local echo from resetting a form while
+    the user is typing. */
+ const normalizeSnapshot=value=>JSON.stringify({
+  theme:value.theme||'light',
+  schoolName:value.schoolName||'',
+  schoolAddress:value.schoolAddress||'',
+  schoolPhone:value.schoolPhone||'',
+  schoolEmail:value.schoolEmail||'',
+  trainingAreas:normalizeTrainingAreas(value.trainingAreas),
+  durations:{...DEFAULT_SETTINGS.durations,...(value.durations||{})}
+ });
+ const identical=normalizeSnapshot(incoming)===normalizeSnapshot(dpCloudSettingsSnapshot());
+ if(incomingAt)dpCloudSettingsLastUpdatedAt=incomingAt;
+ if(identical){
+  console.info('DrivePro Realtime: SETTINGS_UPDATED (no local change)');
+  return;
+ }
  dpCloudSettingsApplyingRemote=true;
  try{
   dpCloudApplySettingsObject(incoming);
-  if(incomingAt)dpCloudSettingsLastUpdatedAt=incomingAt;
-  /* Settings affect future entries and the settings screen. Do not rebuild
-     the calendar/dashboard on a remote settings change: that would be an
-     unnecessary UI refresh and could disturb the user's current calendar
-     position. */
-  if(state.page==='settings')settingsPage();
+  /* Never rebuild settingsPage() here. Replacing #content was the cause of
+     the old "page reload" feeling: focus/caret were lost and text being
+     entered could disappear. Update only safe, unfocused controls. */
+  dpCloudRefreshSettingsUI();
   console.info('DrivePro Realtime: SETTINGS_UPDATED');
  }finally{dpCloudSettingsApplyingRemote=false}
 }
@@ -2261,6 +2317,17 @@ function bindTrainingAreaInput(input){
 function initTrainingAreaSettings(){
  trainingAreasInputs().forEach(bindTrainingAreaInput);
  updateTrainingAreaNumbers();
+}
+/* A remote settings change may arrive while the user is typing in a training
+   area. Once the field is left, refresh the non-active controls so the latest
+   cloud configuration becomes visible without interrupting input. */
+if(!window.__dpSettingsFocusGuardBound){
+ window.__dpSettingsFocusGuardBound=true;
+ document.addEventListener('focusout',e=>{
+  if(e.target?.matches?.('[data-training-area-input], #setSchoolName, #setSchoolPhone, #setSchoolEmail, #setSchoolAddress, [data-duration]')){
+   setTimeout(()=>dpCloudRefreshSettingsUI(),0);
+  }
+ });
 }
 function removeTrainingAreaSetting(index){
  const areas=getTrainingAreas();
