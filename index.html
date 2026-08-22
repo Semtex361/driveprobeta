@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V90.37</title>
+<title>DrivePro Beta V90.38</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -798,6 +798,16 @@ body{overflow-x:hidden}
 .trainingAreasFooter{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-top:13px}
 .trainingAreasCount{font-size:10px;color:#8998a9}
 .trainingAreasInfo{font-size:10px;color:#71839a;line-height:1.45}
+/* V90.38 – Ausbildungsdiagramm Drag & Drop */
+.trainingAreaRow{position:relative}
+.trainingAreaDragHandle{width:32px;height:38px;flex:0 0 32px;display:grid;place-items:center;border:1px solid #dce8f4;border-radius:10px;background:#f7faff;color:#71839a;font-size:17px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.trainingAreaDragHandle:active{cursor:grabbing}
+.trainingAreaRow.dp-dragging{opacity:.48;transform:scale(.995);box-shadow:0 7px 18px rgba(47,128,237,.12)}
+.trainingAreaRow.dp-drag-over{outline:2px dashed #2f80ed;outline-offset:3px}
+.trainingAreaRow.dp-drag-placeholder{border:2px dashed #9bc4f3;background:#f3f8ff;border-radius:12px;min-height:40px;opacity:.75}
+[data-theme="dark"] .trainingAreaDragHandle{background:#122033;border-color:#30465e;color:#9bb0c5}
+[data-theme="dark"] .trainingAreaRow.dp-drag-over{outline-color:#63a7f5}
+@media(max-width:600px){.trainingAreaDragHandle{width:30px;flex-basis:30px;height:36px;font-size:16px}}
 [data-theme="dark"] .trainingAreaNumber{background:#19324b;color:#9bb0c5}
 [data-theme="dark"] .trainingAreaDelete{background:#2a1c20;border-color:#5b353b;color:#ff9a9a}
 [data-theme="dark"] .trainingAreaDelete:hover{background:#3a2228;border-color:#75434a}
@@ -2269,12 +2279,9 @@ function openLogEntry(entryId){
 function trainingAreaSettingRow(name,index){
  const safeName=esc(name||'');
  return `<div class="trainingAreaRow" data-training-area-row>
+   <button type="button" class="trainingAreaDragHandle" data-training-area-drag-handle aria-label="Ausbildungsinhalt verschieben" title="Zum Verschieben ziehen">☷</button>
    <div class="trainingAreaNumber">${index+1}</div>
    <div class="trainingAreaInputWrap"><input class="trainingAreaInput" type="text" maxlength="120" value="${safeName}" data-training-area-input></div>
-   <div class="trainingAreaOrder" aria-label="Reihenfolge">
-    <button type="button" class="trainingAreaMove" ${index===0?'disabled':''} onclick="moveTrainingAreaSetting(this,-1)" aria-label="Ausbildungsinhalt nach oben">↑</button>
-    <button type="button" class="trainingAreaMove" ${index===getTrainingAreas().length-1?'disabled':''} onclick="moveTrainingAreaSetting(this,1)" aria-label="Ausbildungsinhalt nach unten">↓</button>
-   </div>
    <button type="button" class="trainingAreaDelete" onclick="removeTrainingAreaSetting(this)" aria-label="Ausbildungsinhalt löschen">×</button>
   </div>`;
 }
@@ -2298,13 +2305,14 @@ function addTrainingAreaInputIfNeeded(){
  const row=last.closest('[data-training-area-row]');
  row.removeAttribute('data-empty-row');
  row.querySelector('.trainingAreaDelete')?.removeAttribute('disabled');
- const order=document.createElement('div');
- order.className='trainingAreaOrder';
- order.setAttribute('aria-label','Reihenfolge');
- order.innerHTML='<button type="button" class="trainingAreaMove" aria-label="Ausbildungsinhalt nach oben">↑</button><button type="button" class="trainingAreaMove" aria-label="Ausbildungsinhalt nach unten">↓</button>';
- order.children[0].onclick=()=>moveTrainingAreaSetting(order.children[0],-1);
- order.children[1].onclick=()=>moveTrainingAreaSetting(order.children[1],1);
- row.insertBefore(order,row.querySelector('.trainingAreaDelete'));
+ const handle=document.createElement('button');
+ handle.type='button';
+ handle.className='trainingAreaDragHandle';
+ handle.setAttribute('data-training-area-drag-handle','');
+ handle.setAttribute('aria-label','Ausbildungsinhalt verschieben');
+ handle.title='Zum Verschieben ziehen';
+ handle.textContent='☷';
+ row.insertBefore(handle,row.firstChild);
 }
  if(list.querySelector('[data-empty-row]'))return;
  const index=inputs.length;
@@ -2319,74 +2327,104 @@ function addTrainingAreaInputIfNeeded(){
 }
 function updateTrainingAreaNumbers(){
  document.querySelectorAll('#trainingAreasList [data-training-area-row]').forEach((row,i)=>{const n=row.querySelector('.trainingAreaNumber');if(n)n.textContent=String(i+1)});
- updateTrainingAreaMoveButtons();
 }
-function bindTrainingAreaInput(input){
- if(!input||input.dataset.bound==='1')return;
- input.dataset.bound='1';
- input.addEventListener('input',()=>{
-  if(input.value.trim())addTrainingAreaInputIfNeeded();
-  persistTrainingAreasFromSettings();
- });
- input.addEventListener('change',persistTrainingAreasFromSettings);
- input.addEventListener('keydown',e=>{
-  if(e.key==='Enter'){
-   e.preventDefault();
-   if(!input.value.trim())return;
-   addTrainingAreaInputIfNeeded();
-   const inputs=trainingAreasInputs();
-   const next=inputs[inputs.indexOf(input)+1];
-   if(next){next.focus();next.scrollIntoView({block:'nearest'});}
-  }
- });
-}
-function initTrainingAreaSettings(){
- trainingAreasInputs().forEach(bindTrainingAreaInput);
- updateTrainingAreaNumbers();
-}
-/* A remote settings change may arrive while the user is typing in a training
-   area. Once the field is left, refresh the non-active controls so the latest
-   cloud configuration becomes visible without interrupting input. */
-if(!window.__dpSettingsFocusGuardBound){
- window.__dpSettingsFocusGuardBound=true;
- document.addEventListener('focusout',e=>{
-  if(e.target?.matches?.('[data-training-area-input], #setSchoolName, #setSchoolPhone, #setSchoolEmail, #setSchoolAddress, [data-duration]')){
-   setTimeout(()=>dpCloudRefreshSettingsUI(),0);
-  }
- });
-}
-function syncTrainingAreaSettingsFromDom(){
- const values=trainingAreasInputs().map(input=>input.value.trim()).filter(Boolean);
- const normalized=normalizeTrainingAreas(values);
- if(normalized.length)appSettings.trainingAreas=normalized;
- saveSettings();
- const count=document.getElementById('trainingAreasCount');
- if(count)count.textContent=`${getTrainingAreas().length} ${getTrainingAreas().length===1?'Inhalt':'Inhalte'} gespeichert`;
- showSettingsSaved();
- updateTrainingAreaNumbers();
- updateTrainingAreaMoveButtons();
-}
-function updateTrainingAreaMoveButtons(){
- const rows=[...document.querySelectorAll('#trainingAreasList [data-training-area-row]:not([data-empty-row])')];
- rows.forEach((row,i)=>{
-  const buttons=row.querySelectorAll('.trainingAreaMove');
-  if(buttons[0])buttons[0].disabled=i===0;
-  if(buttons[1])buttons[1].disabled=i===rows.length-1;
- });
-}
-function moveTrainingAreaSetting(button,direction){
- const row=button?.closest?.('[data-training-area-row]');
+function bindTrainingAreaDragDrop(){
  const list=document.getElementById('trainingAreasList');
- if(!row||!list||row.hasAttribute('data-empty-row'))return;
+ if(!list)return;
+ list.querySelectorAll('[data-training-area-drag-handle]').forEach(handle=>{
+  if(handle.dataset.dndBound==='1')return;
+  handle.dataset.dndBound='1';
+  const row=handle.closest('[data-training-area-row]');
+  if(!row||row.hasAttribute('data-empty-row'))return;
+
+  // Desktop: native HTML drag-and-drop, started only from the handle.
+  handle.draggable=true;
+  handle.addEventListener('dragstart',e=>{
+   e.stopPropagation();
+   window.__dpTrainingDragRow=row;
+   row.classList.add('dp-dragging');
+   e.dataTransfer.effectAllowed='move';
+   e.dataTransfer.setData('text/plain','training-area');
+  });
+  handle.addEventListener('dragend',()=>{
+   document.querySelectorAll('#trainingAreasList .dp-drag-over').forEach(r=>r.classList.remove('dp-drag-over'));
+   row.classList.remove('dp-dragging');
+   window.__dpTrainingDragRow=null;
+  });
+
+  // iPad/touch: pointer events on the handle only, so typing in the input is unaffected.
+  let pointerId=null, touchActive=false, startX=0, startY=0;
+  handle.addEventListener('pointerdown',e=>{
+   if(e.pointerType==='mouse')return;
+   pointerId=e.pointerId; startX=e.clientX; startY=e.clientY; touchActive=false;
+   try{handle.setPointerCapture(pointerId)}catch(_){ }
+  });
+  handle.addEventListener('pointermove',e=>{
+   if(pointerId!==e.pointerId)return;
+   const moved=Math.hypot(e.clientX-startX,e.clientY-startY)>8;
+   if(!moved)return;
+   touchActive=true;
+   e.preventDefault();
+   row.classList.add('dp-dragging');
+   const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('#trainingAreasList [data-training-area-row]');
+   document.querySelectorAll('#trainingAreasList .dp-drag-over').forEach(r=>r.classList.remove('dp-drag-over'));
+   if(target&&target!==row&&!target.hasAttribute('data-empty-row'))target.classList.add('dp-drag-over');
+  });
+  handle.addEventListener('pointerup',e=>{
+   if(pointerId!==e.pointerId)return;
+   const wasDragging=touchActive;
+   const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('#trainingAreasList [data-training-area-row]');
+   pointerId=null;
+   row.classList.remove('dp-dragging');
+   document.querySelectorAll('#trainingAreasList .dp-drag-over').forEach(r=>r.classList.remove('dp-drag-over'));
+   if(wasDragging&&target&&target!==row&&!target.hasAttribute('data-empty-row'))reorderTrainingAreaRows(row,target);
+   touchActive=false;
+  });
+  handle.addEventListener('pointercancel',()=>{pointerId=null;touchActive=false;row.classList.remove('dp-dragging');document.querySelectorAll('#trainingAreasList .dp-drag-over').forEach(r=>r.classList.remove('dp-drag-over'))});
+ });
+ // Drop handling for desktop rows.
+ list.querySelectorAll('[data-training-area-row]').forEach(target=>{
+  if(target.dataset.dropBound==='1')return;
+  target.dataset.dropBound='1';
+  target.addEventListener('dragover',e=>{
+   const row=window.__dpTrainingDragRow;
+   if(!row||row===target||target.hasAttribute('data-empty-row'))return;
+   e.preventDefault();
+   target.classList.add('dp-drag-over');
+  });
+  target.addEventListener('dragleave',()=>target.classList.remove('dp-drag-over'));
+  target.addEventListener('drop',e=>{
+   e.preventDefault();
+   const row=window.__dpTrainingDragRow;
+   target.classList.remove('dp-drag-over');
+   if(row&&row!==target&&!target.hasAttribute('data-empty-row'))reorderTrainingAreaRows(row,target);
+   window.__dpTrainingDragRow=null;
+  });
+ });
+}
+function reorderTrainingAreaRows(row,target){
+ const list=document.getElementById('trainingAreasList');
+ if(!list||!row||!target||row===target)return;
  const rows=[...list.querySelectorAll('[data-training-area-row]:not([data-empty-row])')];
- const index=rows.indexOf(row);
- const target=index+direction;
- if(index<0||target<0||target>=rows.length)return;
- if(direction<0)list.insertBefore(row,rows[target]);
- else list.insertBefore(row,rows[target].nextSibling);
+ const from=rows.indexOf(row),to=rows.indexOf(target);
+ if(from<0||to<0)return;
+ // Preserve the DOM/input values exactly; only move the existing row node.
+ if(from<to)list.insertBefore(row,target.nextSibling); else list.insertBefore(row,target);
  updateTrainingAreaNumbers();
- updateTrainingAreaMoveButtons();
  syncTrainingAreaSettingsFromDom();
+ bindTrainingAreaDragDrop();
+}
+function updateTrainingAreaMoveButtons(){}
+function moveTrainingAreaSetting(button,direction){
+ // Backwards compatibility for old saved markup. New UI uses Drag & Drop.
+ const row=button?.closest?.('[data-training-area-row]');
+ if(!row)return;
+ const list=document.getElementById('trainingAreasList');
+ const rows=[...list.querySelectorAll('[data-training-area-row]:not([data-empty-row])')];
+ const index=rows.indexOf(row),target=index+direction;
+ if(index<0||target<0||target>=rows.length)return;
+ if(direction<0)list.insertBefore(row,rows[target]); else list.insertBefore(row,rows[target].nextSibling);
+ updateTrainingAreaNumbers(); syncTrainingAreaSettingsFromDom(); bindTrainingAreaDragDrop();
 }
 function removeTrainingAreaSetting(button){
  const areas=getTrainingAreas();
