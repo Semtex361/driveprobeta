@@ -800,7 +800,7 @@ body{overflow-x:hidden}
 .trainingAreasInfo{font-size:10px;color:#71839a;line-height:1.45}
 /* V90.38 – Ausbildungsdiagramm Drag & Drop */
 .trainingAreaRow{position:relative}
-.trainingAreaDragHandle{width:32px;height:38px;flex:0 0 32px;display:grid;place-items:center;border:1px solid #dce8f4;border-radius:10px;background:#f7faff;color:#71839a;font-size:17px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.trainingAreaDragHandle{width:32px;height:38px;flex:0 0 32px;display:grid;place-items:center;border:1px solid #dce8f4;border-radius:10px;background:#f7faff;color:#71839a;font-size:17px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:nonepointer-events:auto;}
 .trainingAreaDragHandle:active{cursor:grabbing}
 .trainingAreaRow.dp-dragging{opacity:.48;transform:scale(.995);box-shadow:0 7px 18px rgba(47,128,237,.12)}
 .trainingAreaRow.dp-drag-over{outline:2px dashed #2f80ed;outline-offset:3px}
@@ -2337,69 +2337,50 @@ function bindTrainingAreaDragDrop(){
   const row=handle.closest('[data-training-area-row]');
   if(!row||row.hasAttribute('data-empty-row'))return;
 
-  // Desktop: native HTML drag-and-drop, started only from the handle.
-  handle.draggable=true;
-  handle.addEventListener('dragstart',e=>{
-   e.stopPropagation();
-   window.__dpTrainingDragRow=row;
-   row.classList.add('dp-dragging');
-   e.dataTransfer.effectAllowed='move';
-   e.dataTransfer.setData('text/plain','training-area');
-  });
-  handle.addEventListener('dragend',()=>{
-   document.querySelectorAll('#trainingAreasList .dp-drag-over').forEach(r=>r.classList.remove('dp-drag-over'));
+  // Pointer-based drag works consistently with mouse, trackpad and iPad touch.
+  // Dragging can only start on the handle, so text inputs remain normal.
+  let pointerId=null, dragging=false;
+  let startX=0, startY=0;
+
+  const clearDrag=()=>{
    row.classList.remove('dp-dragging');
-   window.__dpTrainingDragRow=null;
+   list.querySelectorAll('.dp-drag-over').forEach(r=>r.classList.remove('dp-drag-over'));
+   pointerId=null; dragging=false;
+  };
+
+  handle.addEventListener('pointerdown',e=>{
+   if(e.button!==undefined && e.button!==0)return;
+   pointerId=e.pointerId; startX=e.clientX; startY=e.clientY; dragging=false;
+   try{handle.setPointerCapture(pointerId)}catch(_){ }
+   e.preventDefault();
   });
 
-  // iPad/touch: pointer events on the handle only, so typing in the input is unaffected.
-  let pointerId=null, touchActive=false, startX=0, startY=0;
-  handle.addEventListener('pointerdown',e=>{
-   if(e.pointerType==='mouse')return;
-   pointerId=e.pointerId; startX=e.clientX; startY=e.clientY; touchActive=false;
-   try{handle.setPointerCapture(pointerId)}catch(_){ }
-  });
   handle.addEventListener('pointermove',e=>{
    if(pointerId!==e.pointerId)return;
-   const moved=Math.hypot(e.clientX-startX,e.clientY-startY)>8;
-   if(!moved)return;
-   touchActive=true;
+   const distance=Math.hypot(e.clientX-startX,e.clientY-startY);
+   if(!dragging){
+    if(distance<6)return;
+    dragging=true;
+    row.classList.add('dp-dragging');
+   }
    e.preventDefault();
-   row.classList.add('dp-dragging');
    const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('#trainingAreasList [data-training-area-row]');
-   document.querySelectorAll('#trainingAreasList .dp-drag-over').forEach(r=>r.classList.remove('dp-drag-over'));
+   list.querySelectorAll('.dp-drag-over').forEach(r=>r.classList.remove('dp-drag-over'));
    if(target&&target!==row&&!target.hasAttribute('data-empty-row'))target.classList.add('dp-drag-over');
   });
+
   handle.addEventListener('pointerup',e=>{
    if(pointerId!==e.pointerId)return;
-   const wasDragging=touchActive;
+   const wasDragging=dragging;
    const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('#trainingAreasList [data-training-area-row]');
-   pointerId=null;
-   row.classList.remove('dp-dragging');
-   document.querySelectorAll('#trainingAreasList .dp-drag-over').forEach(r=>r.classList.remove('dp-drag-over'));
-   if(wasDragging&&target&&target!==row&&!target.hasAttribute('data-empty-row'))reorderTrainingAreaRows(row,target);
-   touchActive=false;
+   if(wasDragging&&target&&target!==row&&!target.hasAttribute('data-empty-row')){
+    reorderTrainingAreaRows(row,target);
+   }
+   try{handle.releasePointerCapture(e.pointerId)}catch(_){ }
+   clearDrag();
   });
-  handle.addEventListener('pointercancel',()=>{pointerId=null;touchActive=false;row.classList.remove('dp-dragging');document.querySelectorAll('#trainingAreasList .dp-drag-over').forEach(r=>r.classList.remove('dp-drag-over'))});
- });
- // Drop handling for desktop rows.
- list.querySelectorAll('[data-training-area-row]').forEach(target=>{
-  if(target.dataset.dropBound==='1')return;
-  target.dataset.dropBound='1';
-  target.addEventListener('dragover',e=>{
-   const row=window.__dpTrainingDragRow;
-   if(!row||row===target||target.hasAttribute('data-empty-row'))return;
-   e.preventDefault();
-   target.classList.add('dp-drag-over');
-  });
-  target.addEventListener('dragleave',()=>target.classList.remove('dp-drag-over'));
-  target.addEventListener('drop',e=>{
-   e.preventDefault();
-   const row=window.__dpTrainingDragRow;
-   target.classList.remove('dp-drag-over');
-   if(row&&row!==target&&!target.hasAttribute('data-empty-row'))reorderTrainingAreaRows(row,target);
-   window.__dpTrainingDragRow=null;
-  });
+
+  handle.addEventListener('pointercancel',()=>clearDrag());
  });
 }
 function reorderTrainingAreaRows(row,target){
