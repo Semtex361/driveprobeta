@@ -1674,6 +1674,13 @@ body.auth-locked #driveProAuth{display:flex}
 .dp-logout:hover{border-color:#b7c9df;background:var(--primary-soft)}
 @media(max-width:700px){.dp-cloud-status{display:none}.dp-auth-card{padding:27px 22px;border-radius:20px}.dp-user-info,.dp-admin-badge{display:none!important}.dp-logout{padding:8px 9px}}
 
+
+/* V90.39 – Fahrschüler-Archiv */
+.archiveBadge{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;background:#eef5ff;color:#1769d2;font-size:10px;font-weight:800}
+.archiveCard{border:1px solid #dce7f2}
+.archiveRestoreBtn{background:#1769d2!important;color:#fff!important;font-weight:800!important}
+.archiveEmpty{padding:34px 20px;text-align:center;color:var(--muted)}
+@media(max-width:650px){.archiveRestoreBtn{min-width:100%}}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -1689,7 +1696,7 @@ body.auth-locked #driveProAuth{display:flex}
 .trainingAreaMove:disabled{opacity:.35;cursor:default}
 </style>
 </head>
-<body class="auth-locked" data-drivepro-version="V90.38"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V90.39"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 
 <div id="driveProAuth" aria-label="DrivePro Anmeldung">
   <div class="dp-auth-card">
@@ -1738,12 +1745,13 @@ body.auth-locked #driveProAuth{display:flex}
   <nav class="nav">
     <button id="nav-dashboard" onclick="page('dashboard')"><span>⌂</span>Dashboard</button>
     <button id="nav-students" onclick="page('students')"><span>👥</span>Fahrschüler</button>
+    <button id="nav-archive" onclick="page('archive')"><span>🗄️</span>Archiv</button>
     <button id="nav-calendar" onclick="page('calendar')"><span>▣</span>Kalender</button>
     <button id="nav-stats" onclick="page('stats')"><span>▥</span>Statistik</button>
     <button id="nav-logbook" onclick="page('logbook')"><span>📖</span>Logbuch</button>
     <button id="nav-settings" onclick="page('settings')"><span>⚙</span>Einstellungen</button>
   </nav>
-  <div class="sidefoot">V90.37 · Login & Cloud-Sync aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V90.39 · Login & Cloud-Sync aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -1964,10 +1972,10 @@ function logActivity(action,student,lesson,details=''){
  localStorage.setItem('drivepro_activity_log',JSON.stringify(log.slice(0,500)));
 }
 function activityLabel(x){
- const map={added:'Fahrstunde hinzugefügt',edited:'Fahrstunde geändert',deleted:'Fahrstunde gelöscht',moved:'Fahrstunde verschoben',student_added:'Fahrschüler hinzugefügt',student_edited:'Fahrschüler geändert',student_deleted:'Fahrschüler gelöscht'};
+ const map={added:'Fahrstunde hinzugefügt',edited:'Fahrstunde geändert',deleted:'Fahrstunde gelöscht',moved:'Fahrstunde verschoben',student_added:'Fahrschüler hinzugefügt',student_edited:'Fahrschüler geändert',student_deleted:'Fahrschüler gelöscht',student_completed:'Fahrschüler abgeschlossen',student_restored:'Fahrschüler wiederhergestellt'};
  return map[x]||x;
 }
-function activityIcon(x){return ({added:'➕',edited:'✏️',deleted:'🗑️',moved:'↔️',student_added:'👤',student_edited:'📝',student_deleted:'👤'})[x]||'•'}
+function activityIcon(x){return ({added:'➕',edited:'✏️',deleted:'🗑️',moved:'↔️',student_added:'👤',student_edited:'📝',student_deleted:'👤',student_completed:'📦',student_restored:'↩️'})[x]||'•'}
 function clearActivityLog(){if(!confirm('Das gesamte Logbuch wirklich löschen?'))return;localStorage.removeItem('drivepro_activity_log');render()}
 function save(){localStorage.setItem(KEY,JSON.stringify(students))}
 function notifyLessonChange(action,student,lesson){
@@ -1993,8 +2001,11 @@ function getStudent(id){return students.find(s=>s.id===id)}
 function pct(s){return s.areas?.length?Math.round(s.areas.filter(a=>a.level==='Sicher').length/s.areas.length*100):0}
 function fmtDate(d){return new Date(d+'T12:00:00').toLocaleDateString('de-DE')}
 function fmtTime(t){return t||'—'}
-function page(p){state.page=p;state.studentId=null;document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));document.getElementById('nav-'+p).classList.add('active');document.getElementById('pageTitle').textContent={dashboard:'Dashboard',students:'Fahrschüler',calendar:'Kalender',stats:'Statistik',logbook:'Logbuch',settings:'Einstellungen'}[p];render()}
-function render(){if(state.page==='dashboard')dashboard();else if(state.page==='students')studentsPage();else if(state.page==='calendar')calendarPage();else if(state.page==='stats')statsPage();else if(state.page==='logbook')logbookPage();else if(state.page==='settings')settingsPage();else dashboard()}
+function isArchivedStudent(s){return !!s?.licenseReceivedDate}
+function activeStudents(){return students.filter(s=>!isArchivedStudent(s))}
+function archivedStudents(){return students.filter(isArchivedStudent)}
+function page(p){state.page=p;state.studentId=null;document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));document.getElementById('nav-'+p).classList.add('active');document.getElementById('pageTitle').textContent={dashboard:'Dashboard',students:'Fahrschüler',archive:'Archiv',calendar:'Kalender',stats:'Statistik',logbook:'Logbuch',settings:'Einstellungen'}[p];render()}
+function render(){if(state.page==='dashboard')dashboard();else if(state.page==='students')studentsPage();else if(state.page==='archive')archivePage();else if(state.page==='calendar')calendarPage();else if(state.page==='stats')statsPage();else if(state.page==='logbook')logbookPage();else if(state.page==='settings')settingsPage();else dashboard()}
 function dashboard(){
  const all=allLessons();
  const total=students.reduce((n,s)=>n+(s.lessons?.length||0),0);
@@ -2005,7 +2016,7 @@ function dashboard(){
  <div class="welcome"><div><div class="eyebrow">DEIN FAHRSCHUL-DASHBOARD</div><h2>Guten Tag 👋</h2><p>Hier hast du deine Fahrschüler und den heutigen Ausbildungsstand im Blick.</p></div><button class="primary bigbtn" onclick="openStudentForm()">＋ Fahrschüler hinzufügen</button></div>
  <div class="dashboardGrid">
    <div class="card livelyCard"><div class="section-title"><div><h3>Meine Fahrschüler</h3><span class="muted">Jeder Schüler hat seinen eigenen Ausbildungsfortschritt</span></div><button class="secondary" onclick="page('students')">Alle anzeigen</button></div>
-   ${students.slice(0,6).map(s=>dashboardStudent(s)).join('')||'<div class="empty">Noch keine Fahrschüler angelegt.</div>'}</div>
+   ${activeStudents().slice(0,6).map(s=>dashboardStudent(s)).join('')||'<div class="empty">Noch keine aktiven Fahrschüler.</div>'}</div>
    <div class="card livelyCard nextCard"><div class="section-title"><div><h3>Nächste Termine</h3><span class="muted">Deine nächsten Fahrstunden</span></div><span class="calendarDot">●</span></div>
    ${upcoming.map(x=>upcomingLesson(x.s,x.l)).join('')||'<div class="empty">Keine weiteren Fahrstunden geplant.</div>'}</div>
  </div>
@@ -2028,9 +2039,29 @@ function upcomingLesson(s,l){
 }
 function studentRow(s){return `<div class="student" style="padding:12px 0;border-bottom:1px solid var(--line)"><div class="avatar">${esc((s.firstName[0]||'')+(s.lastName[0]||''))}</div><div class="grow"><b>${esc(s.firstName+' '+s.lastName)}</b><div class="studentMeta"><span>Klasse ${esc(s.license)}</span><span>${(s.lessons||[]).length} Fahrstunden</span><span>${s.visionAid?'👓 Sehhilfe':'👁 Keine Sehhilfe'}</span><span>${s.theoryPassed?'✓ Theorie bestanden':'○ Theorie offen'}</span></div><div class="progress"><i style="width:${pct(s)}%"></i></div></div><div class="studentActions"><button class="secondary" onclick="openStudent('${s.id}')">Öffnen</button><button class="primary smallBtn" onclick="openStudentForm('${s.id}')">Bearbeiten</button><button class="danger smallBtn" onclick="deleteStudent('${s.id}',event)">Löschen</button></div></div>`}
 function studentsPage(){
-document.getElementById('content').innerHTML=`<div class="toolbar"><div class="muted">Alle Fahrschüler verwalten</div><input id="studentSearch" placeholder="Suchen…" oninput="filterStudents()"></div><div id="studentList" class="students">${students.map(studentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Noch keine Fahrschüler.</div>'}</div>`;
+document.getElementById('content').innerHTML=`<div class="toolbar"><div class="muted">Alle Fahrschüler verwalten</div><input id="studentSearch" placeholder="Suchen…" oninput="filterStudents()"></div><div id="studentList" class="students">${activeStudents().map(studentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Noch keine aktiven Fahrschüler.</div>'}</div>`;
 }
-function filterStudents(){let q=(document.getElementById('studentSearch')?.value||'').toLowerCase();let list=students.filter(s=>(s.firstName+' '+s.lastName+' '+s.license).toLowerCase().includes(q));document.getElementById('studentList').innerHTML=list.map(studentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Keine Treffer.</div>'}
+function archivedStudentRow(s){
+ const received=s.licenseReceivedDate?fmtDate(s.licenseReceivedDate):'—';
+ return `<div class="student archiveCard" style="padding:14px 0;border-bottom:1px solid var(--line)">
+   <div class="avatar">${esc((s.firstName[0]||'')+(s.lastName[0]||''))}</div>
+   <div class="grow">
+    <div class="studentHead"><b>${esc(s.firstName+' '+s.lastName)}</b><span class="archiveBadge">✓ Abgeschlossen</span></div>
+    <div class="studentMeta"><span>Klasse ${esc(s.license)}</span><span>${(s.lessons||[]).length} Fahrstunden</span><span>Führerschein erhalten: ${received}</span></div>
+   </div>
+   <div class="studentActions">
+    <button class="secondary" onclick="openStudent('${s.id}')">Öffnen</button>
+    <button class="archiveRestoreBtn smallBtn" onclick="restoreStudent('${s.id}')">↩ Wiederherstellen</button>
+   </div>
+ </div>`;
+}
+function archivePage(){
+ const list=archivedStudents();
+ document.getElementById('content').innerHTML=`
+  <div class="toolbar"><div><b>Archiv</b><div class="muted">Abgeschlossene Fahrschüler werden hier dauerhaft aufbewahrt.</div></div><span class="archiveBadge">${list.length} ${list.length===1?'Fahrschüler':'Fahrschüler'}</span></div>
+  <div id="archiveList" class="students">${list.map(archivedStudentRow).join('')||'<div class="card archiveEmpty" style="grid-column:1/-1"><div style="font-size:34px;margin-bottom:10px">🗄️</div><b>Noch keine abgeschlossenen Fahrschüler</b><div style="margin-top:6px">Sobald du einen Fahrschüler abschließt, wird er automatisch hier abgelegt.</div></div>'}</div>`;
+}
+function filterStudents(){let q=(document.getElementById('studentSearch')?.value||'').toLowerCase();let list=activeStudents().filter(s=>(s.firstName+' '+s.lastName+' '+s.license).toLowerCase().includes(q));document.getElementById('studentList').innerHTML=list.map(studentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Keine Treffer.</div>'}
 function openStudentForm(studentId=''){let s=studentId?getStudent(studentId):null;openModal(`<h2>${s?'Fahrschüler bearbeiten':'Neuer Fahrschüler'}</h2><div class="row"><div class="field"><label>Vorname</label><input id="sf" value="${esc(s?.firstName||'')}"></div><div class="field"><label>Nachname</label><input id="sl" value="${esc(s?.lastName||'')}"></div></div><div class="row"><div class="field"><label>Klasse</label><select id="sc">${['B','B78','B197'].map(x=>`<option ${x===(s?.license||'B')?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Ausbildungsbeginn</label><input id="sd" type="date" value="${s?.start||new Date().toISOString().slice(0,10)}"></div></div><div class="row"><div class="field"><label>Geburtsdatum</label><input id="sb" type="date" value="${s?.birthDate||''}"></div><div class="field"><label>Telefon</label><input id="sphone" type="tel" value="${esc(s?.phone||'')}" placeholder="z. B. 0176 12345678"></div></div><div class="row"><div class="field"><label>E-Mail</label><input id="semail" type="email" value="${esc(s?.email||'')}" placeholder="name@example.de"></div><div class="field"><label>Adresse</label><input id="saddress" value="${esc(s?.address||'')}" placeholder="Straße, Hausnummer, PLZ Ort"></div></div><div class="studentChecks"><label><input type="checkbox" id="sv" ${s?.visionAid===true?'checked':''}> Sehhilfe</label><label><input type="checkbox" id="st" ${s?.theoryPassed===true?'checked':''}> Theorie bestanden</label></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveStudent('${studentId}')">Speichern</button></div>`)}
 async function deleteStudent(sid,event){
  if(event){event.preventDefault();event.stopPropagation()}
@@ -2068,7 +2099,43 @@ async function deleteStudent(sid,event){
 function saveStudent(sid){const f=document.getElementById('sf').value.trim(),l=document.getElementById('sl').value.trim();if(!f||!l){alert('Bitte Vor- und Nachnamen eingeben.');return}const personal={firstName:f,lastName:l,license:document.getElementById('sc').value,start:document.getElementById('sd').value,birthDate:document.getElementById('sb').value,phone:document.getElementById('sphone').value.trim(),email:document.getElementById('semail').value.trim(),address:document.getElementById('saddress').value.trim(),visionAid:document.getElementById('sv').checked,theoryPassed:document.getElementById('st').checked};
 if(sid){const s=getStudent(sid);Object.assign(s,personal);dpCloudMarkPending(sid);dpCloudMarkProgressPending(sid);for(const l of (s.lessons||[]))dpCloudMarkLessonPending(l.id,l);dpCloudBackupLocal();save();closeModal();render();if(dpCloudReady)dpCloudUpsertStudent(s).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}else{const s={id:id(),...personal,areas:trainingAreasForNewStudent(),lessons:[],signature:null};students.push(s);dpCloudMarkPending(s.id);dpCloudBackupLocal();save();closeModal();render();if(dpCloudReady)dpCloudUpsertStudent(s).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}
 }
-function openStudent(sid){const s=getStudent(sid);state.studentId=sid;openModal(`<div class="profileHeader"><div><h2>${esc(s.firstName+' '+s.lastName)}</h2></div><div class="profileActions"><button class="studentCompleteBtn" onclick="licenseReceivedReport('${sid}')">✓ Führerschein erhalten</button><button class="secondary" onclick="closeModal();openStudentForm('${sid}')">✎ Bearbeiten</button><button class="danger" onclick="deleteStudent('${sid}',event)">🗑 Löschen</button></div></div><div class="tabs"><button class="sel" onclick="studentTab('overview','${sid}',this)">Übersicht</button><button onclick="studentTab('diagram','${sid}',this)">Ausbildungsdiagramm</button><button onclick="studentTab('lessons','${sid}',this)">Fahrstunden</button><button onclick="studentTab('signature','${sid}',this)">Unterschrift</button></div><div id="studentBody">${studentOverview(s)}</div>`)}
+function openStudent(sid){const s=getStudent(sid);state.studentId=sid;openModal(`<div class="profileHeader"><div><h2>${esc(s.firstName+' '+s.lastName)}</h2>${isArchivedStudent(s)?'<div class="archiveBadge" style="margin-top:7px">✓ Abgeschlossen · Archiv</div>':''}</div><div class="profileActions">${isArchivedStudent(s)?`<button class="archiveRestoreBtn" onclick="restoreStudent('${sid}')">↩ Wiederherstellen</button>`:`<button class="studentCompleteBtn" onclick="completeStudent('${sid}')">✓ Abschließen & archivieren</button>`}<button class="secondary" onclick="licenseReceivedReport('${sid}')">📄 Abschlussbericht</button><button class="secondary" onclick="closeModal();openStudentForm('${sid}')">✎ Bearbeiten</button><button class="danger" onclick="deleteStudent('${sid}',event)">🗑 Löschen</button></div></div><div class="tabs"><button class="sel" onclick="studentTab('overview','${sid}',this)">Übersicht</button><button onclick="studentTab('diagram','${sid}',this)">Ausbildungsdiagramm</button><button onclick="studentTab('lessons','${sid}',this)">Fahrstunden</button><button onclick="studentTab('signature','${sid}',this)">Unterschrift</button></div><div id="studentBody">${studentOverview(s)}</div>`)}
+async function completeStudent(sid){
+ const s=getStudent(sid);if(!s||isArchivedStudent(s))return;
+ const name=`${s.firstName} ${s.lastName}`;
+ if(!confirm(`Fahrschüler „${name}“ als abgeschlossen markieren?\n\nDer Fahrschüler wird danach automatisch ins Archiv verschoben. Alle Fahrstunden und Ausbildungsdaten bleiben erhalten und können später wiederhergestellt werden.`))return;
+ const backup=students.map(x=>({...x,lessons:[...(x.lessons||[])],areas:[...(x.areas||[])]}));
+ try{
+  s.licenseReceivedDate=new Date().toISOString().slice(0,10);
+  dpCloudMarkPending(s.id);dpCloudBackupLocal();save();
+  logActivity('student_completed',s,null,`Fahrschüler abgeschlossen und archiviert: ${name}`);
+  closeModal();state.page='students';render();
+  if(dpCloudReady)await dpCloudUpsertStudent(s);
+  dpCloudStatus('ok',`Fahrschüler „${name}“ wurde archiviert.`);
+ }catch(e){
+  students=backup;save();render();
+  dpCloudStatus('error',e?.message||'Archivierung konnte nicht synchronisiert werden.');
+  alert(`Der Fahrschüler konnte nicht archiviert werden.\n\n${e?.message||'Unbekannter Cloud-Fehler'}`);
+ }
+}
+async function restoreStudent(sid){
+ const s=getStudent(sid);if(!s||!isArchivedStudent(s))return;
+ const name=`${s.firstName} ${s.lastName}`;
+ if(!confirm(`Fahrschüler „${name}“ wieder zu den aktiven Fahrschülern verschieben?`))return;
+ const oldDate=s.licenseReceivedDate;
+ try{
+  s.licenseReceivedDate='';
+  dpCloudMarkPending(s.id);dpCloudBackupLocal();save();
+  logActivity('student_restored',s,null,`Fahrschüler aus dem Archiv wiederhergestellt: ${name}`);
+  closeModal();state.page='students';render();
+  if(dpCloudReady)await dpCloudUpsertStudent(s);
+  dpCloudStatus('ok',`Fahrschüler „${name}“ ist wieder aktiv.`);
+ }catch(e){
+  s.licenseReceivedDate=oldDate;save();render();
+  dpCloudStatus('error',e?.message||'Wiederherstellung konnte nicht synchronisiert werden.');
+  alert(`Der Fahrschüler konnte nicht wiederhergestellt werden.\n\n${e?.message||'Unbekannter Cloud-Fehler'}`);
+ }
+}
 function studentTab(tab,sid,btn){document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');const s=getStudent(sid),body=document.getElementById('studentBody');if(tab==='overview')body.innerHTML=studentOverview(s);if(tab==='diagram')body.innerHTML=diagram(s);if(tab==='lessons')body.innerHTML=studentLessons(s);if(tab==='signature')body.innerHTML=signature(s)}
 function studentOverview(s){
  const specialTypes=[
@@ -2122,7 +2189,7 @@ function setAreaNote(sid,i,v){
 }
 function studentLessons(s){return `<div style="display:flex;justify-content:space-between;align-items:center"><h3>Gespeicherte Fahrstunden</h3><button class="primary" onclick="openLessonForm('${s.id}')">+ Fahrstunde</button></div>${s.lessons.slice().sort((a,b)=>(b.date+' '+b.startTime).localeCompare(a.date+' '+a.startTime)).map(l=>lessonRow(s,l,true)).join('')||'<div class="empty">Noch keine Fahrstunden.</div>'}`}
 function lessonRow(s,l,clickable=false){return `<div class="lesson ${clickable?'clickable':''}" ${clickable?`onclick="openLessonDetail('${s.id}','${l.id}')"`:''}><b>${fmtDate(l.date)} · ${fmtTime(l.startTime)}${l.endTime?'–'+l.endTime:''} · ${l.duration} Min.</b><div class="muted">${esc(l.special||'Übungsfahrt')} · ${esc(s.firstName+' '+s.lastName)}${l.km?' · '+l.km+' km':''}</div>${l.note?`<div class="small" style="margin-top:5px">${esc(l.note)}</div>`:''}</div>`}
-function openLessonForm(studentId='',lessonId='',presetDate='',presetTime=''){let s=studentId?getStudent(studentId):null,l=lessonId?s.lessons.find(x=>x.id===lessonId):null;const baseDate=new Date().toISOString().slice(0,10);openModal(`<h2>${l?'Fahrstunde bearbeiten':'Fahrstunde dokumentieren'}</h2><div class="row"><div class="field"><label>Fahrschüler</label><select id="ls">${students.map(x=>`<option value="${x.id}" ${x.id===(s?.id||'')?'selected':''}>${esc(x.firstName+' '+x.lastName)}</option>`).join('')}</select></div><div class="field"><label>Datum</label><input id="ld" type="date" value="${l?.date||presetDate||baseDate}"></div></div><div class="row"><div class="field"><label>Beginn</label><input id="lt" type="time" value="${l?.startTime||presetTime||'09:00'}"></div><div class="field"><label>Dauer (Minuten)</label><input id="lm" type="number" value="${l?.duration||appSettings.durations['Übungsfahrt']}"></div></div><div class="field"><label>Art</label><select id="lsp" onchange="setLessonDuration(this.value)">${['Übungsfahrt','B197 Fahrstunde','Überlandfahrt','Autobahnfahrt','Beleuchtungsfahrt','Prüfungsfahrt'].map(x=>`<option ${x===(l?.special||'Übungsfahrt')?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Bemerkung</label><textarea id="ln" rows="4">${esc(l?.note||'')}</textarea></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveLesson('${studentId}','${lessonId}')">${l?'Änderungen speichern':'Speichern'}</button></div>`)}
+function openLessonForm(studentId='',lessonId='',presetDate='',presetTime=''){let s=studentId?getStudent(studentId):null,l=lessonId?s.lessons.find(x=>x.id===lessonId):null;const baseDate=new Date().toISOString().slice(0,10);openModal(`<h2>${l?'Fahrstunde bearbeiten':'Fahrstunde dokumentieren'}</h2><div class="row"><div class="field"><label>Fahrschüler</label><select id="ls">${activeStudents().map(x=>`<option value="${x.id}" ${x.id===(s?.id||'')?'selected':''}>${esc(x.firstName+' '+x.lastName)}</option>`).join('')}</select></div><div class="field"><label>Datum</label><input id="ld" type="date" value="${l?.date||presetDate||baseDate}"></div></div><div class="row"><div class="field"><label>Beginn</label><input id="lt" type="time" value="${l?.startTime||presetTime||'09:00'}"></div><div class="field"><label>Dauer (Minuten)</label><input id="lm" type="number" value="${l?.duration||appSettings.durations['Übungsfahrt']}"></div></div><div class="field"><label>Art</label><select id="lsp" onchange="setLessonDuration(this.value)">${['Übungsfahrt','B197 Fahrstunde','Überlandfahrt','Autobahnfahrt','Beleuchtungsfahrt','Prüfungsfahrt'].map(x=>`<option ${x===(l?.special||'Übungsfahrt')?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Bemerkung</label><textarea id="ln" rows="4">${esc(l?.note||'')}</textarea></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveLesson('${studentId}','${lessonId}')">${l?'Änderungen speichern':'Speichern'}</button></div>`)}
 function updateLessonDuration(){const sel=document.getElementById('lsp'),m=document.getElementById('lm');if(!sel||!m)return;const d=appSettings.durations;if(d[sel.value])m.value=d[sel.value];}
 function setLessonDuration(type){
  const m=document.getElementById('lm'); if(!m)return;
@@ -3476,7 +3543,7 @@ async function dpCloudRealtimeApplyStudent(id){
  const mergedAreaNames=[...areaNames,...(pr.data||[]).map(x=>x.area_name).filter(Boolean).filter(name=>!areaNames.includes(name))];
  const s={id,firstName:sr.data.first_name||'',lastName:sr.data.last_name||'',license:sr.data.license_class||'B',start:sr.data.training_start||'',birthDate:sr.data.birth_date||'',phone:sr.data.phone||'',email:sr.data.email||'',address:sr.data.address||'',visionAid:sr.data.vision_aid===true,theoryPassed:sr.data.theory_passed===true,practiceExamDate:sr.data.practice_exam_date||'',licenseReceivedDate:sr.data.license_received_date||'',notes:sr.data.notes||'',signature:old?.signature||null,areas:mergedAreaNames.map(name=>{const previous=(old?.areas||[]).find(a=>a.name===name);const x=pm.get(name);return{name,level:x?.level||previous?.level||'Offen',note:x?.note||previous?.note||''}}),lessons:(lr.data||[]).map(x=>({id:x.id,date:x.lesson_date,startTime:(x.start_time||'').slice(0,5),duration:Number(x.duration_minutes)||0,special:x.special_type||'',lessonType:x.lesson_type||'Fahrstunde',note:x.notes||'',kilometers:x.kilometers==null?'':x.kilometers,color:x.color||null,signature:x.signature||null}))};
  if(idx>=0)students[idx]=s;else students.push(s);dpCloudKnownStudentIds.add(id);save();
- if(['calendar','dashboard','students','stats'].includes(state.page))render();
+ if(['calendar','dashboard','students','archive','stats'].includes(state.page))render();
 }
 async function dpCloudRealtimeApplyLesson(p){
  const row=p?.new||p?.old||{},lid=row.id;if(!lid)return;
@@ -3492,7 +3559,7 @@ async function dpCloudRealtimeApplyLesson(p){
   const mapped={id:row.id,date:row.lesson_date,startTime:(row.start_time||'').slice(0,5),duration:Number(row.duration_minutes)||0,special:row.special_type||'',lessonType:row.lesson_type||'Fahrstunde',note:row.notes||'',kilometers:row.kilometers==null?'':row.kilometers,color:row.color||null,signature:row.signature||null};
   const i=(s.lessons||[]).findIndex(l=>l.id===lid);if(i>=0)s.lessons[i]=mapped;else s.lessons.push(mapped)
  }
- save();if(['calendar','dashboard','students','stats'].includes(state.page))render();
+ save();if(['calendar','dashboard','students','archive','stats'].includes(state.page))render();
 }
 /* Database Broadcast is used for lesson deletes. The payload contains the
    lesson id explicitly, so this path never depends on Postgres DELETE OLD
@@ -3508,7 +3575,7 @@ function dpCloudRealtimeApplyLessonDeleted(message){
   if(s.lessons.length!==before)changed=true;
  }
  dpCloudClearLessonPending(lid);
- if(changed){save();if(['calendar','dashboard','students','stats'].includes(state.page))render();}
+ if(changed){save();if(['calendar','dashboard','students','archive','stats'].includes(state.page))render();}
  console.info('DrivePro Realtime: LESSON_DELETED',String(lid));
 }
 let dpCloudProgressRenderTimers=new Map();
@@ -3529,7 +3596,7 @@ async function dpCloudRealtimeApplyProgress(p){
  if(dpCloudProgressRenderTimers.has(sid))return;
  const t=setTimeout(()=>{
   dpCloudProgressRenderTimers.delete(sid);
-  if(['calendar','dashboard','students','stats'].includes(state.page))render();
+  if(['calendar','dashboard','students','archive','stats'].includes(state.page))render();
  },200);
  dpCloudProgressRenderTimers.set(sid,t);
 }
