@@ -800,8 +800,10 @@ body{overflow-x:hidden}
 .trainingAreasInfo{font-size:10px;color:#71839a;line-height:1.45}
 /* V90.38 – Ausbildungsdiagramm Drag & Drop */
 .trainingAreaRow{position:relative}
-.trainingAreaDragHandle{width:32px;height:38px;flex:0 0 32px;display:grid;place-items:center;border:1px solid #dce8f4;border-radius:10px;background:#f7faff;color:#71839a;font-size:17px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:nonepointer-events:auto;}
+.trainingAreaDragHandle{width:32px;height:38px;flex:0 0 32px;display:grid;place-items:center;border:1px solid #dce8f4;border-radius:10px;background:#f7faff;color:#71839a;font-size:17px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
 .trainingAreaDragHandle:active{cursor:grabbing}
+.trainingAreaDragHandle{touch-action:none;-webkit-touch-callout:none}
+.trainingAreaRow.dp-dragging{user-select:none;-webkit-user-select:none}
 .trainingAreaRow.dp-dragging{opacity:.48;transform:scale(.995);box-shadow:0 7px 18px rgba(47,128,237,.12)}
 .trainingAreaRow.dp-drag-over{outline:2px dashed #2f80ed;outline-offset:3px}
 .trainingAreaRow.dp-drag-placeholder{border:2px dashed #9bc4f3;background:#f3f8ff;border-radius:12px;min-height:40px;opacity:.75}
@@ -2337,50 +2339,83 @@ function bindTrainingAreaDragDrop(){
   const row=handle.closest('[data-training-area-row]');
   if(!row||row.hasAttribute('data-empty-row'))return;
 
-  // Pointer-based drag works consistently with mouse, trackpad and iPad touch.
-  // Dragging can only start on the handle, so text inputs remain normal.
-  let pointerId=null, dragging=false;
-  let startX=0, startY=0;
-
-  const clearDrag=()=>{
+  let drag=null;
+  const cleanup=()=>{
+   if(!drag)return;
+   if(drag.raf)cancelAnimationFrame(drag.raf);
+   if(drag.placeholder?.parentNode)drag.placeholder.parentNode.removeChild(drag.placeholder);
    row.classList.remove('dp-dragging');
-   list.querySelectorAll('.dp-drag-over').forEach(r=>r.classList.remove('dp-drag-over'));
-   pointerId=null; dragging=false;
+   row.style.pointerEvents='';
+   row.style.position='';
+   row.style.zIndex='';
+   row.style.opacity='';
+   row.style.boxShadow='';
+   row.style.transform='';
+   try{handle.releasePointerCapture?.(drag.pointerId)}catch(_){ }
+   drag=null;
   };
 
-  handle.addEventListener('pointerdown',e=>{
-   if(e.button!==undefined && e.button!==0)return;
-   pointerId=e.pointerId; startX=e.clientX; startY=e.clientY; dragging=false;
-   try{handle.setPointerCapture(pointerId)}catch(_){ }
-   e.preventDefault();
-  });
-
-  handle.addEventListener('pointermove',e=>{
-   if(pointerId!==e.pointerId)return;
-   const distance=Math.hypot(e.clientX-startX,e.clientY-startY);
-   if(!dragging){
-    if(distance<6)return;
-    dragging=true;
-    row.classList.add('dp-dragging');
+  const movePlaceholder=(clientX,clientY)=>{
+   if(!drag)return;
+   const el=document.elementFromPoint(clientX,clientY);
+   const target=el?.closest?.('#trainingAreasList [data-training-area-row]');
+   if(!target||target===row||target.hasAttribute('data-empty-row'))return;
+   const rect=target.getBoundingClientRect();
+   const before=clientY < rect.top+rect.height/2;
+   const desired=before?target:list.querySelector('[data-training-area-row]:not([data-empty-row]):last-of-type')===target?target.nextSibling:target.nextSibling;
+   if(before){
+    if(drag.placeholder.nextSibling!==target)list.insertBefore(drag.placeholder,target);
+   }else{
+    if(target.nextSibling!==drag.placeholder)list.insertBefore(drag.placeholder,target.nextSibling);
    }
-   e.preventDefault();
-   const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('#trainingAreasList [data-training-area-row]');
-   list.querySelectorAll('.dp-drag-over').forEach(r=>r.classList.remove('dp-drag-over'));
-   if(target&&target!==row&&!target.hasAttribute('data-empty-row'))target.classList.add('dp-drag-over');
-  });
+ };
 
-  handle.addEventListener('pointerup',e=>{
-   if(pointerId!==e.pointerId)return;
-   const wasDragging=dragging;
-   const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('#trainingAreasList [data-training-area-row]');
-   if(wasDragging&&target&&target!==row&&!target.hasAttribute('data-empty-row')){
-    reorderTrainingAreaRows(row,target);
-   }
-   try{handle.releasePointerCapture(e.pointerId)}catch(_){ }
-   clearDrag();
-  });
+ const onMove=e=>{
+  if(!drag||e.pointerId!==drag.pointerId)return;
+  const dx=e.clientX-drag.startX,dy=e.clientY-drag.startY;
+  if(!drag.started){
+   if(Math.hypot(dx,dy)<6)return;
+   drag.started=true;
+   row.classList.add('dp-dragging');
+   row.style.pointerEvents='none';
+   row.style.zIndex='1000';
+   row.style.boxShadow='0 10px 28px rgba(20,45,75,.20)';
+  }
+  e.preventDefault();
+  movePlaceholder(e.clientX,e.clientY);
+  if(e.clientY<80)window.scrollBy(0,-12);
+  else if(e.clientY>window.innerHeight-80)window.scrollBy(0,12);
+ };
 
-  handle.addEventListener('pointercancel',()=>clearDrag());
+ const finish=(e,cancel=false)=>{
+  if(!drag||e.pointerId!==drag.pointerId)return;
+  e.preventDefault();
+  const active=drag;
+  if(active.started&&!cancel&&active.placeholder.parentNode){
+   active.placeholder.parentNode.insertBefore(row,active.placeholder);
+   active.placeholder.parentNode.removeChild(active.placeholder);
+   updateTrainingAreaNumbers();
+   syncTrainingAreaSettingsFromDom();
+  }
+  cleanup();
+ };
+
+ handle.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='mouse'&&e.button!==0)return;
+  if(drag)return;
+  e.preventDefault();
+  const rect=row.getBoundingClientRect();
+  const placeholder=document.createElement('div');
+  placeholder.className='trainingAreaRow dp-drag-placeholder';
+  placeholder.style.height=rect.height+'px';
+  placeholder.setAttribute('aria-hidden','true');
+  list.insertBefore(placeholder,row);
+  drag={pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,started:false,placeholder,raf:0};
+  try{handle.setPointerCapture?.(e.pointerId)}catch(_){ }
+ });
+ handle.addEventListener('pointermove',onMove,{passive:false});
+ handle.addEventListener('pointerup',e=>finish(e,false),{passive:false});
+ handle.addEventListener('pointercancel',e=>finish(e,true),{passive:false});
  });
 }
 function reorderTrainingAreaRows(row,target){
