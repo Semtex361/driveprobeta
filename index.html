@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V90</title>
+<title>DrivePro Beta V90.35</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -785,6 +785,25 @@ body{overflow-x:hidden}
 .settingsDanger{margin-top:16px;display:flex;align-items:center;justify-content:space-between;gap:20px;border-color:#f0dddd!important;background:linear-gradient(180deg,#fff,#fffafa)!important}
 .settingsDanger h3{margin:0 0 4px;color:#a34b4b}.settingsDanger p{margin:0;color:#8793a1;font-size:11px;max-width:700px;line-height:1.5}
 .settingsDanger .danger{white-space:nowrap;min-height:42px}
+.trainingAreasCard{grid-column:1/-1}
+.trainingAreasIntro{margin:-4px 0 16px;color:#7a8ca1;font-size:11px;line-height:1.5}
+.trainingAreasList{display:flex;flex-direction:column;gap:8px}
+.trainingAreaRow{display:flex;align-items:center;gap:9px}
+.trainingAreaNumber{width:28px;height:38px;border-radius:10px;background:#f1f6fb;color:#6f8398;display:grid;place-items:center;font-size:11px;font-weight:800;flex:0 0 28px}
+.trainingAreaInputWrap{display:flex;align-items:center;gap:8px;flex:1}
+.trainingAreaInput{width:100%!important;margin:0!important}
+.trainingAreaDelete{width:38px;height:38px;border-radius:10px;background:#fff1f1;color:#c44a4a;border:1px solid #f0d7d7;font-size:15px;flex:0 0 38px}
+.trainingAreaDelete:hover{background:#ffe6e6;border-color:#e9bebe}
+.trainingAreaDelete:disabled{opacity:.35;cursor:not-allowed}
+.trainingAreasFooter{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-top:13px}
+.trainingAreasCount{font-size:10px;color:#8998a9}
+.trainingAreasInfo{font-size:10px;color:#71839a;line-height:1.45}
+[data-theme="dark"] .trainingAreaNumber{background:#19324b;color:#9bb0c5}
+[data-theme="dark"] .trainingAreaDelete{background:#2a1c20;border-color:#5b353b;color:#ff9a9a}
+[data-theme="dark"] .trainingAreaDelete:hover{background:#3a2228;border-color:#75434a}
+[data-theme="dark"] .trainingAreasIntro,[data-theme="dark"] .trainingAreasInfo,[data-theme="dark"] .trainingAreasCount{color:#91a5ba!important}
+@media(max-width:600px){.trainingAreaRow{gap:6px}.trainingAreaNumber{width:24px;flex-basis:24px}.trainingAreaDelete{width:36px;flex-basis:36px}.trainingAreasFooter{align-items:flex-start;flex-direction:column;gap:6px}}
+
 [data-theme="dark"] body{background:linear-gradient(180deg,#0c1522,#101d2d)!important;color:#e7eef7}
 [data-theme="dark"] .side,[data-theme="dark"] .top{background:#111c2b!important;border-color:#26394e!important}
 [data-theme="dark"] .nav button{color:#9cafc3!important}.nav button.active{background:#182f4a!important;color:#6aaeff!important}
@@ -1687,7 +1706,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-logbook" onclick="page('logbook')"><span>📖</span>Logbuch</button>
     <button id="nav-settings" onclick="page('settings')"><span>⚙</span>Einstellungen</button>
   </nav>
-  <div class="sidefoot">V90.34 · Login & Cloud-Sync aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V90.35 · Login & Cloud-Sync aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -1707,12 +1726,14 @@ body.auth-locked #driveProAuth{display:flex}
 <script>
 const KEY='fahrschul_tracker_windows_v5';
 const SETTINGS_KEY='drivepro_settings_v1';
+const DEFAULT_TRAINING_AREAS=["Fahrzeugbedienung","Anfahren / Anhalten","Blickführung","Verkehrsbeobachtung","Geschwindigkeit","Abbiegen","Spurwechsel","Fahrstreifenwahl","Abstände","Verkehrszeichen / Ampeln","Kreuzungen","Kreisverkehr","Rückwärtsfahren","Einparken","Grundfahraufgaben","Landstraße","Autobahn","Nachtfahrt","Prüfungsreife"];
 const DEFAULT_SETTINGS={
  theme:'light',
  schoolName:'DrivePro Fahrschulverwaltung',
  schoolAddress:'',
  schoolPhone:'',
  schoolEmail:'',
+ trainingAreas:[...DEFAULT_TRAINING_AREAS],
  durations:{
   'Übungsfahrt':80,
   'B197 Fahrstunde':90,
@@ -1722,19 +1743,35 @@ const DEFAULT_SETTINGS={
   'Prüfungsfahrt':45
  }
 };
-let appSettings={...DEFAULT_SETTINGS,durations:{...DEFAULT_SETTINGS.durations}};
+function normalizeTrainingAreas(value){
+ const seen=new Set();
+ const list=Array.isArray(value)?value:[];
+ return list.map(v=>String(v??'').trim()).filter(v=>{
+  const key=v.toLocaleLowerCase('de-DE');
+  if(!v||seen.has(key))return false;
+  seen.add(key);
+  return true;
+ });
+}
+let appSettings={...DEFAULT_SETTINGS,trainingAreas:[...DEFAULT_SETTINGS.trainingAreas],durations:{...DEFAULT_SETTINGS.durations}};
 try{
  const savedSettings=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'null');
  if(savedSettings){
-  appSettings={...DEFAULT_SETTINGS,...savedSettings,durations:{...DEFAULT_SETTINGS.durations,...(savedSettings.durations||{})}};
+  const configuredAreas=normalizeTrainingAreas(savedSettings.trainingAreas);
+  appSettings={...DEFAULT_SETTINGS,...savedSettings,trainingAreas:configuredAreas.length?configuredAreas:[...DEFAULT_SETTINGS.trainingAreas],durations:{...DEFAULT_SETTINGS.durations,...(savedSettings.durations||{})}};
  }
 }catch(e){}
 function saveSettings(){localStorage.setItem(SETTINGS_KEY,JSON.stringify(appSettings))}
+function getTrainingAreas(){
+ const areas=normalizeTrainingAreas(appSettings.trainingAreas);
+ return areas.length?areas:[...DEFAULT_TRAINING_AREAS];
+}
+function trainingAreasForNewStudent(){return getTrainingAreas().map(name=>({name,level:'Offen',note:''}))}
 function applyTheme(){
  document.documentElement.setAttribute('data-theme',appSettings.theme==='dark'?'dark':'light');
 }
 applyTheme();
-const DEFAULT_AREAS=["Fahrzeugbedienung","Anfahren / Anhalten","Blickführung","Verkehrsbeobachtung","Geschwindigkeit","Abbiegen","Spurwechsel","Fahrstreifenwahl","Abstände","Verkehrszeichen / Ampeln","Kreuzungen","Kreisverkehr","Rückwärtsfahren","Einparken","Grundfahraufgaben","Landstraße","Autobahn","Nachtfahrt","Prüfungsreife"];
+const DEFAULT_AREAS=DEFAULT_TRAINING_AREAS; // Kompatibilitätsalias für bestehende Daten-/Cloud-Logik
 const state={page:'dashboard',studentId:null,month:new Date(),calendarView:'week',calendarWeekDate:null,calendarScrollLeft:0};
 let students=[];
 try{students=JSON.parse(localStorage.getItem(KEY)||'[]')||[]}catch(e){students=[]}
@@ -1847,7 +1884,7 @@ async function deleteStudent(sid,event){
  }
 }
 function saveStudent(sid){const f=document.getElementById('sf').value.trim(),l=document.getElementById('sl').value.trim();if(!f||!l){alert('Bitte Vor- und Nachnamen eingeben.');return}const personal={firstName:f,lastName:l,license:document.getElementById('sc').value,start:document.getElementById('sd').value,birthDate:document.getElementById('sb').value,phone:document.getElementById('sphone').value.trim(),email:document.getElementById('semail').value.trim(),address:document.getElementById('saddress').value.trim(),visionAid:document.getElementById('sv').checked,theoryPassed:document.getElementById('st').checked};
-if(sid){const s=getStudent(sid);Object.assign(s,personal);dpCloudMarkPending(sid);dpCloudMarkProgressPending(sid);for(const l of (s.lessons||[]))dpCloudMarkLessonPending(l.id,l);dpCloudBackupLocal();save();closeModal();render();if(dpCloudReady)dpCloudUpsertStudent(s).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}else{const s={id:id(),...personal,areas:DEFAULT_AREAS.map(name=>({name,level:'Offen',note:''})),lessons:[],signature:null};students.push(s);dpCloudMarkPending(s.id);dpCloudBackupLocal();save();closeModal();render();if(dpCloudReady)dpCloudUpsertStudent(s).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}
+if(sid){const s=getStudent(sid);Object.assign(s,personal);dpCloudMarkPending(sid);dpCloudMarkProgressPending(sid);for(const l of (s.lessons||[]))dpCloudMarkLessonPending(l.id,l);dpCloudBackupLocal();save();closeModal();render();if(dpCloudReady)dpCloudUpsertStudent(s).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}else{const s={id:id(),...personal,areas:trainingAreasForNewStudent(),lessons:[],signature:null};students.push(s);dpCloudMarkPending(s.id);dpCloudBackupLocal();save();closeModal();render();if(dpCloudReady)dpCloudUpsertStudent(s).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')})}
 }
 function openStudent(sid){const s=getStudent(sid);state.studentId=sid;openModal(`<div class="profileHeader"><div><h2>${esc(s.firstName+' '+s.lastName)}</h2></div><div class="profileActions"><button class="studentCompleteBtn" onclick="licenseReceivedReport('${sid}')">✓ Führerschein erhalten</button><button class="secondary" onclick="closeModal();openStudentForm('${sid}')">✎ Bearbeiten</button><button class="danger" onclick="deleteStudent('${sid}',event)">🗑 Löschen</button></div></div><div class="tabs"><button class="sel" onclick="studentTab('overview','${sid}',this)">Übersicht</button><button onclick="studentTab('diagram','${sid}',this)">Ausbildungsdiagramm</button><button onclick="studentTab('lessons','${sid}',this)">Fahrstunden</button><button onclick="studentTab('signature','${sid}',this)">Unterschrift</button></div><div id="studentBody">${studentOverview(s)}</div>`)}
 function studentTab(tab,sid,btn){document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');const s=getStudent(sid),body=document.getElementById('studentBody');if(tab==='overview')body.innerHTML=studentOverview(s);if(tab==='diagram')body.innerHTML=diagram(s);if(tab==='lessons')body.innerHTML=studentLessons(s);if(tab==='signature')body.innerHTML=signature(s)}
@@ -2079,6 +2116,73 @@ function openLogEntry(entryId){
  </div>`);
 }
 
+function trainingAreaSettingRow(name,index){
+ const safeName=esc(name||'');
+ return `<div class="trainingAreaRow" data-training-area-row><div class="trainingAreaNumber">${index+1}</div><div class="trainingAreaInputWrap"><input class="trainingAreaInput" type="text" maxlength="120" value="${safeName}" data-training-area-input></div><button type="button" class="trainingAreaDelete" onclick="removeTrainingAreaSetting(${index})" aria-label="Ausbildungsinhalt löschen">×</button></div>`;
+}
+function trainingAreasInputs(){return Array.from(document.querySelectorAll('[data-training-area-input]'));}
+function persistTrainingAreasFromSettings(){
+ const values=trainingAreasInputs().map(input=>input.value.trim()).filter(Boolean);
+ const normalized=normalizeTrainingAreas(values);
+ if(normalized.length)appSettings.trainingAreas=normalized;
+ saveSettings();
+ const count=document.getElementById('trainingAreasCount');
+ if(count)count.textContent=`${getTrainingAreas().length} ${getTrainingAreas().length===1?'Inhalt':'Inhalte'} gespeichert`;
+ showSettingsSaved();
+}
+function addTrainingAreaInputIfNeeded(){
+ const list=document.getElementById('trainingAreasList');
+ if(!list)return;
+ const inputs=trainingAreasInputs();
+ const last=inputs[inputs.length-1];
+ if(!last||!last.value.trim())return;
+ if(last.closest('[data-training-area-row]')?.hasAttribute('data-empty-row'))last.closest('[data-training-area-row]').removeAttribute('data-empty-row');
+ if(list.querySelector('[data-empty-row]'))return;
+ const index=inputs.length;
+ const row=document.createElement('div');
+ row.className='trainingAreaRow';
+ row.setAttribute('data-training-area-row','');
+ row.setAttribute('data-empty-row','');
+ row.innerHTML=`<div class="trainingAreaNumber">${index+1}</div><div class="trainingAreaInputWrap"><input class="trainingAreaInput" type="text" maxlength="120" placeholder="Neuer Ausbildungsinhalt …" data-training-area-input></div><button type="button" class="trainingAreaDelete" disabled aria-label="Leeres Feld">×</button>`;
+ list.appendChild(row);
+ bindTrainingAreaInput(row.querySelector('[data-training-area-input]'));
+ updateTrainingAreaNumbers();
+}
+function updateTrainingAreaNumbers(){
+ document.querySelectorAll('#trainingAreasList [data-training-area-row]').forEach((row,i)=>{const n=row.querySelector('.trainingAreaNumber');if(n)n.textContent=String(i+1)});
+}
+function bindTrainingAreaInput(input){
+ if(!input||input.dataset.bound==='1')return;
+ input.dataset.bound='1';
+ input.addEventListener('input',()=>{
+  if(input.value.trim())addTrainingAreaInputIfNeeded();
+  persistTrainingAreasFromSettings();
+ });
+ input.addEventListener('change',persistTrainingAreasFromSettings);
+ input.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+   e.preventDefault();
+   if(!input.value.trim())return;
+   addTrainingAreaInputIfNeeded();
+   const inputs=trainingAreasInputs();
+   const next=inputs[inputs.indexOf(input)+1];
+   if(next){next.focus();next.scrollIntoView({block:'nearest'});}
+  }
+ });
+}
+function initTrainingAreaSettings(){
+ trainingAreasInputs().forEach(bindTrainingAreaInput);
+ updateTrainingAreaNumbers();
+}
+function removeTrainingAreaSetting(index){
+ const areas=getTrainingAreas();
+ if(areas.length<=1){alert('Mindestens ein Ausbildungsinhalt muss vorhanden sein.');return;}
+ areas.splice(index,1);
+ appSettings.trainingAreas=areas;
+ saveSettings();
+ settingsPage();
+}
+
 function settingsPage(){
  const d=appSettings.durations;
  document.getElementById('content').innerHTML=`
@@ -2114,6 +2218,12 @@ function settingsPage(){
        ${Object.entries(d).map(([name,val])=>`<div class="durationRow"><div><b>${esc(name)}</b><small>Standarddauer</small></div><label class="durationInput"><input type="number" min="1" max="600" value="${val}" data-duration="${esc(name)}" onchange="updateDurationSetting(this)"><span>Min.</span></label></div>`).join('')}
       </div>
     </section>
+    <section class="card settingsCard trainingAreasCard">
+      <div class="settingsCardHead"><div class="settingsIcon">📋</div><div><h3>Ausbildungsdiagramm</h3><p>Lege fest, welche Ausbildungsinhalte bei <b>neuen Fahrschülern</b> im Diagramm angelegt werden.</p></div></div>
+      <div class="trainingAreasIntro">Tippe einen neuen Inhalt in das letzte Feld ein – sobald du beginnst, erscheint automatisch darunter das nächste leere Feld. Leere Felder werden nicht gespeichert. Bereits vorhandene Fahrschüler bleiben unverändert, damit keine bestehenden Ausbildungsstände verloren gehen.</div>
+      <div id="trainingAreasList" class="trainingAreasList">${getTrainingAreas().map((name,i)=>trainingAreaSettingRow(name,i)).join('')}<div class="trainingAreaRow" data-training-area-row data-empty-row><div class="trainingAreaNumber">${getTrainingAreas().length+1}</div><div class="trainingAreaInputWrap"><input class="trainingAreaInput" type="text" maxlength="120" placeholder="Neuer Ausbildungsinhalt …" data-training-area-input></div><button type="button" class="trainingAreaDelete" disabled aria-label="Leeres Feld">×</button></div></div>
+      <div class="trainingAreasFooter"><span class="trainingAreasCount" id="trainingAreasCount">${getTrainingAreas().length} Inhalte gespeichert</span><span class="trainingAreasInfo">Die Reihenfolge entspricht der Reihenfolge im Ausbildungsdiagramm.</span></div>
+    </section>
     <section class="card settingsCard">
       <div class="settingsCardHead"><div class="settingsIcon">💾</div><div><h3>Daten & Sicherung</h3><p>Deine aktuellen Fahrschuldaten können als Datei gesichert werden.</p></div></div>
       <div class="backupActions">
@@ -2128,6 +2238,7 @@ function settingsPage(){
     <button class="danger" onclick="resetDriveProData()">Alle Daten löschen</button>
    </section>
  </div>`;
+ initTrainingAreaSettings();
 }
  setTimeout(updateNotificationButton,0)
 function setTheme(theme){
@@ -2907,7 +3018,7 @@ async function dpCloudLoad(){
     address:row.address||'',visionAid:row.vision_aid===true,theoryPassed:row.theory_passed===true,
     practiceExamDate:row.practice_exam_date||'',licenseReceivedDate:row.license_received_date||'',
     notes:row.notes||'',
-    areas:areas.length?areas:DEFAULT_AREAS.map(name=>({name,level:'Offen',note:''})),
+    areas:areas.length?areas:trainingAreasForNewStudent(),
     lessons:mappedLessons,signature:null
    };
   });
@@ -2978,7 +3089,9 @@ async function dpCloudRealtimeApplyStudent(id){
  const lr=await c.from('lessons').select('id,user_id,student_id,lesson_date,start_time,end_time,lesson_type,special_type,duration_minutes,kilometers,notes,color,signature').eq('user_id',uid).eq('student_id',id).order('lesson_date').order('start_time');if(lr.error)throw lr.error;
  const pm=new Map((pr.data||[]).map(x=>[x.area_name,x]));
  const old=idx>=0?students[idx]:null;
- const s={id,firstName:sr.data.first_name||'',lastName:sr.data.last_name||'',license:sr.data.license_class||'B',start:sr.data.training_start||'',birthDate:sr.data.birth_date||'',phone:sr.data.phone||'',email:sr.data.email||'',address:sr.data.address||'',visionAid:sr.data.vision_aid===true,theoryPassed:sr.data.theory_passed===true,practiceExamDate:sr.data.practice_exam_date||'',licenseReceivedDate:sr.data.license_received_date||'',notes:sr.data.notes||'',signature:old?.signature||null,areas:DEFAULT_AREAS.map(name=>{const x=pm.get(name);return{name,level:x?.level||'Offen',note:x?.note||''}}),lessons:(lr.data||[]).map(x=>({id:x.id,date:x.lesson_date,startTime:(x.start_time||'').slice(0,5),duration:Number(x.duration_minutes)||0,special:x.special_type||'',lessonType:x.lesson_type||'Fahrstunde',note:x.notes||'',kilometers:x.kilometers==null?'':x.kilometers,color:x.color||null,signature:x.signature||null}))};
+ const areaNames=old?.areas?.length?old.areas.map(a=>a.name).filter(Boolean):getTrainingAreas();
+ const mergedAreaNames=[...areaNames,...(pr.data||[]).map(x=>x.area_name).filter(Boolean).filter(name=>!areaNames.includes(name))];
+ const s={id,firstName:sr.data.first_name||'',lastName:sr.data.last_name||'',license:sr.data.license_class||'B',start:sr.data.training_start||'',birthDate:sr.data.birth_date||'',phone:sr.data.phone||'',email:sr.data.email||'',address:sr.data.address||'',visionAid:sr.data.vision_aid===true,theoryPassed:sr.data.theory_passed===true,practiceExamDate:sr.data.practice_exam_date||'',licenseReceivedDate:sr.data.license_received_date||'',notes:sr.data.notes||'',signature:old?.signature||null,areas:mergedAreaNames.map(name=>{const previous=(old?.areas||[]).find(a=>a.name===name);const x=pm.get(name);return{name,level:x?.level||previous?.level||'Offen',note:x?.note||previous?.note||''}}),lessons:(lr.data||[]).map(x=>({id:x.id,date:x.lesson_date,startTime:(x.start_time||'').slice(0,5),duration:Number(x.duration_minutes)||0,special:x.special_type||'',lessonType:x.lesson_type||'Fahrstunde',note:x.notes||'',kilometers:x.kilometers==null?'':x.kilometers,color:x.color||null,signature:x.signature||null}))};
  if(idx>=0)students[idx]=s;else students.push(s);dpCloudKnownStudentIds.add(id);save();
  if(['calendar','dashboard','students','stats'].includes(state.page))render();
 }

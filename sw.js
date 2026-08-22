@@ -1,4 +1,4 @@
-const CACHE='drivepro-beta-v90-34-lesson-broadcast';
+const CACHE='drivepro-beta-v90-35-training-areas';
 const APP_SHELL=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png'];
 
 self.addEventListener('install',event=>{
