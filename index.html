@@ -1681,6 +1681,24 @@ body.auth-locked #driveProAuth{display:flex}
 .archiveRestoreBtn{background:#1769d2!important;color:#fff!important;font-weight:800!important}
 .archiveEmpty{padding:34px 20px;text-align:center;color:var(--muted)}
 @media(max-width:650px){.archiveRestoreBtn{min-width:100%}}
+
+/* V90.41 Multi-Account UI */
+.dp-role-school,.dp-role-request{display:none}
+.dp-account-chip{display:none;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:800;background:var(--primary-soft);color:var(--primary);border:1px solid var(--line)}
+.dp-role-school-card,.dp-role-request-card{margin-bottom:16px}
+.dp-role-list{display:grid;gap:10px}
+.dp-role-list .card{padding:14px}
+.dp-role-muted{color:var(--muted);font-size:12px}
+.dp-vehicle-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.dp-vehicle-card{border:1px solid var(--line);border-radius:16px;padding:16px;background:var(--surface)}
+.dp-vehicle-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.dp-vehicle-meta span{padding:4px 7px;border-radius:999px;background:var(--surface2);font-size:10px;font-weight:750}
+.dp-request-status{padding:4px 8px;border-radius:999px;font-size:10px;font-weight:800}
+.dp-request-status.requested{background:#fff4d8;color:#9a6a00}
+.dp-request-status.accepted{background:#edf9f2;color:#24764f}
+.dp-request-status.declined,.dp-request-status.cancelled,.dp-request-status.expired{background:#fff0f0;color:#b33b3b}
+@media(max-width:700px){.dp-vehicle-grid{grid-template-columns:1fr}}
+
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -1750,6 +1768,9 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-stats" onclick="page('stats')"><span>▥</span>Statistik</button>
     <button id="nav-logbook" onclick="page('logbook')"><span>📖</span>Logbuch</button>
     <button id="nav-settings" onclick="page('settings')"><span>⚙</span>Einstellungen</button>
+    <button id="nav-instructors" class="dp-role-school" onclick="page('instructors')"><span>👨‍🏫</span>Fahrlehrer</button>
+    <button id="nav-vehicles" class="dp-role-school" onclick="page('vehicles')"><span>🚗</span>Fahrzeuge</button>
+    <button id="nav-requests" class="dp-role-request" onclick="page('requests')"><span>📨</span>Anfragen</button>
   </nav>
   <div class="sidefoot">V90.39 · Login & Cloud-Sync aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
@@ -2002,10 +2023,60 @@ function pct(s){return s.areas?.length?Math.round(s.areas.filter(a=>a.level==='S
 function fmtDate(d){return new Date(d+'T12:00:00').toLocaleDateString('de-DE')}
 function fmtTime(t){return t||'—'}
 function isArchivedStudent(s){return !!s?.licenseReceivedDate}
-function activeStudents(){return students.filter(s=>!isArchivedStudent(s))}
-function archivedStudents(){return students.filter(isArchivedStudent)}
-function page(p){state.page=p;state.studentId=null;document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));document.getElementById('nav-'+p).classList.add('active');document.getElementById('pageTitle').textContent={dashboard:'Dashboard',students:'Fahrschüler',archive:'Archiv',calendar:'Kalender',stats:'Statistik',logbook:'Logbuch',settings:'Einstellungen'}[p];render()}
-function render(){if(state.page==='dashboard')dashboard();else if(state.page==='students')studentsPage();else if(state.page==='archive')archivePage();else if(state.page==='calendar')calendarPage();else if(state.page==='stats')statsPage();else if(state.page==='logbook')logbookPage();else if(state.page==='settings')settingsPage();else dashboard()}
+function dpAccountType(){
+  return window.driveProAuth?.accountType||window.driveProAuth?.profile?.account_type||'school';
+}
+function dpCurrentUserId(){return window.driveProAuth?.user?.id||null}
+function activeStudents(){
+  const type=dpAccountType(),uid=dpCurrentUserId();
+  let list=students.filter(s=>!isArchivedStudent(s));
+  if(type==='instructor')list=list.filter(s=>!s.instructorId||s.instructorId===uid);
+  if(type==='student')list=list.filter(s=>s.linkedUserId===uid);
+  return list;
+}
+function archivedStudents(){
+  const type=dpAccountType(),uid=dpCurrentUserId();
+  let list=students.filter(isArchivedStudent);
+  if(type==='instructor')list=list.filter(s=>!s.instructorId||s.instructorId===uid);
+  if(type==='student')list=list.filter(s=>s.linkedUserId===uid);
+  return list;
+}
+function page(p){
+  const auth=window.driveProAuth;
+  const type=auth?.accountType||auth?.profile?.account_type||'school';
+  const allowed=type==='school'
+    ? ['dashboard','students','archive','calendar','stats','logbook','settings','instructors','vehicles','requests']
+    : type==='instructor'
+      ? ['dashboard','students','archive','calendar','stats','logbook','settings','requests']
+      : ['dashboard','calendar','requests'];
+  if(!allowed.includes(p))p='dashboard';
+  state.page=p;state.studentId=null;
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('nav-'+p)?.classList.add('active');
+  document.getElementById('pageTitle').textContent={
+    dashboard:'Dashboard',students:'Fahrschüler',archive:'Archiv',calendar:'Kalender',
+    stats:'Statistik',logbook:'Logbuch',settings:'Einstellungen',
+    instructors:'Fahrlehrer',vehicles:'Fahrzeuge',requests:'Anfragen'
+  }[p]||'Dashboard';
+  render();
+}
+function render(){
+  if(state.page==='dashboard'){dashboard();if(dpAccountType()==='student'){const c=document.getElementById('content');if(c)c.insertAdjacentHTML('afterbegin',dpStudentDashboardAddon())}}
+  else if(state.page==='students')studentsPage();
+  else if(state.page==='archive')archivePage();
+  else if(state.page==='calendar')calendarPage();
+  else if(state.page==='stats')statsPage();
+  else if(state.page==='logbook')logbookPage();
+  else if(state.page==='settings')settingsPage();
+  else if(state.page==='instructors')instructorsPage();
+  else if(state.page==='vehicles')vehiclesPage();
+  else if(state.page==='requests')requestsPage();
+  else dashboard();
+}
+function dpStudentDashboardAddon(){
+ if(dpAccountType()!=='student')return `<div class="card dp-role-request-card"><div class="section-title"><div><h3>Fahrstunde anfragen</h3><span class="muted">Fordere eine Fahrstunde bei deiner Fahrschule an.</span></div><button class="primary" onclick="page('requests')">Anfragen</button></div></div>`;
+ return '';
+}
 function dashboard(){
  const all=allLessons();
  const total=students.reduce((n,s)=>n+(s.lessons?.length||0),0);
@@ -2039,7 +2110,8 @@ function upcomingLesson(s,l){
 }
 function studentRow(s){return `<div class="student" style="padding:12px 0;border-bottom:1px solid var(--line)"><div class="avatar">${esc((s.firstName[0]||'')+(s.lastName[0]||''))}</div><div class="grow"><b>${esc(s.firstName+' '+s.lastName)}</b><div class="studentMeta"><span>Klasse ${esc(s.license)}</span><span>${(s.lessons||[]).length} Fahrstunden</span><span>${s.visionAid?'👓 Sehhilfe':'👁 Keine Sehhilfe'}</span><span>${s.theoryPassed?'✓ Theorie bestanden':'○ Theorie offen'}</span></div><div class="progress"><i style="width:${pct(s)}%"></i></div></div><div class="studentActions"><button class="secondary" onclick="openStudent('${s.id}')">Öffnen</button><button class="primary smallBtn" onclick="openStudentForm('${s.id}')">Bearbeiten</button><button class="danger smallBtn" onclick="deleteStudent('${s.id}',event)">Löschen</button></div></div>`}
 function studentsPage(){
-document.getElementById('content').innerHTML=`<div class="toolbar"><div class="muted">Alle Fahrschüler verwalten</div><input id="studentSearch" placeholder="Suchen…" oninput="filterStudents()"></div><div id="studentList" class="students">${activeStudents().map(studentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Noch keine aktiven Fahrschüler.</div>'}</div>`;
+ if(dpAccountType()==='student'){page('dashboard');return}
+ document.getElementById('content').innerHTML=`<div class="toolbar"><div class="muted">${dpAccountType()==='instructor'?'Meine Fahrschüler':'Alle Fahrschüler verwalten'}</div><input id="studentSearch" placeholder="Suchen…" oninput="filterStudents()"></div><div id="studentList" class="students">${activeStudents().map(studentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Noch keine aktiven Fahrschüler.</div>'}</div>`;
 }
 function archivedStudentRow(s){
  const received=s.licenseReceivedDate?fmtDate(s.licenseReceivedDate):'—';
@@ -3008,6 +3080,113 @@ function setCalendarView(view){
  if(view==='week' && !state.calendarWeekDate) state.calendarWeekDate=new Date().toISOString().slice(0,10);
  render();
 }
+
+async function instructorsPage(){
+  if(dpAccountType()!=='school'){page('dashboard');return}
+  const box=document.getElementById('content');
+  box.innerHTML=`<div class="toolbar"><div><b>Fahrlehrer</b><div class="dp-role-muted">Fahrlehrer der Fahrschule verwalten und Fahrschüler zuweisen.</div></div><button class="primary" onclick="openInviteAccountModal('instructor')">+ Fahrlehrer einladen</button></div><div id="instructorList" class="dp-role-list"><div class="card">Lade …</div></div>`;
+  try{
+    const c=dpCloudClient(),school=window.driveProAuth?.schoolId;
+    const r=await c.from('profiles').select('id,first_name,last_name,display_name,role,account_type,is_active').eq('school_id',school).eq('account_type','instructor').order('last_name');
+    if(r.error)throw r.error;
+    const rows=r.data||[];
+    document.getElementById('instructorList').innerHTML=rows.map(p=>`<div class="card"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><b>${esc(dpName(p))}</b><div class="dp-role-muted">${p.is_active?'Aktiv':'Deaktiviert'}</div></div><button class="secondary" onclick="openInstructorAssignment('${p.id}')">Fahrschüler zuweisen</button></div></div>`).join('')||'<div class="card empty">Noch keine Fahrlehrer.</div>';
+  }catch(e){document.getElementById('instructorList').innerHTML=`<div class="card empty">Fahrlehrer konnten nicht geladen werden.<br><small>${esc(e.message||'Unbekannter Fehler')}</small></div>`}
+}
+function dpName(p){return p?.display_name||[p?.first_name,p?.last_name].filter(Boolean).join(' ')||'Fahrlehrer'}
+async function openInstructorAssignment(instructorId){
+  const c=dpCloudClient(),school=window.driveProAuth?.schoolId;
+  const [pr,sr]=await Promise.all([
+    c.from('profiles').select('id,first_name,last_name,display_name').eq('id',instructorId).maybeSingle(),
+    c.from('students').select('id,first_name,last_name,instructor_id').eq('school_id',school).order('last_name')
+  ]);
+  if(pr.error||sr.error){alert((pr.error||sr.error).message);return}
+  const p=pr.data,rows=sr.data||[];
+  openModal(`<h2>Fahrschüler zuweisen</h2><p class="muted">${esc(dpName(p))}</p><div class="dp-role-list">${rows.map(s=>`<label class="card" style="display:flex;gap:10px;align-items:center"><input type="checkbox" data-assign-student="${s.id}" ${s.instructor_id===instructorId?'checked':''}> <span>${esc(s.first_name+' '+s.last_name)}</span></label>`).join('')||'<div class="card empty">Keine Fahrschüler.</div>'}</div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveInstructorAssignment('${instructorId}')">Speichern</button></div>`);
+}
+async function saveInstructorAssignment(instructorId){
+  const c=dpCloudClient(),school=window.driveProAuth?.schoolId;
+  const ids=[...document.querySelectorAll('[data-assign-student]:checked')].map(x=>x.dataset.assignStudent);
+  try{
+    const all=await c.from('students').select('id,instructor_id').eq('school_id',school);
+    if(all.error)throw all.error;
+    const selected=new Set(ids);
+    for(const s of all.data||[]){
+      if(selected.has(s.id) && s.instructor_id!==instructorId){
+        const r=await c.from('students').update({instructor_id:instructorId}).eq('id',s.id).eq('school_id',school);
+        if(r.error)throw r.error;
+      }else if(!selected.has(s.id) && s.instructor_id===instructorId){
+        const r=await c.from('students').update({instructor_id:null}).eq('id',s.id).eq('school_id',school);
+        if(r.error)throw r.error;
+      }
+    }
+    closeModal();await dpCloudLoad();instructorsPage();
+  }catch(e){alert(e.message||'Zuweisung konnte nicht gespeichert werden.')}
+}
+function vehiclesPage(){
+  if(dpAccountType()!=='school'){page('dashboard');return}
+  const box=document.getElementById('content');
+  box.innerHTML=`<div class="toolbar"><div><b>Fahrzeuge</b><div class="dp-role-muted">Fahrzeuge der Fahrschule verwalten.</div></div><button class="primary" onclick="openVehicleModal()">+ Fahrzeug</button></div><div id="vehicleList" class="dp-vehicle-grid"><div class="card">Lade …</div></div>`;
+  loadVehicles();
+}
+async function loadVehicles(){
+  const list=document.getElementById('vehicleList');if(!list)return;
+  try{
+    const r=await dpCloudClient().from('vehicles').select('*').eq('school_id',window.driveProAuth.schoolId).order('license_plate');
+    if(r.error)throw r.error;
+    list.innerHTML=(r.data||[]).map(v=>`<div class="dp-vehicle-card"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(v.license_plate)}</b><button class="danger" onclick="deleteVehicle('${v.id}')">🗑</button></div><div style="font-size:15px;margin-top:7px">${esc(v.make)} ${esc(v.model)}</div><div class="dp-vehicle-meta"><span>${v.transmission==='automatic'?'Automatik':'Schaltung'}</span><span>${v.is_active?'Aktiv':'Inaktiv'}</span></div><div class="actions"><button class="secondary" onclick='openVehicleModal(${JSON.stringify(v)})'>Bearbeiten</button></div></div>`).join('')||'<div class="card empty" style="grid-column:1/-1">Noch keine Fahrzeuge.</div>';
+  }catch(e){list.innerHTML=`<div class="card empty" style="grid-column:1/-1">Fahrzeuge konnten nicht geladen werden.<br><small>${esc(e.message||'Fehler')}</small></div>`}
+}
+function openVehicleModal(v=null){
+  openModal(`<h2>${v?'Fahrzeug bearbeiten':'Neues Fahrzeug'}</h2><div class="row"><div class="field"><label>Kennzeichen</label><input id="vf" value="${esc(v?.license_plate||'')}"></div><div class="field"><label>Marke</label><input id="vmake" value="${esc(v?.make||'')}"></div></div><div class="row"><div class="field"><label>Modell</label><input id="vmodel" value="${esc(v?.model||'')}"></div><div class="field"><label>Getriebe</label><select id="vtrans"><option value="manual" ${v?.transmission==='manual'?'selected':''}>Schaltung</option><option value="automatic" ${v?.transmission==='automatic'?'selected':''}>Automatik</option></select></div></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveVehicle('${v?.id||''}')">Speichern</button></div>`);
+}
+async function saveVehicle(idv){
+  const payload={school_id:window.driveProAuth.schoolId,license_plate:document.getElementById('vf').value.trim().toUpperCase(),make:document.getElementById('vmake').value.trim(),model:document.getElementById('vmodel').value.trim(),transmission:document.getElementById('vtrans').value};
+  if(!payload.license_plate||!payload.make||!payload.model){alert('Bitte Kennzeichen, Marke und Modell ausfüllen.');return}
+  try{
+    const c=dpCloudClient(),r=idv?await c.from('vehicles').update(payload).eq('id',idv).eq('school_id',payload.school_id):await c.from('vehicles').insert(payload);
+    if(r.error)throw r.error;
+    closeModal();vehiclesPage();
+  }catch(e){alert(e.message||'Fahrzeug konnte nicht gespeichert werden.')}
+}
+async function deleteVehicle(idv){
+  if(!confirm('Fahrzeug wirklich löschen?'))return;
+  const r=await dpCloudClient().from('vehicles').delete().eq('id',idv).eq('school_id',window.driveProAuth.schoolId);
+  if(r.error)alert(r.error.message);else vehiclesPage();
+}
+async function requestsPage(){
+  const type=dpAccountType(),c=dpCloudClient(),school=window.driveProAuth?.schoolId;
+  document.getElementById('content').innerHTML=`<div class="toolbar"><div><b>Fahrstunden-Anfragen</b><div class="dp-role-muted">${type==='student'?'Anfragen für deine Fahrstunden':'Anfragen deiner Fahrschüler'}</div></div></div><div id="requestList" class="dp-role-list"><div class="card">Lade …</div></div>`;
+  let q=c.from('lesson_requests').select('*').eq('school_id',school).order('requested_date').order('requested_start_time');
+  if(type==='instructor')q=q.eq('instructor_id',window.driveProAuth.user.id);
+  if(type==='student'){
+    const me=students.find(s=>s.linkedUserId===window.driveProAuth.user.id);
+    if(!me){document.getElementById('requestList').innerHTML='<div class="card empty">Dein Fahrschülerkonto ist noch nicht verknüpft.</div>';return}
+    q=q.eq('student_id',me.id);
+  }
+  try{
+    const r=await q;if(r.error)throw r.error;
+    document.getElementById('requestList').innerHTML=(r.data||[]).map(x=>`<div class="card"><div style="display:flex;justify-content:space-between;gap:10px"><b>${x.requested_date} · ${String(x.requested_start_time).slice(0,5)}</b><span class="dp-request-status ${x.status}">${esc(x.status)}</span></div><div class="dp-role-muted" style="margin-top:6px">${esc(x.lesson_type)} · ${x.duration_minutes} Min.</div>${type==='instructor'&&x.status==='requested'?`<div class="actions"><button class="primary" onclick="respondLessonRequest('${x.id}','accepted')">✓ Annehmen</button><button class="secondary" onclick="respondLessonRequest('${x.id}','declined')">Ablehnen</button></div>`:''}</div>`).join('')||'<div class="card empty">Keine Anfragen.</div>';
+  }catch(e){document.getElementById('requestList').innerHTML=`<div class="card empty">Anfragen konnten nicht geladen werden.<br><small>${esc(e.message||'Fehler')}</small></div>`}
+}
+async function respondLessonRequest(idr,status){
+  const r=await dpCloudClient().from('lesson_requests').update({status,responded_at:new Date().toISOString()}).eq('id',idr).eq('instructor_id',window.driveProAuth.user.id);
+  if(r.error)alert(r.error.message);else requestsPage();
+}
+function openInviteAccountModal(type){
+  openModal(`<h2>${type==='instructor'?'Fahrlehrer einladen':'Fahrschüler einladen'}</h2><div class="row"><div class="field"><label>E-Mail-Adresse</label><input id="inviteEmail" type="email" placeholder="name@beispiel.de"></div><div class="field"><label>Name</label><input id="inviteName" placeholder="Vor- und Nachname"></div></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="sendAccountInvite('${type}')">Einladung senden</button></div>`);
+}
+async function sendAccountInvite(type){
+  const email=document.getElementById('inviteEmail').value.trim(),name=document.getElementById('inviteName').value.trim();
+  if(!email){alert('Bitte E-Mail-Adresse eingeben.');return}
+  try{
+    const r=await dpCloudClient().functions.invoke('drivepro-invite-account',{body:{email,name,account_type:type}});
+    if(r.error)throw r.error;
+    closeModal();alert('Einladung wurde gesendet.');
+    if(type==='instructor')instructorsPage();
+  }catch(e){alert(e.message||'Einladung konnte nicht gesendet werden.')}
+}
+
 function statsPage(){let mins=students.reduce((n,s)=>n+s.lessons.reduce((a,l)=>a+l.duration,0),0);document.getElementById('content').innerHTML=`<div class="cards"><div class="card"><div class="muted">Fahrschüler</div><div class="stat">${students.length}</div></div><div class="card"><div class="muted">Fahrstunden</div><div class="stat">${allLessons().length}</div></div><div class="card"><div class="muted">Gesamtminuten</div><div class="stat">${mins}</div></div><div class="card"><div class="muted">Termine heute</div><div class="stat">${allLessons().filter(x=>x.l.date===new Date().toISOString().slice(0,10)).length}</div><div class="small" style="margin-top:8px">Fahrstunden</div></div></div><div class="card" style="margin-top:16px"><h3>Ausbildungsstand</h3>${students.map(s=>`<div style="margin:15px 0"><div style="display:flex;justify-content:space-between"><b>${esc(s.firstName+' '+s.lastName)}</b><span>${pct(s)}%</span></div><div class="progress"><i style="width:${pct(s)}%"></i></div></div>`).join('')||'<div class="empty">Noch keine Daten.</div>'}</div>`}
 function showConflictOverlay(info){
  const old=document.getElementById('conflictOverlay');
@@ -3147,7 +3326,7 @@ function dpCloudBackupLocal(){
  try{if(students.length)localStorage.setItem(DP_CLOUD_BACKUP_KEY,JSON.stringify({savedAt:new Date().toISOString(),students}))}catch(e){console.warn('DrivePro Cloud-Backup:',e)}
 }
 function dpCloudStudentRow(s,uid){
- return {id:s.id,user_id:uid,first_name:s.firstName||'',last_name:s.lastName||'',birth_date:s.birthDate||null,phone:s.phone||'',email:s.email||'',address:s.address||'',license_class:s.license||'B',training_start:s.start||null,vision_aid:s.visionAid===true,theory_passed:s.theoryPassed===true,practice_exam_date:s.practiceExamDate||null,license_received_date:s.licenseReceivedDate||null,notes:s.notes||''};
+ return {id:s.id,user_id:s.userId||uid,school_id:s.schoolId||window.driveProAuth?.schoolId||null,instructor_id:s.instructorId||null,linked_user_id:s.linkedUserId||null,first_name:s.firstName||'',last_name:s.lastName||'',birth_date:s.birthDate||null,phone:s.phone||'',email:s.email||'',address:s.address||'',license_class:s.license||'B',training_start:s.start||null,vision_aid:s.visionAid===true,theory_passed:s.theoryPassed===true,practice_exam_date:s.practiceExamDate||null,license_received_date:s.licenseReceivedDate||null,notes:s.notes||''};
 }
 function dpCloudLessonRow(s,l,uid){
  return {id:l.id,user_id:uid,student_id:s.id,lesson_date:l.date,start_time:l.startTime,end_time:endTime(l.startTime,Number(l.duration)||0),lesson_type:l.lessonType||'Fahrstunde',special_type:l.special||null,duration_minutes:Number(l.duration)||0,kilometers:l.kilometers===''||l.kilometers==null?null:Number(l.kilometers),notes:l.note||l.notes||'',color:l.color||null,signature:l.signature||null};
@@ -3334,7 +3513,12 @@ async function dpCloudLoad(){
   /* The student list is the critical part of the sync. Ancillary tables
      must never prevent students from loading. This is especially important
      on a newly authenticated mobile session. */
-  const sr=await client.from('students').select('*').eq('user_id',uid).order('last_name',{ascending:true});
+  let srQuery=client.from('students').select('*').order('last_name',{ascending:true});
+  const acct=dpAccountType(),schoolId=window.driveProAuth?.schoolId;
+  if(acct==='school')srQuery=srQuery.eq('school_id',schoolId||'__none__');
+  else if(acct==='instructor')srQuery=srQuery.eq('school_id',schoolId||'__none__').eq('instructor_id',uid);
+  else srQuery=srQuery.eq('school_id',schoolId||'__none__').eq('linked_user_id',uid);
+  const sr=await srQuery;
   if(sr.error)throw new Error('students: '+(sr.error.message||'Lesefehler'));
 
   let deletedIds=new Set();
@@ -3348,9 +3532,18 @@ async function dpCloudLoad(){
 
   let progressRows=[];
   try{
-   const pr=await client.from('training_progress').select('*').eq('user_id',uid);
-   if(pr.error)throw pr.error;
-   progressRows=pr.data||[];
+   let prq=client.from('training_progress').select('*');
+   if(acct==='school'){
+    prq=prq.eq('school_id',schoolId||'__none__');
+    const pr=await prq;if(pr.error)throw pr.error;progressRows=pr.data||[];
+   }else{
+    const scopedStudentIds=(sr.data||[]).map(x=>x.id);
+    if(scopedStudentIds.length){
+     prq=prq.in('student_id',scopedStudentIds);
+     const pr=await prq;if(pr.error)throw pr.error;progressRows=pr.data||[];
+    }else progressRows=[];
+   }
+
   }catch(e){
    console.warn('DrivePro: Ausbildungsfortschritt konnte nicht geladen werden:',e);
    dpCloudStatus('syncing','Fahrschüler werden synchronisiert …');
@@ -3358,9 +3551,18 @@ async function dpCloudLoad(){
 
   let lessonRows=[];
   try{
-   const lr=await client.from('lessons').select('id,user_id,student_id,lesson_date,start_time,end_time,lesson_type,special_type,duration_minutes,kilometers,notes,color,signature,created_at,updated_at').eq('user_id',uid).order('lesson_date',{ascending:true}).order('start_time',{ascending:true});
-   if(lr.error)throw lr.error;
-   lessonRows=lr.data||[];
+   let lrq=client.from('lessons').select('id,user_id,student_id,school_id,instructor_id,vehicle_id,lesson_date,start_time,end_time,lesson_type,special_type,duration_minutes,kilometers,notes,color,signature,created_at,updated_at').order('lesson_date',{ascending:true}).order('start_time',{ascending:true});
+   if(acct==='school'){
+    lrq=lrq.eq('school_id',schoolId||'__none__');
+    const lr=await lrq;if(lr.error)throw lr.error;lessonRows=lr.data||[];
+   }else{
+    const scopedLessonStudentIds=(sr.data||[]).map(x=>x.id);
+    if(scopedLessonStudentIds.length){
+     lrq=lrq.in('student_id',scopedLessonStudentIds);
+     const lr=await lrq;if(lr.error)throw lr.error;lessonRows=lr.data||[];
+    }else lessonRows=[];
+   }
+
   }catch(e){
    console.warn('DrivePro: Fahrstunden konnten nicht geladen werden:',e);
   }
@@ -3389,7 +3591,7 @@ async function dpCloudLoad(){
     (!hasOwner || dpCloudPendingStudentIds.has(s.id))
   );
 
-  if(!hasOwner && students.length){
+  if(acct==='school' && !hasOwner && students.length){
    dpCloudBackupLocal();
    const result=await dpCloudMigrateLocal(students);
    if(result.failed.length){
@@ -3463,6 +3665,7 @@ async function dpCloudLoad(){
    }
    return {
     id:row.id,firstName:row.first_name||'',lastName:row.last_name||'',
+    userId:row.user_id||null,schoolId:row.school_id||schoolId||null,instructorId:row.instructor_id||null,linkedUserId:row.linked_user_id||null,
     license:row.license_class||'B',start:row.training_start||'',
     birthDate:row.birth_date||'',phone:row.phone||'',email:row.email||'',
     address:row.address||'',visionAid:row.vision_aid===true,theoryPassed:row.theory_passed===true,
@@ -3845,15 +4048,20 @@ function dpName(p,u){
  return p?.display_name||[p?.first_name,p?.last_name].filter(Boolean).join(' ')||u?.email||'DrivePro Benutzer';
 }
 async function dpLoadProfile(user){
- const r=await dpClient.from('profiles').select('id,first_name,last_name,display_name,role,is_active').eq('id',user.id).maybeSingle();
+ const r=await dpClient.from('profiles').select('id,first_name,last_name,display_name,role,account_type,school_id,is_active').eq('id',user.id).maybeSingle();
  if(r.error)throw r.error;
  if(!r.data)throw new Error('Für diesen Account wurde kein DrivePro-Profil gefunden.');
  if(r.data.is_active!==true)throw new Error('Dieser DrivePro-Account ist deaktiviert.');
  dpProfile=r.data;
  $('dpUserName').textContent=dpName(r.data,user);
- $('dpUserRole').textContent=r.data.role==='admin'?'Administrator':'Fahrlehrer';
- $('dpAdminBadge').style.display=r.data.role==='admin'?'inline-flex':'none';
- window.driveProAuth={client:dpClient,user,profile:r.data,isAdmin:r.data.role==='admin',signOut:()=>dpClient.auth.signOut()};
+ const accountType=r.data.account_type||(r.data.role==='admin'?'school':(String(r.data.role||'').toLowerCase()==='fahrlehrer'?'instructor':'student'));
+ $('dpUserRole').textContent=accountType==='school'?'Fahrschule':accountType==='instructor'?'Fahrlehrer':'Fahrschüler';
+ $('dpAdminBadge').style.display=accountType==='school'?'inline-flex':'none';
+ document.querySelectorAll('.dp-role-school').forEach(el=>el.style.display=accountType==='school'?'flex':'none');
+ document.querySelectorAll('.dp-role-request').forEach(el=>el.style.display=accountType==='student'||accountType==='instructor'||accountType==='school'?'flex':'none');
+ const addStudentBtn=document.querySelector('.top .dp-userbar > button.primary');
+ if(addStudentBtn)addStudentBtn.style.display=accountType==='school'?'inline-flex':'none';
+ window.driveProAuth={client:dpClient,user,profile:r.data,isAdmin:accountType==='school',accountType,schoolId:r.data.school_id||null,signOut:()=>dpClient.auth.signOut()};
  document.body.classList.remove('auth-locked');
  window.dispatchEvent(new CustomEvent('drivepro:auth-ready'));
 }
