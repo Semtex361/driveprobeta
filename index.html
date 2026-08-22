@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V90.38</title>
+<title>DrivePro Beta V90.37</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -798,18 +798,6 @@ body{overflow-x:hidden}
 .trainingAreasFooter{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-top:13px}
 .trainingAreasCount{font-size:10px;color:#8998a9}
 .trainingAreasInfo{font-size:10px;color:#71839a;line-height:1.45}
-/* V90.38 – Ausbildungsdiagramm Drag & Drop */
-.trainingAreaRow{position:relative}
-.trainingAreaDragHandle{width:32px;height:38px;flex:0 0 32px;display:grid;place-items:center;border:1px solid #dce8f4;border-radius:10px;background:#f7faff;color:#71839a;font-size:17px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
-.trainingAreaDragHandle:active{cursor:grabbing}
-.trainingAreaDragHandle{touch-action:none;-webkit-touch-callout:none}
-.trainingAreaRow.dp-dragging{user-select:none;-webkit-user-select:none}
-.trainingAreaRow.dp-dragging{opacity:.48;transform:scale(.995);box-shadow:0 7px 18px rgba(47,128,237,.12)}
-.trainingAreaRow.dp-drag-over{outline:2px dashed #2f80ed;outline-offset:3px}
-.trainingAreaRow.dp-drag-placeholder{border:2px dashed #9bc4f3;background:#f3f8ff;border-radius:12px;min-height:40px;opacity:.75}
-[data-theme="dark"] .trainingAreaDragHandle{background:#122033;border-color:#30465e;color:#9bb0c5}
-[data-theme="dark"] .trainingAreaRow.dp-drag-over{outline-color:#63a7f5}
-@media(max-width:600px){.trainingAreaDragHandle{width:30px;flex-basis:30px;height:36px;font-size:16px}}
 [data-theme="dark"] .trainingAreaNumber{background:#19324b;color:#9bb0c5}
 [data-theme="dark"] .trainingAreaDelete{background:#2a1c20;border-color:#5b353b;color:#ff9a9a}
 [data-theme="dark"] .trainingAreaDelete:hover{background:#3a2228;border-color:#75434a}
@@ -1655,9 +1643,6 @@ body.auth-locked #driveProAuth{display:flex}
 .dp-logout:hover{border-color:#b7c9df;background:var(--primary-soft)}
 @media(max-width:700px){.dp-cloud-status{display:none}.dp-auth-card{padding:27px 22px;border-radius:20px}.dp-user-info,.dp-admin-badge{display:none!important}.dp-logout{padding:8px 9px}}
 
-
-/* DnD V41: dedicated, reliable mouse/touch handle */
-.trainingAreaDragHandle{touch-action:none!important;cursor:grab!important;-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important;flex:0 0 34px;width:34px;height:38px;display:grid;place-items:center;border:1px solid #dce8f4;border-radius:10px;background:#f7faff;color:#71839a;font-size:18px;padding:0}.trainingAreaDragHandle:active{cursor:grabbing!important}.dpTrainingDragging{cursor:grabbing!important}.dpTrainingDragging *{cursor:grabbing!important}.trainingAreaRow.dp-dragging{opacity:.45}.trainingAreaRow.dp-drag-placeholder{border:2px dashed #2f80ed;background:#f3f8ff;border-radius:12px;min-height:38px;box-sizing:border-box}.trainingAreaRow.dp-drag-placeholder>*{visibility:hidden}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -1882,7 +1867,7 @@ function dpCloudRefreshSettingsUI(){
   const value=appSettings.durations?.[type];
   if(value!=null&&input.value!==String(value))input.value=String(value);
  });
- const trainingActive=!!active?.matches?.('[data-training-area-input]') || !!window.__dpTrainingDrag;
+ const trainingActive=!!active?.matches?.('[data-training-area-input]');
  const list=document.getElementById('trainingAreasList');
  if(list&&!trainingActive){
   list.innerHTML=getTrainingAreas().map((name,i)=>trainingAreaSettingRow(name,i)).join('')+
@@ -2284,9 +2269,12 @@ function openLogEntry(entryId){
 function trainingAreaSettingRow(name,index){
  const safeName=esc(name||'');
  return `<div class="trainingAreaRow" data-training-area-row>
-   <button type="button" class="trainingAreaDragHandle" data-training-area-drag-handle aria-label="Ausbildungsinhalt verschieben" title="Zum Verschieben ziehen">☷</button>
    <div class="trainingAreaNumber">${index+1}</div>
    <div class="trainingAreaInputWrap"><input class="trainingAreaInput" type="text" maxlength="120" value="${safeName}" data-training-area-input></div>
+   <div class="trainingAreaOrder" aria-label="Reihenfolge">
+    <button type="button" class="trainingAreaMove" ${index===0?'disabled':''} onclick="moveTrainingAreaSetting(this,-1)" aria-label="Ausbildungsinhalt nach oben">↑</button>
+    <button type="button" class="trainingAreaMove" ${index===getTrainingAreas().length-1?'disabled':''} onclick="moveTrainingAreaSetting(this,1)" aria-label="Ausbildungsinhalt nach unten">↓</button>
+   </div>
    <button type="button" class="trainingAreaDelete" onclick="removeTrainingAreaSetting(this)" aria-label="Ausbildungsinhalt löschen">×</button>
   </div>`;
 }
@@ -2310,15 +2298,13 @@ function addTrainingAreaInputIfNeeded(){
  const row=last.closest('[data-training-area-row]');
  row.removeAttribute('data-empty-row');
  row.querySelector('.trainingAreaDelete')?.removeAttribute('disabled');
- const handle=document.createElement('button');
- handle.type='button';
- handle.className='trainingAreaDragHandle';
- handle.setAttribute('data-training-area-drag-handle','');
- handle.setAttribute('aria-label','Ausbildungsinhalt verschieben');
- handle.title='Zum Verschieben ziehen';
- handle.textContent='☷';
- row.insertBefore(handle,row.firstChild);
- bindTrainingAreaDragDrop();
+ const order=document.createElement('div');
+ order.className='trainingAreaOrder';
+ order.setAttribute('aria-label','Reihenfolge');
+ order.innerHTML='<button type="button" class="trainingAreaMove" aria-label="Ausbildungsinhalt nach oben">↑</button><button type="button" class="trainingAreaMove" aria-label="Ausbildungsinhalt nach unten">↓</button>';
+ order.children[0].onclick=()=>moveTrainingAreaSetting(order.children[0],-1);
+ order.children[1].onclick=()=>moveTrainingAreaSetting(order.children[1],1);
+ row.insertBefore(order,row.querySelector('.trainingAreaDelete'));
 }
  if(list.querySelector('[data-empty-row]'))return;
  const index=inputs.length;
@@ -2326,146 +2312,81 @@ function addTrainingAreaInputIfNeeded(){
  row.className='trainingAreaRow';
  row.setAttribute('data-training-area-row','');
  row.setAttribute('data-empty-row','');
- row.innerHTML=`<button type="button" class="trainingAreaDragHandle" data-training-area-drag-handle aria-label="Ausbildungsinhalt verschieben" title="Zum Verschieben ziehen">☷</button><div class="trainingAreaNumber">${index+1}</div><div class="trainingAreaInputWrap"><input class="trainingAreaInput" type="text" maxlength="120" placeholder="Neuer Ausbildungsinhalt …" data-training-area-input></div><button type="button" class="trainingAreaDelete" disabled aria-label="Leeres Feld">×</button>`;
+ row.innerHTML=`<div class="trainingAreaNumber">${index+1}</div><div class="trainingAreaInputWrap"><input class="trainingAreaInput" type="text" maxlength="120" placeholder="Neuer Ausbildungsinhalt …" data-training-area-input></div><button type="button" class="trainingAreaDelete" disabled aria-label="Leeres Feld">×</button>`;
  list.appendChild(row);
  bindTrainingAreaInput(row.querySelector('[data-training-area-input]'));
  updateTrainingAreaNumbers();
 }
+function updateTrainingAreaNumbers(){
+ document.querySelectorAll('#trainingAreasList [data-training-area-row]').forEach((row,i)=>{const n=row.querySelector('.trainingAreaNumber');if(n)n.textContent=String(i+1)});
+ updateTrainingAreaMoveButtons();
+}
+function bindTrainingAreaInput(input){
+ if(!input||input.dataset.bound==='1')return;
+ input.dataset.bound='1';
+ input.addEventListener('input',()=>{
+  if(input.value.trim())addTrainingAreaInputIfNeeded();
+  persistTrainingAreasFromSettings();
+ });
+ input.addEventListener('change',persistTrainingAreasFromSettings);
+ input.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+   e.preventDefault();
+   if(!input.value.trim())return;
+   addTrainingAreaInputIfNeeded();
+   const inputs=trainingAreasInputs();
+   const next=inputs[inputs.indexOf(input)+1];
+   if(next){next.focus();next.scrollIntoView({block:'nearest'});}
+  }
+ });
+}
 function initTrainingAreaSettings(){
  trainingAreasInputs().forEach(bindTrainingAreaInput);
  updateTrainingAreaNumbers();
- bindTrainingAreaDragDrop();
+}
+/* A remote settings change may arrive while the user is typing in a training
+   area. Once the field is left, refresh the non-active controls so the latest
+   cloud configuration becomes visible without interrupting input. */
+if(!window.__dpSettingsFocusGuardBound){
+ window.__dpSettingsFocusGuardBound=true;
+ document.addEventListener('focusout',e=>{
+  if(e.target?.matches?.('[data-training-area-input], #setSchoolName, #setSchoolPhone, #setSchoolEmail, #setSchoolAddress, [data-duration]')){
+   setTimeout(()=>dpCloudRefreshSettingsUI(),0);
+  }
+ });
 }
 function syncTrainingAreaSettingsFromDom(){
  const values=trainingAreasInputs().map(input=>input.value.trim()).filter(Boolean);
  const normalized=normalizeTrainingAreas(values);
- if(!normalized.length)return;
- appSettings.trainingAreas=normalized;
+ if(normalized.length)appSettings.trainingAreas=normalized;
  saveSettings();
  const count=document.getElementById('trainingAreasCount');
- if(count)count.textContent=`${normalized.length} ${normalized.length===1?'Inhalt':'Inhalte'} gespeichert`;
+ if(count)count.textContent=`${getTrainingAreas().length} ${getTrainingAreas().length===1?'Inhalt':'Inhalte'} gespeichert`;
  showSettingsSaved();
-}
-function updateTrainingAreaNumbers(){
- document.querySelectorAll('#trainingAreasList [data-training-area-row]').forEach((row,i)=>{const n=row.querySelector('.trainingAreaNumber');if(n)n.textContent=String(i+1)});
-}
-function bindTrainingAreaDragDrop(){
- const list=document.getElementById('trainingAreasList');
- if(!list||list.dataset.dndReady==='1')return;
- list.dataset.dndReady='1';
- let drag=null;
- let suppressClickUntil=0;
- const getRows=()=>[...list.querySelectorAll('[data-training-area-row]:not([data-empty-row])')];
- const clear=()=>{
-  if(!drag)return;
-  drag.row.classList.remove('dp-dragging');
-  drag.placeholder?.remove();
-  document.body.classList.remove('dpTrainingDragging');
-  document.removeEventListener('mousemove',mouseMove,true);
-  document.removeEventListener('mouseup',mouseUp,true);
-  document.removeEventListener('touchmove',touchMove,{capture:true});
-  document.removeEventListener('touchend',touchEnd,true);
-  document.removeEventListener('touchcancel',touchCancel,true);
-  drag=null;
- };
- const move=(x,y)=>{
-  if(!drag)return;
-  const rows=getRows().filter(r=>r!==drag.row);
-  let target=null;
-  for(const r of rows){
-   const b=r.getBoundingClientRect();
-   if(y < b.top+b.height/2){target=r;break;}
-  }
-  if(target){
-   if(drag.placeholder.nextSibling!==target)list.insertBefore(drag.placeholder,target);
-  }else{
-   const empty=list.querySelector('[data-empty-row]');
-   if(empty)list.insertBefore(drag.placeholder,empty);else list.appendChild(drag.placeholder);
-  }
- };
- const finish=(cancel=false)=>{
-  if(!drag)return;
-  const d=drag;
-  if(!cancel&&d.started&&d.placeholder.parentNode){
-   d.placeholder.parentNode.insertBefore(d.row,d.placeholder);
-   updateTrainingAreaNumbers();
-   syncTrainingAreaSettingsFromDom();
-   suppressClickUntil=Date.now()+400;
-  }
-  clear();
- };
- const mouseMove=e=>{
-  if(!drag||drag.mode!=='mouse')return;
-  const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
-  if(!drag.started){if(Math.hypot(dx,dy)<4)return;drag.started=true;drag.row.style.pointerEvents='none';}
-  e.preventDefault();move(e.clientX,e.clientY);
- };
- const mouseUp=e=>{if(drag&&drag.mode==='mouse'){e.preventDefault();finish(false)}};
- const touchMove=e=>{
-  if(!drag||drag.mode!=='touch')return;
-  const t=e.touches[0];if(!t)return;
-  const dx=t.clientX-drag.x,dy=t.clientY-drag.y;
-  if(!drag.started){if(Math.hypot(dx,dy)<6)return;drag.started=true;drag.row.style.pointerEvents='none';}
-  e.preventDefault();move(t.clientX,t.clientY);
- };
- const touchEnd=e=>{if(drag&&drag.mode==='touch'){e.preventDefault();finish(false)}};
- const touchCancel=()=>{if(drag&&drag.mode==='touch')finish(true)};
- const begin=(e,handle,row,mode)=>{
-  if(drag||row.hasAttribute('data-empty-row'))return;
-  if(mode==='mouse'&&e.button!==0)return;
-  const x=mode==='mouse'?e.clientX:e.touches[0].clientX;
-  const y=mode==='mouse'?e.clientY:e.touches[0].clientY;
-  e.preventDefault();e.stopPropagation();
-  const placeholder=document.createElement('div');
-  placeholder.className='trainingAreaRow dp-drag-placeholder';
-  placeholder.style.height=row.getBoundingClientRect().height+'px';
-  placeholder.setAttribute('aria-hidden','true');
-  list.insertBefore(placeholder,row);
-  drag={row,handle,placeholder,x,y,started:false,mode};
-  row.classList.add('dp-dragging');
-  document.body.classList.add('dpTrainingDragging');
-  if(mode==='mouse'){
-   document.addEventListener('mousemove',mouseMove,true);
-   document.addEventListener('mouseup',mouseUp,true);
-  }else{
-   document.addEventListener('touchmove',touchMove,{capture:true,passive:false});
-   document.addEventListener('touchend',touchEnd,true);
-   document.addEventListener('touchcancel',touchCancel,true);
-  }
- };
- list.querySelectorAll('[data-training-area-drag-handle]').forEach(handle=>{
-  if(handle.dataset.dndBound==='1')return;
-  handle.dataset.dndBound='1';
-  const row=handle.closest('[data-training-area-row]');if(!row)return;
-  handle.addEventListener('mousedown',e=>begin(e,handle,row,'mouse'));
-  handle.addEventListener('touchstart',e=>begin(e,handle,row,'touch'),{passive:false});
- });
- window.__dpTrainingSuppressClick=()=>Date.now()<suppressClickUntil;
-}
-
-function reorderTrainingAreaRows(row,target){
- const list=document.getElementById('trainingAreasList');
- if(!list||!row||!target||row===target)return;
- const rows=[...list.querySelectorAll('[data-training-area-row]:not([data-empty-row])')];
- const from=rows.indexOf(row),to=rows.indexOf(target);
- if(from<0||to<0)return;
- // Preserve the DOM/input values exactly; only move the existing row node.
- if(from<to)list.insertBefore(row,target.nextSibling); else list.insertBefore(row,target);
  updateTrainingAreaNumbers();
- syncTrainingAreaSettingsFromDom();
- bindTrainingAreaDragDrop();
+ updateTrainingAreaMoveButtons();
 }
-function updateTrainingAreaMoveButtons(){}
+function updateTrainingAreaMoveButtons(){
+ const rows=[...document.querySelectorAll('#trainingAreasList [data-training-area-row]:not([data-empty-row])')];
+ rows.forEach((row,i)=>{
+  const buttons=row.querySelectorAll('.trainingAreaMove');
+  if(buttons[0])buttons[0].disabled=i===0;
+  if(buttons[1])buttons[1].disabled=i===rows.length-1;
+ });
+}
 function moveTrainingAreaSetting(button,direction){
- // Backwards compatibility for old saved markup. New UI uses Drag & Drop.
  const row=button?.closest?.('[data-training-area-row]');
- if(!row)return;
  const list=document.getElementById('trainingAreasList');
+ if(!row||!list||row.hasAttribute('data-empty-row'))return;
  const rows=[...list.querySelectorAll('[data-training-area-row]:not([data-empty-row])')];
- const index=rows.indexOf(row),target=index+direction;
+ const index=rows.indexOf(row);
+ const target=index+direction;
  if(index<0||target<0||target>=rows.length)return;
- if(direction<0)list.insertBefore(row,rows[target]); else list.insertBefore(row,rows[target].nextSibling);
- updateTrainingAreaNumbers(); syncTrainingAreaSettingsFromDom(); bindTrainingAreaDragDrop();
+ if(direction<0)list.insertBefore(row,rows[target]);
+ else list.insertBefore(row,rows[target].nextSibling);
+ updateTrainingAreaNumbers();
+ updateTrainingAreaMoveButtons();
+ syncTrainingAreaSettingsFromDom();
 }
 function removeTrainingAreaSetting(button){
  const areas=getTrainingAreas();
