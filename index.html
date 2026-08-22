@@ -2670,16 +2670,38 @@ async function loadVehicles(){
   }catch(e){list.innerHTML=`<div class="card empty" style="grid-column:1/-1">Fahrzeuge konnten nicht geladen werden.<br><small>${esc(e.message||'Fehler')}</small></div>`}
 }
 function openVehicleModal(v=null){
-  openModal(`<h2>${v?'Fahrzeug bearbeiten':'Neues Fahrzeug'}</h2><div class="row"><div class="field"><label>Kennzeichen</label><input id="vf" value="${esc(v?.license_plate||'')}"></div><div class="field"><label>Marke</label><input id="vmake" value="${esc(v?.make||'')}"></div></div><div class="row"><div class="field"><label>Modell</label><input id="vmodel" value="${esc(v?.model||'')}"></div><div class="field"><label>Getriebe</label><select id="vtrans"><option value="manual" ${v?.transmission==='manual'?'selected':''}>Schaltung</option><option value="automatic" ${v?.transmission==='automatic'?'selected':''}>Automatik</option></select></div></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveVehicle('${v?.id||''}')">Speichern</button></div>`);
+  openModal(`<h2>${v?'Fahrzeug bearbeiten':'Neues Fahrzeug'}</h2><div class="row"><div class="field"><label>Kennzeichen</label><input id="vf" value="${esc(v?.license_plate||'')}" oninput="clearVehicleFormMessage()"></div><div class="field"><label>Marke</label><input id="vmake" value="${esc(v?.make||'')}" oninput="clearVehicleFormMessage()"></div></div><div class="row"><div class="field"><label>Modell</label><input id="vmodel" value="${esc(v?.model||'')}" oninput="clearVehicleFormMessage()"></div><div class="field"><label>Getriebe</label><select id="vtrans" onchange="clearVehicleFormMessage()"><option value="manual" ${v?.transmission==='manual'?'selected':''}>Schaltung</option><option value="automatic" ${v?.transmission==='automatic'?'selected':''}>Automatik</option></select></div></div><div id="vehicleFormMessage" class="dp-auth-message" style="display:none;margin-top:10px"></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button id="vehicleSaveButton" class="primary" onclick="saveVehicle('${v?.id||''}')">Speichern</button></div>`);
+}
+function showVehicleFormMessage(text,type='error'){
+  const el=document.getElementById('vehicleFormMessage');
+  if(!el)return;
+  el.textContent=text;
+  el.className=`dp-auth-message ${type}`;
+  el.style.display='block';
+}
+function clearVehicleFormMessage(){
+  const el=document.getElementById('vehicleFormMessage');
+  if(!el)return;
+  el.textContent='';
+  el.style.display='none';
 }
 async function saveVehicle(idv){
   const payload={school_id:window.driveProAuth.schoolId,license_plate:document.getElementById('vf').value.trim().toUpperCase(),make:document.getElementById('vmake').value.trim(),model:document.getElementById('vmodel').value.trim(),transmission:document.getElementById('vtrans').value,is_active:true};
-  if(!payload.license_plate||!payload.make||!payload.model){alert('Bitte Kennzeichen, Marke und Modell ausfüllen.');return}
+  if(!payload.license_plate||!payload.make||!payload.model){showVehicleFormMessage('Bitte Kennzeichen, Marke und Modell ausfüllen.');return}
+  const btn=document.getElementById('vehicleSaveButton');
+  if(btn){btn.disabled=true;btn.textContent='Speichern …';}
   try{
     const c=dpCloudClient(),r=idv?await c.from('vehicles').update(payload).eq('id',idv).eq('school_id',payload.school_id):await c.from('vehicles').insert(payload);
     if(r.error)throw r.error;
     closeModal();vehiclesPage();
-  }catch(e){alert(e.message||'Fahrzeug konnte nicht gespeichert werden.')}
+  }catch(e){
+    console.error('DrivePro Fahrzeug speichern:',e);
+    const duplicate=e?.code==='23505' || String(e?.message||'').includes('uq_vehicles_school_license_plate');
+    showVehicleFormMessage(duplicate?'Dieses Kennzeichen ist bereits vergeben. Bitte ein anderes Kennzeichen eingeben.':'Das Fahrzeug konnte nicht gespeichert werden. Bitte versuche es erneut.');
+    const field=document.getElementById('vf');
+    if(duplicate&&field){field.focus();field.select();}
+    if(btn){btn.disabled=false;btn.textContent='Speichern';}
+  }
 }
 async function deleteVehicle(idv){
   if(!confirm('Fahrzeug wirklich löschen?'))return;
