@@ -2127,7 +2127,7 @@ async function restoreStudent(sid){
   s.licenseReceivedDate='';
   dpCloudMarkPending(s.id);dpCloudBackupLocal();save();
   logActivity('student_restored',s,null,`Fahrschüler aus dem Archiv wiederhergestellt: ${name}`);
-  closeModal();state.page='students';render();
+  closeModal();state.page='archive';render();
   if(dpCloudReady)await dpCloudUpsertStudent(s);
   dpCloudStatus('ok',`Fahrschüler „${name}“ ist wieder aktiv.`);
  }catch(e){
