@@ -794,6 +794,37 @@ body{overflow-x:hidden}
 .trainingAreaInput{width:100%!important;margin:0!important}
 .trainingAreaDelete{width:38px;height:38px;border-radius:10px;background:#fff1f1;color:#c44a4a;border:1px solid #f0d7d7;font-size:15px;flex:0 0 38px}
 .trainingAreaDelete:hover{background:#ffe6e6;border-color:#e9bebe}
+
+/* V90.38 – natürlicher Drag-&-Drop-Griff */
+.trainingAreaDragHandle{
+ width:38px;height:38px;flex:0 0 38px;
+ display:grid;place-items:center;
+ border:1px solid #dbe7f2;border-radius:10px;
+ background:#f7faff;color:#6f8398;
+ font-size:19px;font-weight:800;line-height:1;
+ cursor:grab;touch-action:none;
+ user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+}
+.trainingAreaDragHandle:hover{background:#eaf3ff;border-color:#bcd6ef;color:#1769d2}
+.trainingAreaDragHandle:active{cursor:grabbing}
+.trainingAreaRow.dp-dnd-source{opacity:.45}
+.dpTrainingDropIndicator{
+ height:4px;min-height:4px;margin:2px 0;border-radius:999px;
+ background:#2f80ed;box-shadow:0 0 0 2px rgba(47,128,237,.10);
+ pointer-events:none;
+}
+body.dp-training-dnd-active{cursor:grabbing!important}
+body.dp-training-dnd-active *{cursor:grabbing!important}
+[data-theme="dark"] .trainingAreaDragHandle{
+ background:#172a3e;border-color:#31506c;color:#9bb0c5
+}
+[data-theme="dark"] .trainingAreaDragHandle:hover{
+ background:#19324b;border-color:#4b79a7;color:#75b7ff
+}
+@media(max-width:600px){
+ .trainingAreaDragHandle{width:36px;height:36px;flex-basis:36px}
+}
+
 .trainingAreaDelete:disabled{opacity:.35;cursor:not-allowed}
 .trainingAreasFooter{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-top:13px}
 .trainingAreasCount{font-size:10px;color:#8998a9}
@@ -1868,8 +1899,9 @@ function dpCloudRefreshSettingsUI(){
   if(value!=null&&input.value!==String(value))input.value=String(value);
  });
  const trainingActive=!!active?.matches?.('[data-training-area-input]');
+ const trainingDragging=document.body.classList.contains('dp-training-dnd-active');
  const list=document.getElementById('trainingAreasList');
- if(list&&!trainingActive){
+ if(list&&!trainingActive&&!trainingDragging){
   list.innerHTML=getTrainingAreas().map((name,i)=>trainingAreaSettingRow(name,i)).join('')+
    `<div class="trainingAreaRow" data-training-area-row data-empty-row><div class="trainingAreaNumber">${getTrainingAreas().length+1}</div><div class="trainingAreaInputWrap"><input class="trainingAreaInput" type="text" maxlength="120" placeholder="Neuer Ausbildungsinhalt …" data-training-area-input></div><button type="button" class="trainingAreaDelete" disabled aria-label="Leeres Feld">×</button></div>`;
   initTrainingAreaSettings();
@@ -2269,12 +2301,9 @@ function openLogEntry(entryId){
 function trainingAreaSettingRow(name,index){
  const safeName=esc(name||'');
  return `<div class="trainingAreaRow" data-training-area-row>
+   <button type="button" class="trainingAreaDragHandle" aria-label="Ausbildungsinhalt verschieben" title="Zum Verschieben ziehen" draggable="false">☷</button>
    <div class="trainingAreaNumber">${index+1}</div>
    <div class="trainingAreaInputWrap"><input class="trainingAreaInput" type="text" maxlength="120" value="${safeName}" data-training-area-input></div>
-   <div class="trainingAreaOrder" aria-label="Reihenfolge">
-    <button type="button" class="trainingAreaMove" ${index===0?'disabled':''} onclick="moveTrainingAreaSetting(this,-1)" aria-label="Ausbildungsinhalt nach oben">↑</button>
-    <button type="button" class="trainingAreaMove" ${index===getTrainingAreas().length-1?'disabled':''} onclick="moveTrainingAreaSetting(this,1)" aria-label="Ausbildungsinhalt nach unten">↓</button>
-   </div>
    <button type="button" class="trainingAreaDelete" onclick="removeTrainingAreaSetting(this)" aria-label="Ausbildungsinhalt löschen">×</button>
   </div>`;
 }
@@ -2295,17 +2324,18 @@ function addTrainingAreaInputIfNeeded(){
  const last=inputs[inputs.length-1];
  if(!last||!last.value.trim())return;
  if(last.closest('[data-training-area-row]')?.hasAttribute('data-empty-row')){
- const row=last.closest('[data-training-area-row]');
- row.removeAttribute('data-empty-row');
- row.querySelector('.trainingAreaDelete')?.removeAttribute('disabled');
- const order=document.createElement('div');
- order.className='trainingAreaOrder';
- order.setAttribute('aria-label','Reihenfolge');
- order.innerHTML='<button type="button" class="trainingAreaMove" aria-label="Ausbildungsinhalt nach oben">↑</button><button type="button" class="trainingAreaMove" aria-label="Ausbildungsinhalt nach unten">↓</button>';
- order.children[0].onclick=()=>moveTrainingAreaSetting(order.children[0],-1);
- order.children[1].onclick=()=>moveTrainingAreaSetting(order.children[1],1);
- row.insertBefore(order,row.querySelector('.trainingAreaDelete'));
-}
+  const row=last.closest('[data-training-area-row]');
+  row.removeAttribute('data-empty-row');
+  row.querySelector('.trainingAreaDelete')?.removeAttribute('disabled');
+  const handle=document.createElement('button');
+  handle.type='button';
+  handle.className='trainingAreaDragHandle';
+  handle.setAttribute('aria-label','Ausbildungsinhalt verschieben');
+  handle.setAttribute('title','Zum Verschieben ziehen');
+  handle.setAttribute('draggable','false');
+  handle.textContent='☷';
+  row.insertBefore(handle,row.firstChild);
+ }
  if(list.querySelector('[data-empty-row]'))return;
  const index=inputs.length;
  const row=document.createElement('div');
@@ -2340,6 +2370,145 @@ function bindTrainingAreaInput(input){
   }
  });
 }
+
+/* DRIVEPRO V90.38 – Ausbildungsinhalte per Drag & Drop sortieren.
+   Der Drag-Handle ist bewusst vom Eingabefeld getrennt.
+   Pointer Events decken Maus, Trackpad und Touch/iPad mit demselben Ablauf ab. */
+(function(){
+ if(window.__dpTrainingAreaDnDInitialized)return;
+ window.__dpTrainingAreaDnDInitialized=true;
+
+ let drag=null;
+
+ function listEl(){return document.getElementById('trainingAreasList');}
+ function rows(){
+  const list=listEl();
+  return list?[...list.querySelectorAll('[data-training-area-row]:not([data-empty-row])')]:[];
+ }
+ function clearDropUI(){
+  rows().forEach(r=>r.classList.remove('dp-dnd-source'));
+  document.querySelector('.dpTrainingDropIndicator')?.remove();
+  document.body.classList.remove('dp-training-dnd-active');
+ }
+ function cancelDrag(){
+  if(!drag)return;
+  clearDropUI();
+  try{drag.handle.releasePointerCapture?.(drag.pointerId)}catch(_){}
+  drag=null;
+ }
+ function makeIndicator(list,target,before){
+  const old=document.querySelector('.dpTrainingDropIndicator');
+  if(old)old.remove();
+  const line=document.createElement('div');
+  line.className='dpTrainingDropIndicator';
+  if(target){
+   if(before)list.insertBefore(line,target);
+   else list.insertBefore(line,target.nextSibling);
+  }else{
+   const empty=list.querySelector('[data-empty-row]');
+   if(empty)list.insertBefore(line,empty);
+   else list.appendChild(line);
+  }
+  return line;
+ }
+ function updateIndicator(clientY){
+  if(!drag)return;
+  const list=listEl();
+  if(!list)return;
+  const available=rows().filter(r=>r!==drag.row);
+  let target=null,before=true;
+  for(const row of available){
+   const rect=row.getBoundingClientRect();
+   if(clientY < rect.top + rect.height/2){
+    target=row; before=true; break;
+   }
+  }
+  if(!target && available.length){
+   target=available[available.length-1];
+   before=false;
+  }
+  const line=makeIndicator(list,target,before);
+  line._target=target;
+  line._before=before;
+ }
+ function finishDrag(){
+  if(!drag)return;
+  const currentRows=rows();
+  const source=drag.row;
+  const line=document.querySelector('.dpTrainingDropIndicator');
+  let targetIndex=-1;
+  if(line){
+   const target=line._target;
+   const before=line._before;
+   if(target){
+    const idx=currentRows.indexOf(target);
+    targetIndex=before?idx:idx+1;
+   }else{
+    targetIndex=currentRows.length;
+   }
+  }
+  const from=currentRows.indexOf(source);
+  clearDropUI();
+  try{drag.handle.releasePointerCapture?.(drag.pointerId)}catch(_){}
+  drag=null;
+
+  if(from<0||targetIndex<0)return;
+  if(targetIndex>from)targetIndex--;
+  const afterRows=rows();
+  const safeTarget=Math.max(0,Math.min(targetIndex,afterRows.length-1));
+  if(from===safeTarget)return;
+
+  const list=listEl();
+  if(!list)return;
+  const ref=afterRows[safeTarget];
+  if(!ref)return;
+  if(safeTarget<from)list.insertBefore(source,ref);
+  else list.insertBefore(source,ref.nextSibling);
+
+  updateTrainingAreaNumbers();
+  syncTrainingAreaSettingsFromDom();
+ }
+
+ document.addEventListener('pointerdown',e=>{
+  const handle=e.target.closest?.('.trainingAreaDragHandle');
+  if(!handle)return;
+  const row=handle.closest?.('[data-training-area-row]:not([data-empty-row])');
+  if(!row)return;
+  if(e.pointerType==='mouse' && e.button!==0)return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  drag={row,handle,pointerId:e.pointerId};
+  row.classList.add('dp-dnd-source');
+  document.body.classList.add('dp-training-dnd-active');
+  try{handle.setPointerCapture(e.pointerId)}catch(_){}
+  updateIndicator(e.clientY);
+ },true);
+
+ document.addEventListener('pointermove',e=>{
+  if(!drag||e.pointerId!==drag.pointerId)return;
+  e.preventDefault();
+  updateIndicator(e.clientY);
+ },{capture:true,passive:false});
+
+ document.addEventListener('pointerup',e=>{
+  if(!drag||e.pointerId!==drag.pointerId)return;
+  e.preventDefault();
+  finishDrag();
+ },true);
+
+ document.addEventListener('pointercancel',e=>{
+  if(!drag||e.pointerId!==drag.pointerId)return;
+  cancelDrag();
+ },true);
+
+ window.dpTrainingAreaDnDRefresh=function(){
+  // Rows are dynamically created. The event delegation above means no
+  // per-row listener is required; this function is intentionally lightweight.
+ };
+})();
+
 function initTrainingAreaSettings(){
  trainingAreasInputs().forEach(bindTrainingAreaInput);
  updateTrainingAreaNumbers();
@@ -2434,7 +2603,7 @@ function settingsPage(){
     </section>
     <section class="card settingsCard trainingAreasCard">
       <div class="settingsCardHead"><div class="settingsIcon">📋</div><div><h3>Ausbildungsdiagramm</h3><p>Lege fest, welche Ausbildungsinhalte bei <b>neuen Fahrschülern</b> im Diagramm angelegt werden.</p></div></div>
-      <div class="trainingAreasIntro">Tippe einen neuen Inhalt in das letzte Feld ein – sobald du beginnst, erscheint automatisch darunter das nächste leere Feld. Leere Felder werden nicht gespeichert. Bereits vorhandene Fahrschüler bleiben unverändert, damit keine bestehenden Ausbildungsstände verloren gehen.</div>
+      <div class="trainingAreasIntro">Tippe einen neuen Inhalt in das letzte Feld ein – sobald du beginnst, erscheint automatisch darunter das nächste leere Feld. Ziehe einen bestehenden Inhalt am ☷-Griff an die gewünschte Stelle, um die Reihenfolge zu ändern. Leere Felder werden nicht gespeichert. Bereits vorhandene Fahrschüler bleiben unverändert, damit keine bestehenden Ausbildungsstände verloren gehen.</div>
       <div id="trainingAreasList" class="trainingAreasList">${getTrainingAreas().map((name,i)=>trainingAreaSettingRow(name,i)).join('')}<div class="trainingAreaRow" data-training-area-row data-empty-row><div class="trainingAreaNumber">${getTrainingAreas().length+1}</div><div class="trainingAreaInputWrap"><input class="trainingAreaInput" type="text" maxlength="120" placeholder="Neuer Ausbildungsinhalt …" data-training-area-input></div><button type="button" class="trainingAreaDelete" disabled aria-label="Leeres Feld">×</button></div></div>
       <div class="trainingAreasFooter"><span class="trainingAreasCount" id="trainingAreasCount">${getTrainingAreas().length} Inhalte gespeichert</span><span class="trainingAreasInfo">Die Reihenfolge entspricht der Reihenfolge im Ausbildungsdiagramm.</span></div>
     </section>
