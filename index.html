@@ -1651,8 +1651,14 @@ body.auth-locked #driveProAuth{display:flex}
 <meta name="apple-mobile-web-app-title" content="DrivePro Beta">
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style id="dp-training-reorder-css">
+.trainingAreaOrder{display:flex;gap:4px;align-items:center;flex:0 0 auto}
+.trainingAreaMove{width:30px;height:30px;padding:0;border:1px solid var(--line);border-radius:8px;background:var(--surface2);color:var(--text);font-weight:800;cursor:pointer;line-height:1}
+.trainingAreaMove:hover:not(:disabled){border-color:var(--primary);background:var(--primary-soft)}
+.trainingAreaMove:disabled{opacity:.35;cursor:default}
+</style>
 </head>
-<body class="auth-locked" data-drivepro-version="V90.37"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V90.38"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 
 <div id="driveProAuth" aria-label="DrivePro Anmeldung">
   <div class="dp-auth-card">
@@ -2262,7 +2268,15 @@ function openLogEntry(entryId){
 
 function trainingAreaSettingRow(name,index){
  const safeName=esc(name||'');
- return `<div class="trainingAreaRow" data-training-area-row><div class="trainingAreaNumber">${index+1}</div><div class="trainingAreaInputWrap"><input class="trainingAreaInput" type="text" maxlength="120" value="${safeName}" data-training-area-input></div><button type="button" class="trainingAreaDelete" onclick="removeTrainingAreaSetting(${index})" aria-label="Ausbildungsinhalt löschen">×</button></div>`;
+ return `<div class="trainingAreaRow" data-training-area-row>
+   <div class="trainingAreaNumber">${index+1}</div>
+   <div class="trainingAreaInputWrap"><input class="trainingAreaInput" type="text" maxlength="120" value="${safeName}" data-training-area-input></div>
+   <div class="trainingAreaOrder" aria-label="Reihenfolge">
+    <button type="button" class="trainingAreaMove" ${index===0?'disabled':''} onclick="moveTrainingAreaSetting(this,-1)" aria-label="Ausbildungsinhalt nach oben">↑</button>
+    <button type="button" class="trainingAreaMove" ${index===getTrainingAreas().length-1?'disabled':''} onclick="moveTrainingAreaSetting(this,1)" aria-label="Ausbildungsinhalt nach unten">↓</button>
+   </div>
+   <button type="button" class="trainingAreaDelete" onclick="removeTrainingAreaSetting(this)" aria-label="Ausbildungsinhalt löschen">×</button>
+  </div>`;
 }
 function trainingAreasInputs(){return Array.from(document.querySelectorAll('[data-training-area-input]'));}
 function persistTrainingAreasFromSettings(){
@@ -2280,7 +2294,18 @@ function addTrainingAreaInputIfNeeded(){
  const inputs=trainingAreasInputs();
  const last=inputs[inputs.length-1];
  if(!last||!last.value.trim())return;
- if(last.closest('[data-training-area-row]')?.hasAttribute('data-empty-row'))last.closest('[data-training-area-row]').removeAttribute('data-empty-row');
+ if(last.closest('[data-training-area-row]')?.hasAttribute('data-empty-row')){
+ const row=last.closest('[data-training-area-row]');
+ row.removeAttribute('data-empty-row');
+ row.querySelector('.trainingAreaDelete')?.removeAttribute('disabled');
+ const order=document.createElement('div');
+ order.className='trainingAreaOrder';
+ order.setAttribute('aria-label','Reihenfolge');
+ order.innerHTML='<button type="button" class="trainingAreaMove" aria-label="Ausbildungsinhalt nach oben">↑</button><button type="button" class="trainingAreaMove" aria-label="Ausbildungsinhalt nach unten">↓</button>';
+ order.children[0].onclick=()=>moveTrainingAreaSetting(order.children[0],-1);
+ order.children[1].onclick=()=>moveTrainingAreaSetting(order.children[1],1);
+ row.insertBefore(order,row.querySelector('.trainingAreaDelete'));
+}
  if(list.querySelector('[data-empty-row]'))return;
  const index=inputs.length;
  const row=document.createElement('div');
@@ -2294,6 +2319,7 @@ function addTrainingAreaInputIfNeeded(){
 }
 function updateTrainingAreaNumbers(){
  document.querySelectorAll('#trainingAreasList [data-training-area-row]').forEach((row,i)=>{const n=row.querySelector('.trainingAreaNumber');if(n)n.textContent=String(i+1)});
+ updateTrainingAreaMoveButtons();
 }
 function bindTrainingAreaInput(input){
  if(!input||input.dataset.bound==='1')return;
@@ -2329,13 +2355,46 @@ if(!window.__dpSettingsFocusGuardBound){
   }
  });
 }
-function removeTrainingAreaSetting(index){
+function syncTrainingAreaSettingsFromDom(){
+ const values=trainingAreasInputs().map(input=>input.value.trim()).filter(Boolean);
+ const normalized=normalizeTrainingAreas(values);
+ if(normalized.length)appSettings.trainingAreas=normalized;
+ saveSettings();
+ const count=document.getElementById('trainingAreasCount');
+ if(count)count.textContent=`${getTrainingAreas().length} ${getTrainingAreas().length===1?'Inhalt':'Inhalte'} gespeichert`;
+ showSettingsSaved();
+ updateTrainingAreaNumbers();
+ updateTrainingAreaMoveButtons();
+}
+function updateTrainingAreaMoveButtons(){
+ const rows=[...document.querySelectorAll('#trainingAreasList [data-training-area-row]:not([data-empty-row])')];
+ rows.forEach((row,i)=>{
+  const buttons=row.querySelectorAll('.trainingAreaMove');
+  if(buttons[0])buttons[0].disabled=i===0;
+  if(buttons[1])buttons[1].disabled=i===rows.length-1;
+ });
+}
+function moveTrainingAreaSetting(button,direction){
+ const row=button?.closest?.('[data-training-area-row]');
+ const list=document.getElementById('trainingAreasList');
+ if(!row||!list||row.hasAttribute('data-empty-row'))return;
+ const rows=[...list.querySelectorAll('[data-training-area-row]:not([data-empty-row])')];
+ const index=rows.indexOf(row);
+ const target=index+direction;
+ if(index<0||target<0||target>=rows.length)return;
+ if(direction<0)list.insertBefore(row,rows[target]);
+ else list.insertBefore(row,rows[target].nextSibling);
+ updateTrainingAreaNumbers();
+ updateTrainingAreaMoveButtons();
+ syncTrainingAreaSettingsFromDom();
+}
+function removeTrainingAreaSetting(button){
  const areas=getTrainingAreas();
  if(areas.length<=1){alert('Mindestens ein Ausbildungsinhalt muss vorhanden sein.');return;}
- areas.splice(index,1);
- appSettings.trainingAreas=areas;
- saveSettings();
- settingsPage();
+ const row=button?.closest?.('[data-training-area-row]');
+ if(!row||row.hasAttribute('data-empty-row'))return;
+ row.remove();
+ syncTrainingAreaSettingsFromDom();
 }
 
 function settingsPage(){
