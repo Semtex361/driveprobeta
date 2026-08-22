@@ -1879,7 +1879,7 @@ function dpCloudRefreshSettingsUI(){
   const value=appSettings.durations?.[type];
   if(value!=null&&input.value!==String(value))input.value=String(value);
  });
- const trainingActive=!!active?.matches?.('[data-training-area-input]');
+ const trainingActive=!!active?.matches?.('[data-training-area-input]') || !!window.__dpTrainingDrag;
  const list=document.getElementById('trainingAreasList');
  if(list&&!trainingActive){
   list.innerHTML=getTrainingAreas().map((name,i)=>trainingAreaSettingRow(name,i)).join('')+
@@ -2315,6 +2315,7 @@ function addTrainingAreaInputIfNeeded(){
  handle.title='Zum Verschieben ziehen';
  handle.textContent='☷';
  row.insertBefore(handle,row.firstChild);
+ bindTrainingAreaDragDrop();
 }
  if(list.querySelector('[data-empty-row]'))return;
  const index=inputs.length;
@@ -2327,6 +2328,21 @@ function addTrainingAreaInputIfNeeded(){
  bindTrainingAreaInput(row.querySelector('[data-training-area-input]'));
  updateTrainingAreaNumbers();
 }
+function initTrainingAreaSettings(){
+ trainingAreasInputs().forEach(bindTrainingAreaInput);
+ updateTrainingAreaNumbers();
+ bindTrainingAreaDragDrop();
+}
+function syncTrainingAreaSettingsFromDom(){
+ const values=trainingAreasInputs().map(input=>input.value.trim()).filter(Boolean);
+ const normalized=normalizeTrainingAreas(values);
+ if(!normalized.length)return;
+ appSettings.trainingAreas=normalized;
+ saveSettings();
+ const count=document.getElementById('trainingAreasCount');
+ if(count)count.textContent=`${normalized.length} ${normalized.length===1?'Inhalt':'Inhalte'} gespeichert`;
+ showSettingsSaved();
+}
 function updateTrainingAreaNumbers(){
  document.querySelectorAll('#trainingAreasList [data-training-area-row]').forEach((row,i)=>{const n=row.querySelector('.trainingAreaNumber');if(n)n.textContent=String(i+1)});
 }
@@ -2335,89 +2351,83 @@ function bindTrainingAreaDragDrop(){
  if(!list)return;
  list.querySelectorAll('[data-training-area-drag-handle]').forEach(handle=>{
   if(handle.dataset.dndBound==='1')return;
-  handle.dataset.dndBound='1';
   const row=handle.closest('[data-training-area-row]');
   if(!row||row.hasAttribute('data-empty-row'))return;
+  handle.dataset.dndBound='1';
 
-  let drag=null;
-  const cleanup=()=>{
-   if(!drag)return;
-   if(drag.raf)cancelAnimationFrame(drag.raf);
-   if(drag.placeholder?.parentNode)drag.placeholder.parentNode.removeChild(drag.placeholder);
-   row.classList.remove('dp-dragging');
-   row.style.pointerEvents='';
-   row.style.position='';
-   row.style.zIndex='';
-   row.style.opacity='';
-   row.style.boxShadow='';
-   row.style.transform='';
-   try{handle.releasePointerCapture?.(drag.pointerId)}catch(_){ }
-   drag=null;
-  };
+  handle.addEventListener('pointerdown',e=>{
+   if(e.pointerType==='mouse'&&e.button!==0)return;
+   if(window.__dpTrainingDrag)return;
+   e.preventDefault();
+   const rect=row.getBoundingClientRect();
+   const placeholder=document.createElement('div');
+   placeholder.className='trainingAreaRow dp-drag-placeholder';
+   placeholder.style.height=rect.height+'px';
+   placeholder.setAttribute('aria-hidden','true');
+   list.insertBefore(placeholder,row);
 
-  const movePlaceholder=(clientX,clientY)=>{
-   if(!drag)return;
-   const el=document.elementFromPoint(clientX,clientY);
-   const target=el?.closest?.('#trainingAreasList [data-training-area-row]');
-   if(!target||target===row||target.hasAttribute('data-empty-row'))return;
-   const rect=target.getBoundingClientRect();
-   const before=clientY < rect.top+rect.height/2;
-   const desired=before?target:list.querySelector('[data-training-area-row]:not([data-empty-row]):last-of-type')===target?target.nextSibling:target.nextSibling;
-   if(before){
-    if(drag.placeholder.nextSibling!==target)list.insertBefore(drag.placeholder,target);
-   }else{
-    if(target.nextSibling!==drag.placeholder)list.insertBefore(drag.placeholder,target.nextSibling);
-   }
- };
-
- const onMove=e=>{
-  if(!drag||e.pointerId!==drag.pointerId)return;
-  const dx=e.clientX-drag.startX,dy=e.clientY-drag.startY;
-  if(!drag.started){
-   if(Math.hypot(dx,dy)<6)return;
-   drag.started=true;
+   const drag={row,handle,placeholder,pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,started:false};
+   window.__dpTrainingDrag=drag;
    row.classList.add('dp-dragging');
-   row.style.pointerEvents='none';
-   row.style.zIndex='1000';
-   row.style.boxShadow='0 10px 28px rgba(20,45,75,.20)';
-  }
-  e.preventDefault();
-  movePlaceholder(e.clientX,e.clientY);
-  if(e.clientY<80)window.scrollBy(0,-12);
-  else if(e.clientY>window.innerHeight-80)window.scrollBy(0,12);
- };
 
- const finish=(e,cancel=false)=>{
-  if(!drag||e.pointerId!==drag.pointerId)return;
-  e.preventDefault();
-  const active=drag;
-  if(active.started&&!cancel&&active.placeholder.parentNode){
-   active.placeholder.parentNode.insertBefore(row,active.placeholder);
-   active.placeholder.parentNode.removeChild(active.placeholder);
-   updateTrainingAreaNumbers();
-   syncTrainingAreaSettingsFromDom();
-  }
-  cleanup();
- };
+   const cleanup=()=>{
+    if(window.__dpTrainingDrag!==drag)return;
+    document.removeEventListener('pointermove',onMove);
+    document.removeEventListener('pointerup',onUp);
+    document.removeEventListener('pointercancel',onCancel);
+    row.classList.remove('dp-dragging');
+    row.style.pointerEvents='';
+    if(placeholder.parentNode)placeholder.parentNode.removeChild(placeholder);
+    window.__dpTrainingDrag=null;
+   };
 
- handle.addEventListener('pointerdown',e=>{
-  if(e.pointerType==='mouse'&&e.button!==0)return;
-  if(drag)return;
-  e.preventDefault();
-  const rect=row.getBoundingClientRect();
-  const placeholder=document.createElement('div');
-  placeholder.className='trainingAreaRow dp-drag-placeholder';
-  placeholder.style.height=rect.height+'px';
-  placeholder.setAttribute('aria-hidden','true');
-  list.insertBefore(placeholder,row);
-  drag={pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,started:false,placeholder,raf:0};
-  try{handle.setPointerCapture?.(e.pointerId)}catch(_){ }
- });
- handle.addEventListener('pointermove',onMove,{passive:false});
- handle.addEventListener('pointerup',e=>finish(e,false),{passive:false});
- handle.addEventListener('pointercancel',e=>finish(e,true),{passive:false});
+   const movePlaceholder=(x,y)=>{
+    const el=document.elementFromPoint(x,y);
+    const target=el?.closest?.('#trainingAreasList [data-training-area-row]');
+    if(!target||target===row||target===placeholder||target.hasAttribute('data-empty-row'))return;
+    const rect=target.getBoundingClientRect();
+    const before=y<rect.top+rect.height/2;
+    if(before){
+     if(placeholder.nextSibling!==target)list.insertBefore(placeholder,target);
+    }else{
+     const after=target.nextSibling;
+     if(after!==placeholder)list.insertBefore(placeholder,after);
+    }
+   };
+
+   const onMove=e=>{
+    if(window.__dpTrainingDrag!==drag||e.pointerId!==drag.pointerId)return;
+    const dx=e.clientX-drag.startX,dy=e.clientY-drag.startY;
+    if(!drag.started){
+     if(Math.hypot(dx,dy)<5)return;
+     drag.started=true;
+     row.style.pointerEvents='none';
+    }
+    e.preventDefault();
+    movePlaceholder(e.clientX,e.clientY);
+    if(e.clientY<90)window.scrollBy(0,-12);
+    else if(e.clientY>window.innerHeight-90)window.scrollBy(0,12);
+   };
+
+   const finish=(e,cancel)=>{
+    if(window.__dpTrainingDrag!==drag||e.pointerId!==drag.pointerId)return;
+    e.preventDefault();
+    if(drag.started&&!cancel&&placeholder.parentNode){
+     placeholder.parentNode.insertBefore(row,placeholder);
+     updateTrainingAreaNumbers();
+     syncTrainingAreaSettingsFromDom();
+    }
+    cleanup();
+   };
+   const onUp=e=>finish(e,false);
+   const onCancel=e=>finish(e,true);
+   document.addEventListener('pointermove',onMove,{passive:false});
+   document.addEventListener('pointerup',onUp,{passive:false});
+   document.addEventListener('pointercancel',onCancel,{passive:false});
+  },{passive:false});
  });
 }
+
 function reorderTrainingAreaRows(row,target){
  const list=document.getElementById('trainingAreasList');
  if(!list||!row||!target||row===target)return;
