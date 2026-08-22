@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V90.35</title>
+<title>DrivePro Beta V90.36</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -1706,7 +1706,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-logbook" onclick="page('logbook')"><span>📖</span>Logbuch</button>
     <button id="nav-settings" onclick="page('settings')"><span>⚙</span>Einstellungen</button>
   </nav>
-  <div class="sidefoot">V90.35 · Login & Cloud-Sync aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V90.36 · Login & Cloud-Sync aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -1761,7 +1761,95 @@ try{
   appSettings={...DEFAULT_SETTINGS,...savedSettings,trainingAreas:configuredAreas.length?configuredAreas:[...DEFAULT_SETTINGS.trainingAreas],durations:{...DEFAULT_SETTINGS.durations,...(savedSettings.durations||{})}};
  }
 }catch(e){}
-function saveSettings(){localStorage.setItem(SETTINGS_KEY,JSON.stringify(appSettings))}
+let dpCloudSettingsReady=false;
+let dpCloudSettingsSyncTimer=null;
+let dpCloudSettingsWriteSerial=0;
+let dpCloudSettingsApplyingRemote=false;
+let dpCloudSettingsLastUpdatedAt='';
+function saveSettings(syncCloud=true){
+ localStorage.setItem(SETTINGS_KEY,JSON.stringify(appSettings));
+ if(syncCloud&&!dpCloudSettingsApplyingRemote)dpCloudScheduleSettingsSync();
+}
+function dpCloudSettingsSnapshot(){
+ return JSON.parse(JSON.stringify({
+  theme:appSettings.theme||'light',
+  schoolName:appSettings.schoolName||'',
+  schoolAddress:appSettings.schoolAddress||'',
+  schoolPhone:appSettings.schoolPhone||'',
+  schoolEmail:appSettings.schoolEmail||'',
+  trainingAreas:getTrainingAreas(),
+  durations:{...DEFAULT_SETTINGS.durations,...(appSettings.durations||{})}
+ }));
+}
+function dpCloudScheduleSettingsSync(delay=450){
+ if(!dpCloudSettingsReady||!dpCloudUserId())return;
+ if(dpCloudSettingsSyncTimer)clearTimeout(dpCloudSettingsSyncTimer);
+ dpCloudSettingsSyncTimer=setTimeout(()=>{
+  dpCloudSettingsSyncTimer=null;
+  dpCloudSaveSettingsToCloud().catch(e=>console.warn('DrivePro: Einstellungen konnten nicht synchronisiert werden:',e));
+ },delay);
+}
+async function dpCloudSaveSettingsToCloud(){
+ const client=dpCloudClient(),uid=dpCloudUserId();
+ if(!client||!uid||!dpCloudSettingsReady)return;
+ const snapshot=dpCloudSettingsSnapshot();
+ const serial=++dpCloudSettingsWriteSerial;
+ const r=await client.from('drivepro_settings').upsert({user_id:uid,settings:snapshot},{onConflict:'user_id'}).select('settings,updated_at').single();
+ if(r.error)throw r.error;
+ if(serial===dpCloudSettingsWriteSerial)dpCloudSettingsLastUpdatedAt=r.data?.updated_at||dpCloudSettingsLastUpdatedAt;
+}
+function dpCloudApplySettingsObject(value){
+ if(!value||typeof value!=='object')return false;
+ const areas=normalizeTrainingAreas(value.trainingAreas);
+ const durations={...DEFAULT_SETTINGS.durations,...(value.durations||{})};
+ appSettings={...DEFAULT_SETTINGS,...appSettings,...value,
+  trainingAreas:areas.length?areas:[...DEFAULT_SETTINGS.trainingAreas],
+  durations
+ };
+ localStorage.setItem(SETTINGS_KEY,JSON.stringify(appSettings));
+ applyTheme();
+ return true;
+}
+async function dpCloudLoadSettings(){
+ const client=dpCloudClient(),uid=dpCloudUserId();
+ if(!client||!uid)return;
+ try{
+  const r=await client.from('drivepro_settings').select('settings,updated_at').eq('user_id',uid).maybeSingle();
+  if(r.error)throw r.error;
+  if(r.data?.settings){
+   dpCloudSettingsApplyingRemote=true;
+   try{dpCloudApplySettingsObject(r.data.settings);dpCloudSettingsLastUpdatedAt=r.data.updated_at||''}
+   finally{dpCloudSettingsApplyingRemote=false}
+   return;
+  }
+  /* First device for this account: promote its existing local settings to
+     the cloud. Other devices will subsequently receive this canonical copy. */
+  dpCloudSettingsReady=true;
+  await dpCloudSaveSettingsToCloud();
+ }catch(e){
+  console.warn('DrivePro: Cloud-Einstellungen konnten nicht geladen werden:',e);
+ }finally{
+  dpCloudSettingsReady=true;
+ }
+}
+function dpCloudRealtimeApplySettings(message){
+ const body=message?.payload||message||{};
+ const incoming=body.settings||body.data;
+ if(!incoming||typeof incoming!=='object')return;
+ const incomingAt=String(body.updated_at||'');
+ if(incomingAt&&dpCloudSettingsLastUpdatedAt&&incomingAt<dpCloudSettingsLastUpdatedAt)return;
+ dpCloudSettingsApplyingRemote=true;
+ try{
+  dpCloudApplySettingsObject(incoming);
+  if(incomingAt)dpCloudSettingsLastUpdatedAt=incomingAt;
+  /* Settings affect future entries and the settings screen. Do not rebuild
+     the calendar/dashboard on a remote settings change: that would be an
+     unnecessary UI refresh and could disturb the user's current calendar
+     position. */
+  if(state.page==='settings')settingsPage();
+  console.info('DrivePro Realtime: SETTINGS_UPDATED');
+ }finally{dpCloudSettingsApplyingRemote=false}
+}
 function getTrainingAreas(){
  const areas=normalizeTrainingAreas(appSettings.trainingAreas);
  return areas.length?areas:[...DEFAULT_TRAINING_AREAS];
@@ -2202,10 +2290,10 @@ function settingsPage(){
     <section class="card settingsCard">
       <div class="settingsCardHead"><div class="settingsIcon">🔔</div><div><h3>Benachrichtigungen</h3><p>Meldungen bei hinzugefügten, bearbeiteten oder gelöschten Fahrstunden.</p></div></div>
       <button id="notificationButton" type="button" class="primary settingsAction" onclick="enableNotifications()">🔔 Benachrichtigungen aktivieren</button>
-      <div class="settingsHint">Gilt aktuell für dieses Gerät und diesen Browser.</div>
+      <div class="settingsHint">Die Browser-Berechtigung selbst bleibt aus Sicherheitsgründen geräteabhängig.</div>
     </section>
     <section class="card settingsCard">
-      <div class="settingsCardHead"><div class="settingsIcon">🏫</div><div><h3>Fahrschule</h3><p>Diese Angaben werden lokal auf diesem Gerät gespeichert.</p></div></div>
+      <div class="settingsCardHead"><div class="settingsIcon">🏫</div><div><h3>Fahrschule</h3><p>Diese Angaben werden automatisch mit deinem DrivePro-Konto synchronisiert.</p></div></div>
       <div class="settingsFields">
        <div class="field"><label>Fahrschulname</label><input id="setSchoolName" value="${esc(appSettings.schoolName)}" onchange="updateSchoolSettings()"></div>
        <div class="row"><div class="field"><label>Telefon</label><input id="setSchoolPhone" value="${esc(appSettings.schoolPhone)}" onchange="updateSchoolSettings()"></div><div class="field"><label>E-Mail</label><input id="setSchoolEmail" type="email" value="${esc(appSettings.schoolEmail)}" onchange="updateSchoolSettings()"></div></div>
@@ -3187,6 +3275,8 @@ async function dpCloudRealtimeStart(){
     p=>dpCloudRealtimeApplyLesson(p).catch(dpCloudRealtimeHandleError));
   ch.on('broadcast',{event:'LESSON_DELETED'},
     p=>dpCloudRealtimeApplyLessonDeleted(p));
+  ch.on('broadcast',{event:'SETTINGS_UPDATED'},
+    p=>dpCloudRealtimeApplySettings(p));
 
   ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'training_progress',filter:`user_id=eq.${uid}`},
     p=>dpCloudRealtimeApplyProgress(p).catch(dpCloudRealtimeHandleError));
@@ -3245,6 +3335,9 @@ function dpCloudStartPolling(){
 function dpCloudStopPolling(){}
 function dpCloudHandleReady(){
  setTimeout(async()=>{
+  /* Load the canonical account settings first. Student/template mapping can
+     then use the same configuration on every device from the first render. */
+  await dpCloudLoadSettings();
   await dpCloudLoad();
   dpCloudInitialLoadDone=true;
   await dpCloudRealtimeStart();
@@ -3269,6 +3362,8 @@ async function dpCloudRetryPendingWrites(){
 }
 function dpCloudHandleLogout(){
  dpCloudRealtimeStop();
+ if(dpCloudSettingsSyncTimer){clearTimeout(dpCloudSettingsSyncTimer);dpCloudSettingsSyncTimer=null}
+ dpCloudSettingsReady=false;dpCloudSettingsWriteSerial=0;dpCloudSettingsLastUpdatedAt='';
  dpCloudStopPolling();dpCloudReady=false;dpCloudBusy=false;dpCloudInitialLoadDone=false;
  dpCloudKnownStudentIds=new Set();dpCloudDeletingStudentIds=new Set();
  dpCloudPendingStudentIds=new Set();dpCloudPendingLessonIds=new Set();
