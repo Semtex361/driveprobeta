@@ -2203,20 +2203,29 @@ async function dpSaveStudentInstructorAssignments(studentId,instructorIds){
  if(saved.length!==wanted.length||saved.some((id,i)=>id!==wanted[i])){
   throw new Error('Die Fahrlehrer-Zuweisungen konnten nicht vollständig bestätigt werden.');
  }
- /* Broadcast only AFTER the atomic database RPC has committed. This is the
-    authoritative assignment state and avoids the old race where the student
-    UPDATE broadcast was sent before student_instructors was changed. */
- try{
-  const ch=dpCloudRealtimeChannel;
-  if(ch&&String(ch.state||'').toUpperCase()==='SUBSCRIBED'){
-   await ch.send({
+ /* Broadcast only AFTER the atomic database RPC has committed.
+    IMPORTANT: supabase-js reports SUBSCRIBED via the callback, while
+    channel.state is 'joined'. The old code compared channel.state with
+    'SUBSCRIBED', so it NEVER sent the assignment broadcast. */
+ const assignmentBroadcast={
+  student_id:String(studentId),
+  school_id:String(school),
+  instructor_id:saved[0]||null,
+  instructor_ids:saved
+ };
+ dpCloudPendingAssignmentBroadcasts.set(String(studentId),assignmentBroadcast);
+ const ch=dpCloudRealtimeChannel;
+ if(ch&&dpCloudRealtimeSubscribed){
+  try{
+   const result=await ch.send({
     type:'broadcast',
     event:'STUDENT_ASSIGNMENT_CHANGED',
-    payload:{student_id:studentId,school_id:school,instructor_id:saved[0]||null,instructor_ids:saved}
+    payload:assignmentBroadcast
    });
+   if(result==='ok'||result===undefined)dpCloudPendingAssignmentBroadcasts.delete(String(studentId));
+  }catch(broadcastError){
+   console.warn('DrivePro assignment broadcast:',broadcastError);
   }
- }catch(broadcastError){
-  console.warn('DrivePro assignment broadcast:',broadcastError);
  }
  return {ids:saved,legacyOnly:false,setupMissing:false};
 }
@@ -3295,6 +3304,8 @@ let dpCloudBusy=false;
 let dpCloudLoadQueued=false;
 let dpCloudInitialLoadDone=false;
 let dpCloudRealtimeChannel=null;
+let dpCloudRealtimeSubscribed=false;
+let dpCloudPendingAssignmentBroadcasts=new Map();
 let dpCloudRealtimeStarting=false;
 let dpCloudRealtimeRetryTimer=null;
 let dpCloudRealtimeRetryCount=0;
@@ -3781,7 +3792,7 @@ function dpCloudForceSync(){
 
 function dpCloudRealtimeStop(){
  if(dpCloudRealtimeRetryTimer){clearTimeout(dpCloudRealtimeRetryTimer);dpCloudRealtimeRetryTimer=null}
- const c=dpCloudRealtimeChannel;dpCloudRealtimeChannel=null;dpCloudRealtimeStarting=false;dpCloudRealtimeRetryCount=0;
+ const c=dpCloudRealtimeChannel;dpCloudRealtimeChannel=null;dpCloudRealtimeSubscribed=false;dpCloudRealtimeStarting=false;dpCloudRealtimeRetryCount=0;
  if(c&&dpCloudClient()){try{dpCloudClient().removeChannel(c)}catch(e){}}
 }
 function dpCloudRealtimeScheduleRetry(){
@@ -4058,14 +4069,25 @@ async function dpCloudRealtimeStart(){
       p=>dpCloudRealtimeApplyProgress(p).catch(dpCloudRealtimeHandleError));
   }
 
-  ch.subscribe(status=>{
+  ch.subscribe(async status=>{
    if(status==='SUBSCRIBED'){
     dpCloudRealtimeRetryCount=0;
+    dpCloudRealtimeSubscribed=true;
     dpCloudStatus('ok','Cloud gespeichert · Live-Sync aktiv');
+    /* Flush assignment changes saved while this channel was joining. */
+    const pending=[...dpCloudPendingAssignmentBroadcasts.entries()];
+    for(const [key,payload] of pending){
+     try{
+      const result=await ch.send({type:'broadcast',event:'STUDENT_ASSIGNMENT_CHANGED',payload});
+      if(result==='ok'||result===undefined)dpCloudPendingAssignmentBroadcasts.delete(key);
+     }catch(e){console.warn('DrivePro assignment broadcast flush:',e);}
+    }
    }else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){
+    dpCloudRealtimeSubscribed=false;
     if(dpCloudRealtimeChannel===ch)dpCloudRealtimeChannel=null;
     dpCloudRealtimeHandleError(new Error('Realtime '+status+' · Live-Sync ist nicht verbunden'));
    }else if(status==='CLOSED'){
+    dpCloudRealtimeSubscribed=false;
     if(dpCloudRealtimeChannel===ch)dpCloudRealtimeChannel=null;
     dpCloudRealtimeScheduleRetry();
    }
@@ -4088,7 +4110,7 @@ function dpCloudBindRealtimeLifecycle(){
    if(!c||!uid)return;
    if(dpCloudRealtimeChannel){
      const st=String(dpCloudRealtimeChannel.state||'').toUpperCase();
-     if(st==='SUBSCRIBED')return;
+     if(dpCloudRealtimeSubscribed)return;
      try{await c.removeChannel(dpCloudRealtimeChannel)}catch(e){}
      dpCloudRealtimeChannel=null;
    }
