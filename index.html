@@ -1785,7 +1785,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-vehicles" class="dp-role-school" onclick="page('vehicles')"><span>🚗</span>Fahrzeuge</button>
     <button id="nav-requests" class="dp-role-request" onclick="page('requests')"><span>📨</span>Anfragen</button>
   </nav>
-  <div class="sidefoot">V91.19 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V91.19.1 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -4358,6 +4358,18 @@ let dpClient=null;
 let dpProfile=null;
 function dpName(p,u){
  return p?.display_name||[p?.first_name,p?.last_name].filter(Boolean).join(' ')||u?.email||'DrivePro Benutzer';
+}
+function dpMessage(text,type='error'){
+ const box=$('dpLoginMessage');
+ if(!box)return;
+ box.textContent=text||'';
+ box.className='dp-auth-message'+(text?' '+type:'');
+}
+function dpBusy(busy){
+ const b=$('dpLoginButton');
+ if(!b)return;
+ b.disabled=busy;
+ b.textContent=busy?'Anmeldung läuft …':'Anmelden';
 }
 function dpShowLoginView(){
  const login=$('dpLoginView');
