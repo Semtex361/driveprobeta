@@ -3385,6 +3385,15 @@ async function dpCloudMigrateLocal(sourceStudents=students){
  else{localStorage.setItem(DP_CLOUD_OWNER_KEY,uid);dpCloudReady=true;dpCloudStatus('ok',`${migrated} Fahrschüler mit der Cloud abgeglichen.`)}
  return {migrated,failed};
 }
+function dpCloudStudentsQuery(client,uid){
+ const acct=dpAccountType(),schoolId=window.driveProAuth?.schoolId;
+ let q=client.from('students').select('*').order('last_name',{ascending:true});
+ if(acct==='school')q=q.eq('school_id',schoolId||'__none__');
+ else if(acct==='instructor')q=q.eq('school_id',schoolId||'__none__').eq('instructor_id',uid);
+ else q=q.eq('school_id',schoolId||'__none__').eq('linked_user_id',uid);
+ return q;
+}
+
 async function dpCloudLoad(){
  const client=dpCloudClient(),uid=dpCloudUserId();if(!client||!uid)return;
  if(dpCloudBusy){dpCloudLoadQueued=true;return}
@@ -3395,12 +3404,8 @@ async function dpCloudLoad(){
   /* The student list is the critical part of the sync. Ancillary tables
      must never prevent students from loading. This is especially important
      on a newly authenticated mobile session. */
-  let srQuery=client.from('students').select('*').order('last_name',{ascending:true});
+  const sr=await dpCloudStudentsQuery(client,uid);
   const acct=dpAccountType(),schoolId=window.driveProAuth?.schoolId;
-  if(acct==='school')srQuery=srQuery.eq('school_id',schoolId||'__none__');
-  else if(acct==='instructor')srQuery=srQuery.eq('school_id',schoolId||'__none__').eq('instructor_id',uid);
-  else srQuery=srQuery.eq('school_id',schoolId||'__none__').eq('linked_user_id',uid);
-  const sr=await srQuery;
   if(sr.error)throw new Error('students: '+(sr.error.message||'Lesefehler'));
 
   let deletedIds=new Set();
@@ -3463,7 +3468,7 @@ async function dpCloudLoad(){
    if(result.failed.length){
     dpCloudStatus('error',`${result.migrated} gespeichert, ${result.failed.length} konnten nicht übertragen werden.`);
    }
-   const again=await client.from('students').select('*').eq('user_id',uid).order('last_name',{ascending:true});
+   const again=await dpCloudStudentsQuery(client,uid);
    if(again.error)throw new Error('students: '+again.error.message);
    cloudStudents=(again.data||[]).filter(r=>!deletedIds.has(String(r.id))&&!dpCloudDeletingStudentIds.has(String(r.id)));
   }else if(candidates.length){
@@ -3475,7 +3480,7 @@ async function dpCloudLoad(){
      console.error('DrivePro: ausstehender Schüler',s.id,e);
     }
    }
-   const again=await client.from('students').select('*').eq('user_id',uid).order('last_name',{ascending:true});
+   const again=await dpCloudStudentsQuery(client,uid);
    if(again.error)throw new Error('students: '+(again.error?.message||'Lesefehler'));
    cloudStudents=(again.data||[]).filter(r=>!deletedIds.has(String(r.id))&&!dpCloudDeletingStudentIds.has(String(r.id)));
   }
@@ -3599,23 +3604,52 @@ function dpCloudRealtimeScheduleRetry(){
  dpCloudRealtimeRetryTimer=setTimeout(()=>{dpCloudRealtimeRetryTimer=null;dpCloudRealtimeStart()},delay);
 }
 function dpCloudRealtimeHandleError(err){console.warn('DrivePro Realtime:',err);dpCloudRealtimeScheduleRetry()}
-async function dpCloudRealtimeApplyStudent(id){
+async function dpCloudRealtimeApplyStudent(id,eventPayload=null){
  const c=dpCloudClient(),uid=dpCloudUserId(),acct=dpAccountType(),schoolId=window.driveProAuth?.schoolId;
  if(!c||!uid||!id||dpCloudDeletingStudentIds.has(id)||dpCloudPendingStudentIds.has(id))return;
 
- /* Realtime rows belong to the school. Resolve the same scope used by
-    dpCloudLoad(), otherwise instructor assignment changes are missed. */
- let sq=c.from('students').select('*').eq('id',id);
- if(acct==='school')sq=sq.eq('school_id',schoolId||'__none__');
- else if(acct==='instructor')sq=sq.eq('school_id',schoolId||'__none__').eq('instructor_id',uid);
- else sq=sq.eq('school_id',schoolId||'__none__').eq('linked_user_id',uid);
- const sr=await sq.maybeSingle();if(sr.error)throw sr.error;
- const idx=students.findIndex(s=>s.id===id);
- if(!sr.data){if(idx>=0){students.splice(idx,1);save();if(['calendar','dashboard','students','stats'].includes(state.page))render()}return}
+ const eventRow=eventPayload?.new||eventPayload?.old||null;
+ const localIdx=students.findIndex(s=>s.id===id);
+ const local=localIdx>=0?students[localIdx]:null;
+
+ /* IMPORTANT: an UPDATE can be an instructor assignment change. Do not wait
+    for a second REST query to decide whether the row belongs to this account.
+    The realtime payload already contains instructor_id/school_id. This avoids
+    the race where the dashboard shows the student and a later refresh removes
+    it again before the query catches up. */
+ if(eventRow){
+   const sameSchool=!schoolId||!eventRow.school_id||String(eventRow.school_id)===String(schoolId);
+   const visible=acct==='school'
+     ? sameSchool
+     : acct==='instructor'
+       ? sameSchool && String(eventRow.instructor_id||'')===String(uid)
+       : sameSchool && String(eventRow.linked_user_id||'')===String(uid);
+   if(!visible){
+     if(localIdx>=0){
+       students.splice(localIdx,1);
+       save();
+       if(['calendar','dashboard','students','stats'].includes(state.page))render();
+     }
+     return;
+   }
+ }
+
+ /* Fetch the canonical row using the same role/school scope as dpCloudLoad(). */
+ const sr=await dpCloudStudentsQuery(c,uid).eq('id',id).maybeSingle();
+ if(sr.error)throw sr.error;
+ if(!sr.data){
+   /* A missing row is only a deletion for a row that was previously visible.
+      Do not let an unrelated/RLS-timing miss erase local instructor data. */
+   if(localIdx>=0 && acct==='school'){
+     students.splice(localIdx,1);save();
+     if(['calendar','dashboard','students','stats'].includes(state.page))render();
+   }
+   return;
+ }
  const pr=await c.from('training_progress').select('*').eq('school_id',schoolId||'__none__').eq('student_id',id);if(pr.error)throw pr.error;
  const lr=await c.from('lessons').select('id,user_id,student_id,school_id,instructor_id,vehicle_id,lesson_date,start_time,end_time,lesson_type,special_type,duration_minutes,kilometers,notes,color,signature').eq('school_id',schoolId||'__none__').eq('student_id',id).order('lesson_date').order('start_time');if(lr.error)throw lr.error;
  const pm=new Map((pr.data||[]).map(x=>[x.area_name,x]));
- const old=idx>=0?students[idx]:null;
+ const old=localIdx>=0?students[localIdx]:null;
  const areaNames=old?.areas?.length?old.areas.map(a=>a.name).filter(Boolean):getTrainingAreas();
  const mergedAreaNames=[...areaNames,...(pr.data||[]).map(x=>x.area_name).filter(Boolean).filter(name=>!areaNames.includes(name))];
  const s={
@@ -3628,19 +3662,11 @@ async function dpCloudRealtimeApplyStudent(id){
   visionAid:sr.data.vision_aid===true,theoryPassed:sr.data.theory_passed===true,
   practiceExamDate:sr.data.practice_exam_date||'',licenseReceivedDate:sr.data.license_received_date||'',notes:sr.data.notes||'',
   signature:old?.signature||null,
-  areas:mergedAreaNames.map(name=>{
-    const previous=(old?.areas||[]).find(a=>a.name===name);
-    const x=pm.get(name);
-    return {name,level:x?.level||previous?.level||'Offen',note:x?.note||previous?.note||''};
-  }),
-  lessons:(lr.data||[]).map(x=>({
-    id:x.id,date:x.lesson_date,startTime:(x.start_time||'').slice(0,5),
-    duration:Number(x.duration_minutes)||0,special:x.special_type||'',lessonType:x.lesson_type||'Fahrstunde',
-    note:x.notes||'',kilometers:x.kilometers==null?'':x.kilometers,color:x.color||null,signature:x.signature||null,
-    vehicleId:x.vehicle_id||null,instructorId:x.instructor_id||null
-  }))
+  areas:mergedAreaNames.map(name=>{const previous=(old?.areas||[]).find(a=>a.name===name);const x=pm.get(name);return{name,level:x?.level||previous?.level||'Offen',note:x?.note||previous?.note||''}}),
+  lessons:(lr.data||[]).map(x=>({id:x.id,date:x.lesson_date,startTime:(x.start_time||'').slice(0,5),duration:Number(x.duration_minutes)||0,special:x.special_type||'',lessonType:x.lesson_type||'Fahrstunde',note:x.notes||'',kilometers:x.kilometers==null?'':x.kilometers,color:x.color||null,signature:x.signature||null,vehicleId:x.vehicle_id||null,instructorId:x.instructor_id||null}))
  };
- if(idx>=0)students[idx]=s;else students.push(s);dpCloudKnownStudentIds.add(id);save();
+ if(localIdx>=0)students[localIdx]=s;else students.push(s);
+ dpCloudKnownStudentIds.add(id);save();
  if(['calendar','dashboard','students','stats'].includes(state.page))render();
 }
 async function dpCloudRealtimeApplyLesson(p){
@@ -3732,9 +3758,9 @@ async function dpCloudRealtimeStart(){
   const schoolFilter=schoolId?`school_id=eq.${schoolId}`:null;
   if(schoolFilter){
     ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'students',filter:schoolFilter},
-      p=>dpCloudRealtimeApplyStudent(p.new.id).catch(dpCloudRealtimeHandleError));
+      p=>dpCloudRealtimeApplyStudent(p.new.id,p).catch(dpCloudRealtimeHandleError));
     ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'students',filter:schoolFilter},
-      p=>dpCloudRealtimeApplyStudent(p.new.id).catch(dpCloudRealtimeHandleError));
+      p=>dpCloudRealtimeApplyStudent(p.new.id,p).catch(dpCloudRealtimeHandleError));
   }
   ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'students'},
     p=>{
