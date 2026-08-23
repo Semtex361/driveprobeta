@@ -2135,14 +2135,16 @@ async function openStudentForm(studentId=''){
  if(dpIsSchool()){
   try{instructors=await dpLoadSchoolInstructors()}catch(e){console.error('DrivePro: Fahrlehrer konnten nicht geladen werden',e);alert('Die Fahrlehrer konnten nicht geladen werden. Bitte Cloud-Verbindung prüfen.');return}
  }
- const instructorField=dpIsSchool()?`<div class="row"><div class="field" style="flex:1"><label>Fahrlehrer zuweisen</label><div class="muted" style="margin:4px 0 10px">Setze einen Haken bei dem Fahrlehrer, der diesen Fahrschüler betreut. Es kann immer nur ein Fahrlehrer gleichzeitig ausgewählt sein.</div><div id="studentInstructorChecks" style="display:grid;gap:8px">${instructors.filter(p=>p.is_active!==false).map(p=>{const checked=String(p.id)===String(s?.instructorId||'');return `<label class="card" style="display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer"><input type="checkbox" class="student-instructor-check" data-instructor-id="${esc(p.id)}" ${checked?'checked':''} onchange="studentInstructorChanged(this)" style="width:20px;height:20px;min-width:20px;accent-color:var(--accent);cursor:pointer"><span class="grow"><b>${esc(dpStaffName(p))}</b><span class="muted" style="display:block;font-size:12px;margin-top:2px">Fahrlehrer</span></span></label>`}).join('')||'<div class="muted">Noch kein aktiver Fahrlehrer vorhanden.</div>'}</div><div class="muted" style="margin-top:7px">Haken entfernen = keine Fahrlehrer-Zuweisung.</div></div></div>`:'';
+ const instructorField=dpIsSchool()?`<div class="row"><div class="field" style="flex:1">
+<label>Fahrlehrer zuweisen</label>
+<select id="studentInstructorSelect">
+<option value="">Nicht zugewiesen</option>
+${instructors.filter(p=>p.is_active!==false).map(p=>`<option value="${esc(p.id)}" ${String(p.id)===String(s?.instructorId||'')?'selected':''}>${esc(dpStaffName(p))}</option>`).join('')}
+</select>
+<div class="muted" style="margin-top:5px">Wähle einen Fahrlehrer. Bei einem Fahrlehrerwechsel kannst du hier jederzeit einen anderen Fahrlehrer auswählen.</div>
+</div></div>`:'';
+
  openModal(`<h2>${s?'Fahrschüler bearbeiten':'Neuer Fahrschüler'}</h2><div class="row"><div class="field"><label>Vorname</label><input id="sf" value="${esc(s?.firstName||'')}"></div><div class="field"><label>Nachname</label><input id="sl" value="${esc(s?.lastName||'')}"></div></div><div class="row"><div class="field"><label>Klasse</label><select id="sc">${['B','B78','B197'].map(x=>`<option ${x===(s?.license||'B')?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Ausbildungsbeginn</label><input id="sd" type="date" value="${s?.start||new Date().toISOString().slice(0,10)}"></div></div>${instructorField}<div class="row"><div class="field"><label>Geburtsdatum</label><input id="sb" type="date" value="${s?.birthDate||''}"></div><div class="field"><label>Telefon</label><input id="sphone" type="tel" value="${esc(s?.phone||'')}" placeholder="z. B. 0176 12345678"></div></div><div class="row"><div class="field"><label>E-Mail</label><input id="semail" type="email" value="${esc(s?.email||'')}" placeholder="name@example.de"></div><div class="field"><label>Adresse</label><input id="saddress" value="${esc(s?.address||'')}" placeholder="Straße, Hausnummer, PLZ Ort"></div></div><div class="studentChecks"><label><input type="checkbox" id="sv" ${s?.visionAid===true?'checked':''}> Sehhilfe</label><label><input type="checkbox" id="st" ${s?.theoryPassed===true?'checked':''}> Theorie bestanden</label></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveStudent('${studentId}')">Speichern</button></div>`)
-}
-function studentInstructorChanged(changed){
- if(!changed)return;
- if(changed.checked){
-  document.querySelectorAll('.student-instructor-check').forEach(cb=>{if(cb!==changed)cb.checked=false;});
- }
 }
 
 async function deleteStudent(sid,event){
@@ -2182,18 +2184,24 @@ async function saveStudent(sid){
  const f=document.getElementById('sf').value.trim(),l=document.getElementById('sl').value.trim();
  if(!f||!l){alert('Bitte Vor- und Nachnamen eingeben.');return}
  const personal={firstName:f,lastName:l,license:document.getElementById('sc').value,start:document.getElementById('sd').value,birthDate:document.getElementById('sb').value,phone:document.getElementById('sphone').value.trim(),email:document.getElementById('semail').value.trim(),address:document.getElementById('saddress').value.trim(),visionAid:document.getElementById('sv').checked,theoryPassed:document.getElementById('st').checked};
- const selectedInstructor=dpIsSchool()?(document.querySelector('.student-instructor-check:checked')?.dataset.instructorId||null):null;
+ const selectedInstructor=dpIsSchool()?(document.getElementById('studentInstructorSelect')?.value||null):null;
  if(sid){
   const s=getStudent(sid);if(!s)return;
   Object.assign(s,personal);
-  if(dpIsSchool())s.instructorId=selectedInstructor;
+  if(dpIsSchool())s.instructorId=selectedInstructor||null;
   dpCloudMarkPending(sid);dpCloudMarkProgressPending(sid);for(const l of (s.lessons||[]))dpCloudMarkLessonPending(l.id,l);
   dpCloudBackupLocal();save();closeModal();render();
-  if(dpCloudReady)dpCloudUpsertStudent(s).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')});
+  if(dpCloudReady){
+   try{await dpCloudUpsertStudent(s); await dpCloudLoad();}
+   catch(e){console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')}
+  }
  }else{
-  const s={id:id(),...personal,schoolId:window.driveProAuth?.schoolId||null,instructorId:dpIsSchool()?selectedInstructor:(dpAccountType()==='instructor'?window.driveProAuth?.user?.id:null),linkedUserId:null,areas:trainingAreasForNewStudent(),lessons:[],signature:null};
+  const s={id:id(),...personal,schoolId:window.driveProAuth?.schoolId||null,instructorId:dpIsSchool()?(selectedInstructor||null):(dpAccountType()==='instructor'?window.driveProAuth?.user?.id:null),linkedUserId:null,areas:trainingAreasForNewStudent(),lessons:[],signature:null};
   students.push(s);dpCloudMarkPending(s.id);dpCloudBackupLocal();save();closeModal();render();
-  if(dpCloudReady)dpCloudUpsertStudent(s).catch(e=>{console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')});
+  if(dpCloudReady){
+   try{await dpCloudUpsertStudent(s); await dpCloudLoad();}
+   catch(e){console.error(e);dpCloudStatus('error',e.message||'Speichern fehlgeschlagen')}
+  }
  }
 }
 
@@ -3269,7 +3277,19 @@ async function dpCloudUpsertStudent(s){
    await dpCloudSyncProgress(s,true);
    for(const l of (s.lessons||[]))await dpCloudUpsertLesson(s,l,true,true);
   });
-  dpCloudReady=true;dpCloudClearPending(s.id);dpCloudStatus('ok','Fahrschüler und Ausbildungsstand sind in der Cloud gespeichert.');
+  dpCloudReady=true;
+  dpCloudClearPending(s.id);
+  try{
+    const schoolId=s.schoolId||window.driveProAuth?.schoolId;
+    if(dpCloudRealtimeChannel&&schoolId){
+      await dpCloudRealtimeChannel.send({
+        type:'broadcast',
+        event:'STUDENT_ASSIGNMENT_CHANGED',
+        payload:{student_id:s.id,school_id:schoolId,instructor_id:s.instructorId||null}
+      });
+    }
+  }catch(broadcastError){console.warn('DrivePro assignment broadcast:',broadcastError);}
+  dpCloudStatus('ok','Fahrschüler und Ausbildungsstand sind in der Cloud gespeichert.');
  }catch(e){dpCloudStatus('error',e?.message||'Fahrschüler konnte nicht synchronisiert werden.');throw e}
 }
 async function dpCloudUpsertLesson(s,l,silent=false,alreadyQueued=false){
@@ -3592,6 +3612,13 @@ function dpCloudRealtimeScheduleRetry(){
  const delay=Math.min(30000,1000*Math.pow(2,dpCloudRealtimeRetryCount++));
  dpCloudRealtimeRetryTimer=setTimeout(()=>{dpCloudRealtimeRetryTimer=null;dpCloudRealtimeStart()},delay);
 }
+async function dpCloudApplyStudentAssignmentChange(studentId,instructorId){
+ const idx=students.findIndex(s=>String(s.id)===String(studentId));
+ if(idx<0){await dpCloudLoad();return;}
+ students[idx].instructorId=instructorId||null;
+ save();
+ if(['dashboard','students','archive','calendar','stats','logbook'].includes(state.page))render();
+}
 function dpCloudRealtimeHandleError(err){console.warn('DrivePro Realtime:',err);dpCloudRealtimeScheduleRetry()}
 async function dpCloudRealtimeApplyStudent(id,eventPayload=null){
  const c=dpCloudClient(),uid=dpCloudUserId(),acct=dpAccountType(),schoolId=window.driveProAuth?.schoolId;
@@ -3772,6 +3799,15 @@ async function dpCloudRealtimeStart(){
     p=>dpCloudRealtimeApplyLessonDeleted(p));
   ch.on('broadcast',{event:'SETTINGS_UPDATED'},
     p=>dpCloudRealtimeApplySettings(p));
+
+  ch.on('broadcast',{event:'STUDENT_ASSIGNMENT_CHANGED'},async msg=>{
+    const payload=msg?.payload||{};
+    const schoolId=window.driveProAuth?.schoolId;
+    if(!payload.student_id || (schoolId && payload.school_id && String(payload.school_id)!==String(schoolId)))return;
+    try{
+      await dpCloudApplyStudentAssignmentChange(payload.student_id,payload.instructor_id||null);
+    }catch(e){dpCloudRealtimeHandleError(e);}
+  });
 
   /* Lesson requests are school-scoped. A request/response must appear on an
      already-open Anfragen page without requiring a manual reload. */
