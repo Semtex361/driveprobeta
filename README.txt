@@ -1,19 +1,19 @@
-DrivePro V91.15 – Realtime Assignment Broadcast Fix
+DrivePro V91.15 – Realtime Assignment Fix
 
-Root cause fixed:
-The V91.14 code checked `channel.state === 'SUBSCRIBED'` before sending
-the STUDENT_ASSIGNMENT_CHANGED broadcast. Supabase JS reports SUBSCRIBED
-through the subscribe callback, while the channel state is `joined`.
-Therefore the broadcast was never sent.
+Based directly on the user-supplied V91.14 build.
 
-Fix:
-- Track the actual SUBSCRIBED callback state.
-- Queue assignment broadcasts if the channel is still joining.
-- Flush queued assignment broadcasts immediately after SUBSCRIBED.
-- Reset the realtime subscribed flag on errors/close/logout.
-- Avoid the incorrect lifecycle check against channel.state='SUBSCRIBED'.
+Changes in this build are isolated to Realtime assignment handling:
+- Correctly tracks Supabase Realtime subscription via the SUBSCRIBED callback.
+- Does not inspect the internal RealtimeChannel.state for SUBSCRIBED.
+- Queues assignment broadcasts until the channel is actually subscribed.
+- Uses broadcast acknowledgements and retries failed queued broadcasts.
+- Keeps the school-scoped private Realtime channel.
+- Keeps existing database/RLS logic unchanged.
+- Version marker is V91.15.
 
-No Supabase schema/data changes are required for this fix.
+Validation performed:
+- All inline JavaScript blocks pass node --check.
+- Source contains V91.15 and no V91.14 markers.
+- No Supabase SQL/DDL is included or required for this frontend fix.
 
-Validation:
-- 6 JavaScript blocks syntax-checked successfully.
+V91.8 remains the rollback/backup baseline.

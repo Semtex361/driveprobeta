@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V91.14</title>
+<title>DrivePro Beta V91.15</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -1722,7 +1722,7 @@ body.auth-locked #driveProAuth{display:flex}
 .trainingAreaMove:disabled{opacity:.35;cursor:default}
 </style>
 </head>
-<body class="auth-locked" data-drivepro-version="V91.14"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V91.15"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 
 <div id="driveProAuth" aria-label="DrivePro Anmeldung">
   <div class="dp-auth-card">
@@ -1802,7 +1802,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-vehicles" class="dp-role-school" onclick="page('vehicles')"><span>🚗</span>Fahrzeuge</button>
     <button id="nav-requests" class="dp-role-request" onclick="page('requests')"><span>📨</span>Anfragen</button>
   </nav>
-  <div class="sidefoot">V91.14 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V91.15 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -2203,30 +2203,15 @@ async function dpSaveStudentInstructorAssignments(studentId,instructorIds){
  if(saved.length!==wanted.length||saved.some((id,i)=>id!==wanted[i])){
   throw new Error('Die Fahrlehrer-Zuweisungen konnten nicht vollständig bestätigt werden.');
  }
- /* Broadcast only AFTER the atomic database RPC has committed.
-    IMPORTANT: supabase-js reports SUBSCRIBED via the callback, while
-    channel.state is 'joined'. The old code compared channel.state with
-    'SUBSCRIBED', so it NEVER sent the assignment broadcast. */
- const assignmentBroadcast={
-  student_id:String(studentId),
-  school_id:String(school),
+ /* Broadcast only AFTER the atomic database RPC has committed. This is the
+    authoritative assignment state and avoids the old race where the student
+    UPDATE broadcast was sent before student_instructors was changed. */
+ await dpCloudSendAssignmentBroadcast({
+  student_id:studentId,
+  school_id:school,
   instructor_id:saved[0]||null,
   instructor_ids:saved
- };
- dpCloudPendingAssignmentBroadcasts.set(String(studentId),assignmentBroadcast);
- const ch=dpCloudRealtimeChannel;
- if(ch&&dpCloudRealtimeSubscribed){
-  try{
-   const result=await ch.send({
-    type:'broadcast',
-    event:'STUDENT_ASSIGNMENT_CHANGED',
-    payload:assignmentBroadcast
-   });
-   if(result==='ok'||result===undefined)dpCloudPendingAssignmentBroadcasts.delete(String(studentId));
-  }catch(broadcastError){
-   console.warn('DrivePro assignment broadcast:',broadcastError);
-  }
- }
+ });
  return {ids:saved,legacyOnly:false,setupMissing:false};
 }
 async function openStudentForm(studentId=''){
@@ -3304,11 +3289,11 @@ let dpCloudBusy=false;
 let dpCloudLoadQueued=false;
 let dpCloudInitialLoadDone=false;
 let dpCloudRealtimeChannel=null;
-let dpCloudRealtimeSubscribed=false;
-let dpCloudPendingAssignmentBroadcasts=new Map();
 let dpCloudRealtimeStarting=false;
 let dpCloudRealtimeRetryTimer=null;
 let dpCloudRealtimeRetryCount=0;
+let dpCloudRealtimeSubscribed=false;
+let dpCloudPendingAssignmentBroadcasts=[];
 let dpCloudKnownStudentIds=new Set();
 let dpCloudPendingLessonIds=new Set();
 let dpCloudPendingLessonSnapshots=new Map();
@@ -3792,8 +3777,30 @@ function dpCloudForceSync(){
 
 function dpCloudRealtimeStop(){
  if(dpCloudRealtimeRetryTimer){clearTimeout(dpCloudRealtimeRetryTimer);dpCloudRealtimeRetryTimer=null}
- const c=dpCloudRealtimeChannel;dpCloudRealtimeChannel=null;dpCloudRealtimeSubscribed=false;dpCloudRealtimeStarting=false;dpCloudRealtimeRetryCount=0;
+ const c=dpCloudRealtimeChannel;dpCloudRealtimeChannel=null;dpCloudRealtimeStarting=false;dpCloudRealtimeSubscribed=false;dpCloudRealtimeRetryCount=0;
+ dpCloudPendingAssignmentBroadcasts=[];
  if(c&&dpCloudClient()){try{dpCloudClient().removeChannel(c)}catch(e){}}
+}
+async function dpCloudSendAssignmentBroadcast(payload){
+ const ch=dpCloudRealtimeChannel;
+ if(!ch||!dpCloudRealtimeSubscribed){
+   dpCloudPendingAssignmentBroadcasts.push(payload);
+   return false;
+ }
+ try{
+   const result=await ch.send({type:'broadcast',event:'STUDENT_ASSIGNMENT_CHANGED',payload});
+   if(result&&result!=='ok'&&result!=='OK'){console.warn('DrivePro assignment broadcast status:',result);}
+   return true;
+ }catch(e){
+   console.warn('DrivePro assignment broadcast:',e);
+   dpCloudPendingAssignmentBroadcasts.push(payload);
+   return false;
+ }
+}
+async function dpCloudFlushAssignmentBroadcasts(){
+ if(!dpCloudRealtimeSubscribed||!dpCloudRealtimeChannel||!dpCloudPendingAssignmentBroadcasts.length)return;
+ const queue=dpCloudPendingAssignmentBroadcasts.splice(0);
+ for(const payload of queue)await dpCloudSendAssignmentBroadcast(payload);
 }
 function dpCloudRealtimeScheduleRetry(){
  if(dpCloudRealtimeRetryTimer||!dpCloudReady)return;
@@ -3997,8 +4004,9 @@ async function dpCloudRealtimeStart(){
   if(!token)throw new Error('Realtime: keine aktive Sitzung');
   if(c.realtime?.setAuth)await c.realtime.setAuth(token);
 
-  const ch=c.channel(topic,{config:{private:true,presence:{key:uid}}});
+  const ch=c.channel(topic,{config:{private:true,presence:{key:uid},broadcast:{ack:true,self:false}}});
   dpCloudRealtimeChannel=ch;
+  dpCloudRealtimeSubscribed=false;
 
   /* Students are owned by the school. Filtering by user_id here was wrong
      for instructor accounts because user_id is the school account's id. */
@@ -4070,18 +4078,12 @@ async function dpCloudRealtimeStart(){
   }
 
   ch.subscribe(async status=>{
+   console.log('DrivePro Realtime channel:',topic,status);
    if(status==='SUBSCRIBED'){
-    dpCloudRealtimeRetryCount=0;
     dpCloudRealtimeSubscribed=true;
+    dpCloudRealtimeRetryCount=0;
     dpCloudStatus('ok','Cloud gespeichert · Live-Sync aktiv');
-    /* Flush assignment changes saved while this channel was joining. */
-    const pending=[...dpCloudPendingAssignmentBroadcasts.entries()];
-    for(const [key,payload] of pending){
-     try{
-      const result=await ch.send({type:'broadcast',event:'STUDENT_ASSIGNMENT_CHANGED',payload});
-      if(result==='ok'||result===undefined)dpCloudPendingAssignmentBroadcasts.delete(key);
-     }catch(e){console.warn('DrivePro assignment broadcast flush:',e);}
-    }
+    await dpCloudFlushAssignmentBroadcasts();
    }else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){
     dpCloudRealtimeSubscribed=false;
     if(dpCloudRealtimeChannel===ch)dpCloudRealtimeChannel=null;
@@ -4109,7 +4111,6 @@ function dpCloudBindRealtimeLifecycle(){
    const c=dpCloudClient(),uid=dpCloudUserId();
    if(!c||!uid)return;
    if(dpCloudRealtimeChannel){
-     const st=String(dpCloudRealtimeChannel.state||'').toUpperCase();
      if(dpCloudRealtimeSubscribed)return;
      try{await c.removeChannel(dpCloudRealtimeChannel)}catch(e){}
      dpCloudRealtimeChannel=null;
