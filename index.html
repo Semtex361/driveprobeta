@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V90.43</title>
+<title>DrivePro Beta V90.48</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -774,6 +774,12 @@ body{overflow-x:hidden}
 .dp-request-status.requested{background:#fff4d8;color:#9a6a00}
 .dp-request-status.accepted{background:#edf9f2;color:#24764f}
 .dp-request-status.declined,.dp-request-status.cancelled,.dp-request-status.expired{background:#fff0f0;color:#b33b3b}
+.dp-instructor-placeholder-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px}
+.dp-instructor-placeholder{border:1px solid var(--line);border-radius:16px;padding:16px;background:var(--card);display:flex;align-items:center;gap:12px}
+.dp-instructor-placeholder .avatar{flex:0 0 44px}
+.dp-instructor-placeholder .smallBtn{margin-left:auto;white-space:nowrap}
+.dp-request-form-note{font-size:11px;color:var(--muted);line-height:1.45;margin-top:7px}
+@media(max-width:650px){.dp-instructor-placeholder-grid{grid-template-columns:1fr}.dp-instructor-placeholder{align-items:flex-start}.dp-instructor-placeholder .smallBtn{width:auto}}
 @media(max-width:700px){.dp-vehicle-grid{grid-template-columns:1fr}}
 
 
@@ -819,6 +825,22 @@ body{overflow-x:hidden}
 .trainingAreaInput{width:100%!important;margin:0!important}
 .trainingAreaDelete{width:38px;height:38px;border-radius:10px;background:#fff1f1;color:#c44a4a;border:1px solid #f0d7d7;font-size:15px;flex:0 0 38px}
 .trainingAreaDelete:hover{background:#ffe6e6;border-color:#e9bebe}
+/* V90.48 – Ausbildungsinhalte per Drag & Drop verschieben */
+.trainingAreaDragHandle{
+ width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;
+ border:1px solid #dbe7f2;border-radius:10px;background:#f7faff;color:#6f8398;
+ font-size:19px;font-weight:800;line-height:1;cursor:grab;touch-action:none;
+ user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+}
+.trainingAreaDragHandle:hover{background:#eaf3ff;border-color:#bcd6ef;color:#1769d2}
+.trainingAreaDragHandle:active{cursor:grabbing}
+.trainingAreaRow.dp-dnd-source{opacity:.45}
+.dpTrainingDropIndicator{height:4px;min-height:4px;margin:2px 0;border-radius:999px;background:#2f80ed;box-shadow:0 0 0 2px rgba(47,128,237,.10);pointer-events:none}
+body.dp-training-dnd-active,body.dp-training-dnd-active *{cursor:grabbing!important}
+[data-theme="dark"] .trainingAreaDragHandle{background:#172a3e;border-color:#31506c;color:#9bb0c5}
+[data-theme="dark"] .trainingAreaDragHandle:hover{background:#19324b;border-color:#4b79a7;color:#75b7ff}
+@media(max-width:600px){.trainingAreaDragHandle{width:36px;height:36px;flex-basis:36px}}
+
 .trainingAreaDelete:disabled{opacity:.35;cursor:not-allowed}
 .trainingAreasFooter{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-top:13px}
 .trainingAreasCount{font-size:10px;color:#8998a9}
@@ -1627,7 +1649,7 @@ body.dpTouchTablet .dpTimelineEmpty{left:31px!important;font-size:8px!important}
 }
 
 
-/* V90.42 – Kontenstruktur / Fahrschule-Fahrlehrer Verwaltung */
+/* V90.48 – Kontenstruktur / Fahrschule-Fahrlehrer Verwaltung */
 .dp-school-only{display:block}
 body.dp-instructor .dp-school-only{display:none!important}
 .staffGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
@@ -1642,7 +1664,7 @@ body.dp-instructor .dp-school-only{display:none!important}
 .staffHero p{margin:0;color:var(--muted);font-size:13px}
 @media(max-width:850px){.staffGrid{grid-template-columns:1fr}.staffHero{flex-direction:column}}
 
-/* V90.43 – Einladung / Kontoaktivierung */
+/* V90.48 – Einladung / Kontoaktivierung */
 .dp-invite-badge{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:#eaf3ff;border:1px solid #cfe1fb;color:#245c9d;font-size:10px;font-weight:850;letter-spacing:.4px;margin-bottom:12px}
 .dp-invite-email{margin:-6px 0 18px;padding:11px 13px;border:1px solid var(--line);background:var(--surface2);border-radius:11px;font-size:13px;font-weight:750;word-break:break-word}
 [data-theme="dark"] .dp-invite-badge{background:#132844;border-color:#254c7d;color:#b9d7ff}
@@ -1703,7 +1725,7 @@ body.auth-locked #driveProAuth{display:flex}
 .trainingAreaMove:disabled{opacity:.35;cursor:default}
 </style>
 </head>
-<body class="auth-locked" data-drivepro-version="V90.42"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V90.48"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 
 <div id="driveProAuth" aria-label="DrivePro Anmeldung">
   <div class="dp-auth-card">
@@ -1783,7 +1805,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-vehicles" class="dp-role-school" onclick="page('vehicles')"><span>🚗</span>Fahrzeuge</button>
     <button id="nav-requests" class="dp-role-request" onclick="page('requests')"><span>📨</span>Anfragen</button>
   </nav>
-  <div class="sidefoot">V90.43 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V90.48 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -2052,9 +2074,27 @@ function archivedStudents(){
 function page(p){
  const type=dpAccountType();
  const schoolOnly=['instructors','settings','vehicles'];
- if(schoolOnly.includes(p)&&type!=='school'){state.page='dashboard';state.studentId=null;document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));document.getElementById('nav-dashboard')?.classList.add('active');document.getElementById('pageTitle').textContent='Dashboard';render();return;}
- if(p==='archive'&&type==='student'){state.page='dashboard';state.studentId=null;render();return;}
- state.page=p;state.studentId=null;document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));document.getElementById('nav-'+p)?.classList.add('active');document.getElementById('pageTitle').textContent={dashboard:'Dashboard',students:'Fahrschüler',archive:'Archiv',instructors:'Fahrlehrer',vehicles:'Fahrzeuge',requests:'Anfragen',calendar:'Kalender',stats:'Statistik',logbook:'Logbuch',settings:'Einstellungen'}[p]||'Dashboard';render();}
+ const studentAllowed=['dashboard','requests'];
+ if(type==='student'&&!studentAllowed.includes(p)){
+   state.page='dashboard';state.studentId=null;
+   document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+   document.getElementById('nav-dashboard')?.classList.add('active');
+   document.getElementById('pageTitle').textContent='Dashboard';
+   render();return;
+ }
+ if(schoolOnly.includes(p)&&type!=='school'){
+   state.page='dashboard';state.studentId=null;
+   document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+   document.getElementById('nav-dashboard')?.classList.add('active');
+   document.getElementById('pageTitle').textContent='Dashboard';
+   render();return;
+ }
+ state.page=p;state.studentId=null;
+ document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+ document.getElementById('nav-'+p)?.classList.add('active');
+ document.getElementById('pageTitle').textContent={dashboard:'Dashboard',students:'Fahrschüler',archive:'Archiv',instructors:'Fahrlehrer',vehicles:'Fahrzeuge',requests:'Anfragen',calendar:'Kalender',stats:'Statistik',logbook:'Logbuch',settings:'Einstellungen'}[p]||'Dashboard';
+ render();
+}
 function render(){if(state.page==='dashboard')dashboard();else if(state.page==='students')studentsPage();else if(state.page==='archive')archivePage();else if(state.page==='instructors')instructorsPage();else if(state.page==='vehicles')vehiclesPage();else if(state.page==='requests')requestsPage();else if(state.page==='calendar')calendarPage();else if(state.page==='stats')statsPage();else if(state.page==='logbook')logbookPage();else if(state.page==='settings')settingsPage();else dashboard()}
 function dpCurrentSchoolId(){return window.driveProAuth?.profile?.school_id||window.driveProAuth?.schoolId||null}
 function dpIsSchool(){return window.driveProAuth?.isSchool===true}
@@ -2077,9 +2117,10 @@ function openInstructorInvite(){if(!dpIsSchool()){alert('Nur das Fahrschulkonto 
 async function submitInstructorInvite(){const c=window.driveProAuth?.client,schoolId=dpCurrentSchoolId(),name=(document.getElementById('inviteInstructorName')?.value||'').trim(),email=(document.getElementById('inviteInstructorEmail')?.value||'').trim().toLowerCase(),msg=document.getElementById('inviteInstructorMessage'),btn=document.getElementById('inviteInstructorButton');if(!c||!schoolId){if(msg)msg.textContent='Fahrschulkonto oder Cloud-Verbindung nicht verfügbar.';return;}if(!name){if(msg)msg.textContent='Bitte einen Namen eingeben.';document.getElementById('inviteInstructorName')?.focus();return;}if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){if(msg)msg.textContent='Bitte eine gültige E-Mail-Adresse eingeben.';document.getElementById('inviteInstructorEmail')?.focus();return;}btn.disabled=true;btn.textContent='Einladung wird gesendet …';try{const r=await c.functions.invoke('drivepro-invite-account',{body:{email,name,account_type:'instructor',school_id:schoolId,redirect_to:(window.DP_DRIVEPRO_URL||'https://semtex361.github.io/driveprobeta/')+'?invite=1'}});if(r.error)throw r.error;if(!r.data?.ok)throw new Error(r.data?.error||'Die Einladung konnte nicht erstellt werden.');closeModal();await instructorsPage();alert(`✓ Einladung an ${email} wurde erstellt.`);}catch(e){console.error('DrivePro Fahrlehrer-Einladung:',e);if(msg){msg.className='dp-auth-message';msg.textContent=e?.message||'Die Einladung konnte nicht gesendet werden.';}btn.disabled=false;btn.textContent='Einladung senden';}}
 
 function dashboard(){
+ if(dpAccountType()==='student'){return studentDashboard()}
  const all=allLessons();
- const total=students.reduce((n,s)=>n+(s.lessons?.length||0),0);
-  const today=new Date().toISOString().slice(0,10);
+ const total=activeStudents().reduce((n,s)=>n+(s.lessons?.length||0),0);
+ const today=new Date().toISOString().slice(0,10);
  const upcoming=all.filter(x=>x.l.date>today).sort((a,b)=>(a.l.date+' '+a.l.startTime).localeCompare(b.l.date+' '+b.l.startTime)).slice(0,4);
  const recent=all.slice(0,4);
  document.getElementById('content').innerHTML=`
@@ -2099,6 +2140,18 @@ function dashboard(){
     <button class="quickAction" onclick="page('stats')"><span>📊</span><b>Statistik ansehen</b><small>Ausbildungsfortschritt</small><strong>›</strong></button>
    </div>
  </div>`;
+}
+async function studentDashboard(){
+ const content=document.getElementById('content');
+ content.innerHTML=`<div class="welcome"><div><div class="eyebrow">FAHRSCHÜLERKONTO</div><h2>Guten Tag 👋</h2><p>Hier kannst du Fahrlehrer auswählen und eine Fahrstunde anfragen.</p></div><button class="primary bigbtn" onclick="page('requests')">📨 Fahrstunde anfragen</button></div><div class="card"><div class="section-title"><div><h3>Fahrlehrer</h3><span class="muted">Fahrlehrer werden dir als einfache Auswahl angezeigt.</span></div></div><div id="studentInstructorPlaceholders"><div class="empty">Fahrlehrer werden geladen …</div></div></div>`;
+ try{
+  const c=dpCloudClient(),school=dpCurrentSchoolId();
+  if(!c||!school)throw new Error('Fahrschulkonto konnte nicht ermittelt werden.');
+  const r=await c.from('profiles').select('id,first_name,last_name,display_name,is_active,account_type,school_id').eq('school_id',school).eq('account_type','instructor').eq('is_active',true).order('created_at',{ascending:true});
+  if(r.error)throw r.error;
+  const box=document.getElementById('studentInstructorPlaceholders');if(!box)return;
+  box.innerHTML=(r.data||[]).map((p,i)=>{const label=`Fahrlehrer ${i+1}`;return `<div class="dp-instructor-placeholder-grid"><div class="dp-instructor-placeholder"><div class="avatar">👨‍🏫</div><div class="grow"><b>${label}</b><div class="muted">Verfügbarer Fahrlehrer</div></div><button class="secondary smallBtn" onclick="openLessonRequestModal('${p.id}','${esc(label)}')">Anfragen</button></div></div>`}).join('')||'<div class="empty">Aktuell sind keine Fahrlehrer freigeschaltet.</div>';
+ }catch(e){const box=document.getElementById('studentInstructorPlaceholders');if(box)box.innerHTML=`<div class="card empty">Fahrlehrer konnten nicht geladen werden.<br><small>${esc(e.message||'Unbekannter Fehler')}</small><div class="actions" style="justify-content:center;margin-top:10px"><button class="secondary" onclick="studentDashboard()">Erneut versuchen</button></div></div>`}
 }
 function dashboardStudent(s){
  const p=pct(s);
@@ -2329,7 +2382,7 @@ function saveSignature(sid){
  }
  alert('Unterschrift gespeichert.')
 }
-function allLessons(){const a=[];students.forEach(s=>(s.lessons||[]).forEach(l=>a.push({s,l})));return a.sort((a,b)=>(b.l.date+' '+b.l.startTime).localeCompare(a.l.date+' '+a.l.startTime))}
+function allLessons(){const a=[];activeStudents().forEach(s=>(s.lessons||[]).forEach(l=>a.push({s,l})));return a.sort((a,b)=>(b.l.date+' '+b.l.startTime).localeCompare(a.l.date+' '+a.l.startTime))}
 function lessonsPage(){document.getElementById('content').innerHTML=`<div class="toolbar"><div class="muted">Alle gespeicherten Fahrstunden – zum Öffnen anklicken</div><button class="primary" onclick="openLessonForm()">+ Fahrstunde</button></div><div class="card">${allLessons().map(x=>lessonRow(x.s,x.l,true)).join('')||'<div class="empty">Noch keine Fahrstunden.</div>'}</div>`}
 
 function logbookPage(){
@@ -2388,12 +2441,9 @@ function openLogEntry(entryId){
 function trainingAreaSettingRow(name,index){
  const safeName=esc(name||'');
  return `<div class="trainingAreaRow" data-training-area-row>
+   <button type="button" class="trainingAreaDragHandle" aria-label="Ausbildungsinhalt verschieben" title="Zum Verschieben ziehen">☷</button>
    <div class="trainingAreaNumber">${index+1}</div>
    <div class="trainingAreaInputWrap"><input class="trainingAreaInput" type="text" maxlength="120" value="${safeName}" data-training-area-input></div>
-   <div class="trainingAreaOrder" aria-label="Reihenfolge">
-    <button type="button" class="trainingAreaMove" ${index===0?'disabled':''} onclick="moveTrainingAreaSetting(this,-1)" aria-label="Ausbildungsinhalt nach oben">↑</button>
-    <button type="button" class="trainingAreaMove" ${index===getTrainingAreas().length-1?'disabled':''} onclick="moveTrainingAreaSetting(this,1)" aria-label="Ausbildungsinhalt nach unten">↓</button>
-   </div>
    <button type="button" class="trainingAreaDelete" onclick="removeTrainingAreaSetting(this)" aria-label="Ausbildungsinhalt löschen">×</button>
   </div>`;
 }
@@ -2414,17 +2464,17 @@ function addTrainingAreaInputIfNeeded(){
  const last=inputs[inputs.length-1];
  if(!last||!last.value.trim())return;
  if(last.closest('[data-training-area-row]')?.hasAttribute('data-empty-row')){
- const row=last.closest('[data-training-area-row]');
- row.removeAttribute('data-empty-row');
- row.querySelector('.trainingAreaDelete')?.removeAttribute('disabled');
- const order=document.createElement('div');
- order.className='trainingAreaOrder';
- order.setAttribute('aria-label','Reihenfolge');
- order.innerHTML='<button type="button" class="trainingAreaMove" aria-label="Ausbildungsinhalt nach oben">↑</button><button type="button" class="trainingAreaMove" aria-label="Ausbildungsinhalt nach unten">↓</button>';
- order.children[0].onclick=()=>moveTrainingAreaSetting(order.children[0],-1);
- order.children[1].onclick=()=>moveTrainingAreaSetting(order.children[1],1);
- row.insertBefore(order,row.querySelector('.trainingAreaDelete'));
-}
+  const row=last.closest('[data-training-area-row]');
+  row.removeAttribute('data-empty-row');
+  row.querySelector('.trainingAreaDelete')?.removeAttribute('disabled');
+  const handle=document.createElement('button');
+  handle.type='button';
+  handle.className='trainingAreaDragHandle';
+  handle.setAttribute('aria-label','Ausbildungsinhalt verschieben');
+  handle.setAttribute('title','Zum Verschieben ziehen');
+  handle.textContent='☷';
+  row.insertBefore(handle,row.firstChild);
+ }
  if(list.querySelector('[data-empty-row]'))return;
  const index=inputs.length;
  const row=document.createElement('div');
@@ -2459,6 +2509,25 @@ function bindTrainingAreaInput(input){
   }
  });
 }
+/* V90.48 – echtes Drag & Drop für Ausbildungsinhalte. Pointer Events decken Maus, Trackpad und Touch ab. */
+(function(){
+ if(window.__dpTrainingAreaDnDInitialized)return;
+ window.__dpTrainingAreaDnDInitialized=true;
+ let drag=null;
+ const listEl=()=>document.getElementById('trainingAreasList');
+ const rows=()=>{const list=listEl();return list?[...list.querySelectorAll('[data-training-area-row]:not([data-empty-row])')]:[]};
+ const clear=()=>{rows().forEach(r=>r.classList.remove('dp-dnd-source'));document.querySelector('.dpTrainingDropIndicator')?.remove();document.body.classList.remove('dp-training-dnd-active')};
+ const cancel=()=>{if(!drag)return;clear();try{drag.handle.releasePointerCapture?.(drag.pointerId)}catch(_){}drag=null};
+ function indicator(target,before){const list=listEl();if(!list)return null;document.querySelector('.dpTrainingDropIndicator')?.remove();const line=document.createElement('div');line.className='dpTrainingDropIndicator';if(target){if(before)list.insertBefore(line,target);else list.insertBefore(line,target.nextSibling)}else{const empty=list.querySelector('[data-empty-row]');if(empty)list.insertBefore(line,empty);else list.appendChild(line)}line._target=target;line._before=before;return line}
+ function update(y){if(!drag)return;const available=rows().filter(r=>r!==drag.row);let target=null,before=true;for(const row of available){const rect=row.getBoundingClientRect();if(y<rect.top+rect.height/2){target=row;break}}if(!target&&available.length){target=available[available.length-1];before=false}indicator(target,before)}
+ function finish(){if(!drag)return;const current=rows(),source=drag.row,line=document.querySelector('.dpTrainingDropIndicator');let targetIndex=-1;if(line){const target=line._target;targetIndex=target?current.indexOf(target)+(line._before?0:1):current.length}const from=current.indexOf(source);clear();try{drag.handle.releasePointerCapture?.(drag.pointerId)}catch(_){}drag=null;if(from<0||targetIndex<0)return;if(targetIndex>from)targetIndex--;if(from===targetIndex)return;const list=listEl(),after=rows();if(!list)return;if(targetIndex>=after.length)list.appendChild(source);else list.insertBefore(source,after[targetIndex]);updateTrainingAreaNumbers();syncTrainingAreaSettingsFromDom()}
+ document.addEventListener('pointerdown',e=>{const handle=e.target.closest?.('.trainingAreaDragHandle');if(!handle)return;if(e.pointerType==='mouse'&&e.button!==0)return;const row=handle.closest?.('[data-training-area-row]:not([data-empty-row])');if(!row)return;e.preventDefault();e.stopPropagation();drag={row,handle,pointerId:e.pointerId};row.classList.add('dp-dnd-source');document.body.classList.add('dp-training-dnd-active');try{handle.setPointerCapture(e.pointerId)}catch(_){}update(e.clientY)},true);
+ document.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.pointerId)return;e.preventDefault();update(e.clientY)},{capture:true,passive:false});
+ document.addEventListener('pointerup',e=>{if(!drag||e.pointerId!==drag.pointerId)return;e.preventDefault();finish()},true);
+ document.addEventListener('pointercancel',e=>{if(!drag||e.pointerId!==drag.pointerId)return;cancel()},true);
+ window.dpTrainingAreaDnDRefresh=()=>{};
+})();
+
 function initTrainingAreaSettings(){
  trainingAreasInputs().forEach(bindTrainingAreaInput);
  updateTrainingAreaNumbers();
@@ -2626,7 +2695,7 @@ function resetDriveProData(){
 }
 
 async function openInstructorAssignment(instructorId){
-  const c=dpCloudClient(),school=window.driveProAuth?.schoolId;
+  const c=dpCloudClient(),school=dpCurrentSchoolId();
   const [pr,sr]=await Promise.all([
     c.from('profiles').select('id,first_name,last_name,display_name').eq('id',instructorId).maybeSingle(),
     c.from('students').select('id,first_name,last_name,instructor_id').eq('school_id',school).order('last_name')
@@ -2636,7 +2705,7 @@ async function openInstructorAssignment(instructorId){
   openModal(`<h2>Fahrschüler zuweisen</h2><p class="muted">${esc(dpName(p))}</p><div class="dp-role-list">${rows.map(s=>`<label class="card" style="display:flex;gap:10px;align-items:center"><input type="checkbox" data-assign-student="${s.id}" ${s.instructor_id===instructorId?'checked':''}> <span>${esc(s.first_name+' '+s.last_name)}</span></label>`).join('')||'<div class="card empty">Keine Fahrschüler.</div>'}</div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveInstructorAssignment('${instructorId}')">Speichern</button></div>`);
 }
 async function saveInstructorAssignment(instructorId){
-  const c=dpCloudClient(),school=window.driveProAuth?.schoolId;
+  const c=dpCloudClient(),school=dpCurrentSchoolId();
   const ids=[...document.querySelectorAll('[data-assign-student]:checked')].map(x=>x.dataset.assignStudent);
   try{
     const all=await c.from('students').select('id,instructor_id').eq('school_id',school);
@@ -2655,6 +2724,29 @@ async function saveInstructorAssignment(instructorId){
   }catch(e){alert(e.message||'Zuweisung konnte nicht gespeichert werden.')}
 }
 
+function vehicleSchoolId(){
+  return dpCurrentSchoolId()||window.driveProAuth?.profile?.school_id||window.driveProAuth?.schoolId||dpProfile?.school_id||null;
+}
+function normalizeVehiclePlate(value){
+  return String(value||'').trim().toUpperCase().replace(/\s+/g,' ');
+}
+function vehicleFormMessage(message,type='error'){
+  const body=document.getElementById('modalBody');
+  if(!body)return;
+  let box=body.querySelector('#vehicleFormMessage');
+  if(!box){
+    box=document.createElement('div');
+    box.id='vehicleFormMessage';
+    box.setAttribute('role','alert');
+    box.style.cssText='margin-top:14px;padding:12px 14px;border-radius:12px;font-size:13px;font-weight:700;line-height:1.45;display:flex;align-items:flex-start;gap:9px;';
+    const actions=body.querySelector('.actions');
+    if(actions)body.insertBefore(box,actions);else body.appendChild(box);
+  }
+  box.innerHTML=`<span aria-hidden="true">${type==='error'?'⚠️':'✓'}</span><span>${esc(message)}</span>`;
+  box.style.background=type==='error'?'#fff4f4':'#edf9f2';
+  box.style.border=`1px solid ${type==='error'?'#efcaca':'#c7e8d3'}`;
+  box.style.color=type==='error'?'#a61b1b':'#176b45';
+}
 function vehiclesPage(){
   if(dpAccountType()!=='school'){page('dashboard');return}
   const box=document.getElementById('content');
@@ -2663,70 +2755,117 @@ function vehiclesPage(){
 }
 async function loadVehicles(){
   const list=document.getElementById('vehicleList');if(!list)return;
+  const schoolId=vehicleSchoolId();
+  if(!schoolId){list.innerHTML='<div class="card empty" style="grid-column:1/-1">Fahrschulkonto konnte nicht ermittelt werden.</div>';return}
   try{
-    const r=await dpCloudClient().from('vehicles').select('*').eq('school_id',window.driveProAuth.schoolId).order('license_plate');
+    const c=dpCloudClient();
+    if(!c)throw new Error('Cloud-Verbindung nicht verfügbar.');
+    const r=await c.from('vehicles').select('*').eq('school_id',schoolId).order('license_plate');
     if(r.error)throw r.error;
-    list.innerHTML=(r.data||[]).map(v=>`<div class="dp-vehicle-card"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(v.license_plate)}</b><button class="danger" onclick="deleteVehicle('${v.id}')">🗑</button></div><div style="font-size:15px;margin-top:7px">${esc(v.make)} ${esc(v.model)}</div><div class="dp-vehicle-meta"><span>${v.transmission==='automatic'?'Automatik':'Schaltung'}</span><span>${v.is_active?'Aktiv':'Inaktiv'}</span></div><div class="actions"><button class="secondary" onclick='openVehicleModal(${JSON.stringify(v)})'>Bearbeiten</button></div></div>`).join('')||'<div class="card empty" style="grid-column:1/-1">Noch keine Fahrzeuge.</div>';
-  }catch(e){list.innerHTML=`<div class="card empty" style="grid-column:1/-1">Fahrzeuge konnten nicht geladen werden.<br><small>${esc(e.message||'Fehler')}</small></div>`}
-}
-function openVehicleModal(v=null){
-  openModal(`<h2>${v?'Fahrzeug bearbeiten':'Neues Fahrzeug'}</h2><div class="row"><div class="field"><label>Kennzeichen</label><input id="vf" value="${esc(v?.license_plate||'')}" oninput="clearVehicleFormMessage()"></div><div class="field"><label>Marke</label><input id="vmake" value="${esc(v?.make||'')}" oninput="clearVehicleFormMessage()"></div></div><div class="row"><div class="field"><label>Modell</label><input id="vmodel" value="${esc(v?.model||'')}" oninput="clearVehicleFormMessage()"></div><div class="field"><label>Getriebe</label><select id="vtrans" onchange="clearVehicleFormMessage()"><option value="manual" ${v?.transmission==='manual'?'selected':''}>Schaltung</option><option value="automatic" ${v?.transmission==='automatic'?'selected':''}>Automatik</option></select></div></div><div id="vehicleFormMessage" class="dp-auth-message" style="display:none;margin-top:10px"></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button id="vehicleSaveButton" class="primary" onclick="saveVehicle('${v?.id||''}')">Speichern</button></div>`);
-}
-function showVehicleFormMessage(text,type='error'){
-  const el=document.getElementById('vehicleFormMessage');
-  if(!el)return;
-  el.textContent=text;
-  el.className=`dp-auth-message ${type}`;
-  el.style.display='block';
-}
-function clearVehicleFormMessage(){
-  const el=document.getElementById('vehicleFormMessage');
-  if(!el)return;
-  el.textContent='';
-  el.style.display='none';
-}
-async function saveVehicle(idv){
-  const payload={school_id:window.driveProAuth.schoolId,license_plate:document.getElementById('vf').value.trim().toUpperCase(),make:document.getElementById('vmake').value.trim(),model:document.getElementById('vmodel').value.trim(),transmission:document.getElementById('vtrans').value,is_active:true};
-  if(!payload.license_plate||!payload.make||!payload.model){showVehicleFormMessage('Bitte Kennzeichen, Marke und Modell ausfüllen.');return}
-  const btn=document.getElementById('vehicleSaveButton');
-  if(btn){btn.disabled=true;btn.textContent='Speichern …';}
-  try{
-    const c=dpCloudClient(),r=idv?await c.from('vehicles').update(payload).eq('id',idv).eq('school_id',payload.school_id):await c.from('vehicles').insert(payload);
-    if(r.error)throw r.error;
-    closeModal();vehiclesPage();
+    const rows=r.data||[];
+    list.innerHTML=rows.map(v=>`<div class="dp-vehicle-card" data-vehicle-id="${esc(v.id)}"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>${esc(v.license_plate)}</b><button class="danger" type="button" title="Fahrzeug löschen" onclick="deleteVehicle('${v.id}')">🗑</button></div><div style="font-size:15px;margin-top:7px;font-weight:650">${esc(v.make)} ${esc(v.model)}</div><div class="dp-vehicle-meta"><span>${v.transmission==='automatic'?'Automatik':'Schaltung'}</span><span>${v.is_active?'Aktiv':'Inaktiv'}</span></div><div class="actions"><button class="secondary" type="button" onclick='openVehicleModal(${JSON.stringify(v).replace(/</g,'\\u003c')})'>Bearbeiten</button></div></div>`).join('')||'<div class="card empty" style="grid-column:1/-1">Noch keine Fahrzeuge.<br><small>Lege dein erstes Fahrschulfahrzeug an.</small></div>';
   }catch(e){
-    console.error('DrivePro Fahrzeug speichern:',e);
-    const duplicate=e?.code==='23505' || String(e?.message||'').includes('uq_vehicles_school_license_plate');
-    showVehicleFormMessage(duplicate?'Dieses Kennzeichen ist bereits vergeben. Bitte ein anderes Kennzeichen eingeben.':'Das Fahrzeug konnte nicht gespeichert werden. Bitte versuche es erneut.');
-    const field=document.getElementById('vf');
-    if(duplicate&&field){field.focus();field.select();}
-    if(btn){btn.disabled=false;btn.textContent='Speichern';}
+    console.error('DrivePro Fahrzeuge laden:',e);
+    list.innerHTML=`<div class="card empty" style="grid-column:1/-1"><b>Fahrzeuge konnten nicht geladen werden.</b><br><small>${esc(e?.message||'Unbekannter Fehler')}</small><div class="actions" style="justify-content:center;margin-top:12px"><button class="secondary" type="button" onclick="loadVehicles()">Erneut versuchen</button></div></div>`;
   }
 }
+function openVehicleModal(v=null){
+  const active=v? v.is_active!==false : true;
+  openModal(`<h2>${v?'Fahrzeug bearbeiten':'Neues Fahrzeug'}</h2><div class="row"><div class="field"><label for="vf">Kennzeichen</label><input id="vf" autocomplete="off" value="${esc(v?.license_plate||'')}" placeholder="z. B. B-DP 1234"></div><div class="field"><label for="vmake">Marke</label><input id="vmake" autocomplete="organization" value="${esc(v?.make||'')}" placeholder="z. B. Mercedes"></div></div><div class="row"><div class="field"><label for="vmodel">Modell</label><input id="vmodel" autocomplete="off" value="${esc(v?.model||'')}" placeholder="z. B. A 200"></div><div class="field"><label for="vtrans">Getriebe</label><select id="vtrans"><option value="manual" ${v?.transmission==='manual'?'selected':''}>Schaltung</option><option value="automatic" ${v?.transmission==='automatic'?'selected':''}>Automatik</option></select></div></div><div class="row"><div class="field"><label for="vactive">Status</label><select id="vactive"><option value="true" ${active?'selected':''}>Aktiv</option><option value="false" ${!active?'selected':''}>Inaktiv</option></select></div></div><div class="actions"><button type="button" onclick="closeModal()">Abbrechen</button><button id="saveVehicleButton" class="primary" type="button" onclick="saveVehicle('${v?.id||''}')">Speichern</button></div>`);
+  setTimeout(()=>document.getElementById('vf')?.focus(),50);
+}
+async function saveVehicle(idv){
+  const plateEl=document.getElementById('vf'),makeEl=document.getElementById('vmake'),modelEl=document.getElementById('vmodel'),transEl=document.getElementById('vtrans'),activeEl=document.getElementById('vactive'),saveBtn=document.getElementById('saveVehicleButton');
+  const schoolId=vehicleSchoolId();
+  const payload={school_id:schoolId,license_plate:normalizeVehiclePlate(plateEl?.value),make:String(makeEl?.value||'').trim(),model:String(modelEl?.value||'').trim(),transmission:transEl?.value||'manual',is_active:activeEl?.value!=='false'};
+  if(!schoolId){vehicleFormMessage('Die Fahrschule konnte nicht ermittelt werden. Bitte abmelden und erneut anmelden.');return}
+  if(!payload.license_plate||!payload.make||!payload.model){vehicleFormMessage('Bitte Kennzeichen, Marke und Modell ausfüllen.');return}
+  if(!['manual','automatic'].includes(payload.transmission)){vehicleFormMessage('Bitte ein gültiges Getriebe auswählen.');return}
+  if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='Speichern …'}
+  try{
+    const c=dpCloudClient();if(!c)throw new Error('Cloud-Verbindung nicht verfügbar.');
+    const r=idv?await c.from('vehicles').update(payload).eq('id',idv).eq('school_id',schoolId):await c.from('vehicles').insert(payload);
+    if(r.error){
+      const code=String(r.error.code||''),details=String(r.error.details||''),message=String(r.error.message||'');
+      const duplicate=code==='23505'||/duplicate key value violates unique constraint/i.test(message)||/uq_vehicles_school_license_plate/i.test(details+message);
+      if(duplicate){vehicleFormMessage('Dieses Kennzeichen ist bereits vergeben. Bitte ein anderes Kennzeichen eingeben.');plateEl?.focus();plateEl?.select();return}
+      if(code==='42501'||/permission denied/i.test(message)){vehicleFormMessage('Du hast keine Berechtigung, dieses Fahrzeug zu speichern. Bitte prüfe dein Fahrschulkonto.');return}
+      throw r.error;
+    }
+    closeModal();
+    await loadVehicles();
+  }catch(e){
+    console.error('DrivePro Fahrzeug speichern:',e);
+    vehicleFormMessage(e?.message||'Das Fahrzeug konnte nicht gespeichert werden. Bitte erneut versuchen.');
+  }finally{if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='Speichern'}}
+}
 async function deleteVehicle(idv){
-  if(!confirm('Fahrzeug wirklich löschen?'))return;
-  const r=await dpCloudClient().from('vehicles').delete().eq('id',idv).eq('school_id',window.driveProAuth.schoolId);
-  if(r.error)alert(r.error.message);else vehiclesPage();
+  const schoolId=vehicleSchoolId();
+  if(!schoolId)return;
+  if(!confirm('Fahrzeug wirklich löschen?\n\nDas Fahrzeug wird dauerhaft aus der Fahrschulverwaltung entfernt.'))return;
+  try{
+    const c=dpCloudClient();if(!c)throw new Error('Cloud-Verbindung nicht verfügbar.');
+    const r=await c.from('vehicles').delete().eq('id',idv).eq('school_id',schoolId);
+    if(r.error)throw r.error;
+    await loadVehicles();
+  }catch(e){
+    console.error('DrivePro Fahrzeug löschen:',e);
+    const list=document.getElementById('vehicleList');
+    if(list)list.insertAdjacentHTML('afterbegin',`<div class="card" role="alert" style="grid-column:1/-1;border:1px solid #efcaca;background:#fff7f7;color:#8f1d1d"><b>Fahrzeug konnte nicht gelöscht werden.</b><br><small>${esc(e?.message||'Unbekannter Fehler')}</small></div>`);
+  }
 }
 
 async function requestsPage(){
-  const type=dpAccountType(),c=dpCloudClient(),school=window.driveProAuth?.schoolId;
-  document.getElementById('content').innerHTML=`<div class="toolbar"><div><b>Fahrstunden-Anfragen</b><div class="dp-role-muted">${type==='student'?'Anfragen für deine Fahrstunden':'Anfragen deiner Fahrschüler'}</div></div></div><div id="requestList" class="dp-role-list"><div class="card">Lade …</div></div>`;
-  let q=c.from('lesson_requests').select('*').eq('school_id',school).order('requested_date').order('requested_start_time');
-  if(type==='instructor')q=q.eq('instructor_id',window.driveProAuth.user.id);
-  if(type==='student'){
-    const me=students.find(s=>s.linkedUserId===window.driveProAuth.user.id);
-    if(!me){document.getElementById('requestList').innerHTML='<div class="card empty">Dein Fahrschülerkonto ist noch nicht verknüpft.</div>';return}
-    q=q.eq('student_id',me.id);
-  }
-  try{
-    const r=await q;if(r.error)throw r.error;
-    document.getElementById('requestList').innerHTML=(r.data||[]).map(x=>`<div class="card"><div style="display:flex;justify-content:space-between;gap:10px"><b>${x.requested_date} · ${String(x.requested_start_time).slice(0,5)}</b><span class="dp-request-status ${x.status}">${esc(x.status)}</span></div><div class="dp-role-muted" style="margin-top:6px">${esc(x.lesson_type)} · ${x.duration_minutes} Min.</div>${type==='instructor'&&x.status==='requested'?`<div class="actions"><button class="primary" onclick="respondLessonRequest('${x.id}','accepted')">✓ Annehmen</button><button class="secondary" onclick="respondLessonRequest('${x.id}','declined')">Ablehnen</button></div>`:''}</div>`).join('')||'<div class="card empty">Keine Anfragen.</div>';
-  }catch(e){document.getElementById('requestList').innerHTML=`<div class="card empty">Anfragen konnten nicht geladen werden.<br><small>${esc(e.message||'Fehler')}</small></div>`}
+ const type=dpAccountType(),c=dpCloudClient(),school=dpCurrentSchoolId();
+ if(!c||!school){document.getElementById('content').innerHTML='<div class="card empty">Cloud-Verbindung nicht verfügbar.</div>';return}
+ if(type==='student'){
+   document.getElementById('content').innerHTML=`<div class="toolbar"><div><b>Fahrstunden-Anfragen</b><div class="dp-role-muted">Wähle einen Fahrlehrer und sende eine Anfrage.</div></div><button class="primary" onclick="studentDashboard()">← Fahrlehrer</button></div><div id="requestList" class="dp-role-list"><div class="card">Lade …</div></div>`;
+ }else{
+   document.getElementById('content').innerHTML=`<div class="toolbar"><div><b>Fahrstunden-Anfragen</b><div class="dp-role-muted">Anfragen deiner Fahrschüler</div></div></div><div id="requestList" class="dp-role-list"><div class="card">Lade …</div></div>`;
+ }
+ let q=c.from('lesson_requests').select('*').eq('school_id',school).order('requested_date').order('requested_start_time');
+ if(type==='instructor')q=q.eq('instructor_id',dpCurrentUserId());
+ if(type==='student'){
+   const me=students.find(s=>s.linkedUserId===dpCurrentUserId()&&s.schoolId===school);
+   if(!me){document.getElementById('requestList').innerHTML='<div class="card empty">Dein Fahrschülerkonto ist noch nicht mit einem Fahrschüler verknüpft. Bitte die Fahrschule kontaktieren.</div>';return}
+   q=q.eq('student_id',me.id);
+ }
+ try{
+   const r=await q;if(r.error)throw r.error;
+   const statusLabel={requested:'Offen',accepted:'Angenommen',declined:'Abgelehnt',cancelled:'Storniert',expired:'Abgelaufen'};
+   document.getElementById('requestList').innerHTML=(r.data||[]).map(x=>`<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><b>${esc(x.requested_date||'—')} · ${esc(String(x.requested_start_time||'').slice(0,5))}</b><span class="dp-request-status ${esc(x.status)}">${esc(statusLabel[x.status]||x.status||'Offen')}</span></div><div class="dp-role-muted" style="margin-top:6px">${esc(x.lesson_type||'Fahrstunde')} · ${Number(x.duration_minutes)||0} Min.</div>${type==='instructor'&&x.status==='requested'?`<div class="actions"><button class="primary" onclick="respondLessonRequest('${x.id}','accepted')">✓ Annehmen</button><button class="secondary" onclick="respondLessonRequest('${x.id}','declined')">Ablehnen</button></div>`:''}</div>`).join('')||'<div class="card empty">Keine Anfragen vorhanden.</div>';
+ }catch(e){document.getElementById('requestList').innerHTML=`<div class="card empty">Anfragen konnten nicht geladen werden.<br><small>${esc(e.message||'Fehler')}</small></div>`}
+}
+function openLessonRequestModal(instructorId,label){
+ if(dpAccountType()!=='student')return;
+ const me=students.find(s=>s.linkedUserId===dpCurrentUserId()&&s.schoolId===dpCurrentSchoolId());
+ if(!me){alert('Dein Fahrschülerkonto ist noch nicht mit einem Fahrschüler verknüpft.');return}
+ const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,10);
+ openModal(`<div class="eyebrow">FAHRSTUNDEN-ANFRAGE</div><h2>${esc(label)}</h2><p class="muted">Sende einen Wunsch. Die Fahrstunde wird erst nach Bestätigung durch den Fahrlehrer verbindlich.</p><div class="row"><div class="field"><label for="lrDate">Wunschtermin</label><input id="lrDate" type="date" min="${tomorrow}" value="${tomorrow}"></div><div class="field"><label for="lrTime">Wunschzeit</label><input id="lrTime" type="time" value="17:00"></div></div><div class="row"><div class="field"><label for="lrType">Fahrtart</label><select id="lrType"><option value="Fahrstunde">Fahrstunde</option><option value="B197 Fahrstunde">B197 Fahrstunde</option><option value="Überlandfahrt">Überlandfahrt</option><option value="Autobahnfahrt">Autobahnfahrt</option><option value="Beleuchtungsfahrt">Beleuchtungsfahrt</option></select></div><div class="field"><label for="lrDuration">Dauer</label><select id="lrDuration"><option value="45">45 Minuten</option><option value="60">60 Minuten</option><option value="80">80 Minuten</option><option value="90">90 Minuten</option></select></div></div><div id="lrMessage" class="dp-auth-message"></div><div class="actions"><button class="secondary" onclick="closeModal()">Abbrechen</button><button id="lrSend" class="primary" onclick="sendLessonRequest('${instructorId}')">Anfrage senden</button></div>`);
+}
+async function sendLessonRequest(instructorId){
+ const c=dpCloudClient(),school=dpCurrentSchoolId(),uid=dpCurrentUserId(),me=students.find(s=>s.linkedUserId===uid&&s.schoolId===school);
+ const msg=document.getElementById('lrMessage'),btn=document.getElementById('lrSend');
+ if(!c||!school||!uid||!me){if(msg)msg.textContent='Dein Fahrschülerkonto ist nicht vollständig verknüpft.';return}
+ const date=document.getElementById('lrDate')?.value||'',time=document.getElementById('lrTime')?.value||'',lessonType=document.getElementById('lrType')?.value||'Fahrstunde',duration=Number(document.getElementById('lrDuration')?.value||45);
+ if(!date||!time){if(msg)msg.textContent='Bitte Wunschtermin und Wunschzeit auswählen.';return}
+ if(btn){btn.disabled=true;btn.textContent='Wird gesendet …'}
+ try{
+   const r=await c.from('lesson_requests').insert({school_id:school,student_id:me.id,instructor_id:instructorId,requested_date:date,requested_start_time:time,duration_minutes:duration,lesson_type:lessonType,status:'requested'});
+   if(r.error)throw r.error;
+   closeModal();
+   await requestsPage();
+ }catch(e){
+   console.error('DrivePro Fahrstunden-Anfrage:',e);
+   if(msg)msg.textContent=e?.message||'Die Anfrage konnte nicht gesendet werden.';
+   if(btn){btn.disabled=false;btn.textContent='Anfrage senden'}
+ }
 }
 async function respondLessonRequest(idr,status){
-  const r=await dpCloudClient().from('lesson_requests').update({status,responded_at:new Date().toISOString()}).eq('id',idr).eq('instructor_id',window.driveProAuth.user.id);
-  if(r.error)alert(r.error.message);else requestsPage();
+ if(dpAccountType()!=='instructor')return;
+ const r=await dpCloudClient().from('lesson_requests').update({status,responded_at:new Date().toISOString()}).eq('id',idr).eq('instructor_id',dpCurrentUserId());
+ if(r.error){alert('Die Anfrage konnte nicht aktualisiert werden.\n\n'+r.error.message);return}
+ requestsPage();
 }
 
 function licenseReceivedReport(sid){
@@ -2995,7 +3134,7 @@ function setCalendarView(view){
  if(view==='week' && !state.calendarWeekDate) state.calendarWeekDate=new Date().toISOString().slice(0,10);
  render();
 }
-function statsPage(){let mins=students.reduce((n,s)=>n+s.lessons.reduce((a,l)=>a+l.duration,0),0);document.getElementById('content').innerHTML=`<div class="cards"><div class="card"><div class="muted">Fahrschüler</div><div class="stat">${students.length}</div></div><div class="card"><div class="muted">Fahrstunden</div><div class="stat">${allLessons().length}</div></div><div class="card"><div class="muted">Gesamtminuten</div><div class="stat">${mins}</div></div><div class="card"><div class="muted">Termine heute</div><div class="stat">${allLessons().filter(x=>x.l.date===new Date().toISOString().slice(0,10)).length}</div><div class="small" style="margin-top:8px">Fahrstunden</div></div></div><div class="card" style="margin-top:16px"><h3>Ausbildungsstand</h3>${students.map(s=>`<div style="margin:15px 0"><div style="display:flex;justify-content:space-between"><b>${esc(s.firstName+' '+s.lastName)}</b><span>${pct(s)}%</span></div><div class="progress"><i style="width:${pct(s)}%"></i></div></div>`).join('')||'<div class="empty">Noch keine Daten.</div>'}</div>`}
+function statsPage(){const visible=activeStudents(),mins=visible.reduce((n,s)=>n+s.lessons.reduce((a,l)=>a+l.duration,0),0);document.getElementById('content').innerHTML=`<div class="cards"><div class="card"><div class="muted">Fahrschüler</div><div class="stat">${visible.length}</div></div><div class="card"><div class="muted">Fahrstunden</div><div class="stat">${allLessons().length}</div></div><div class="card"><div class="muted">Gesamtminuten</div><div class="stat">${mins}</div></div><div class="card"><div class="muted">Termine heute</div><div class="stat">${allLessons().filter(x=>x.l.date===new Date().toISOString().slice(0,10)).length}</div><div class="small" style="margin-top:8px">Fahrstunden</div></div></div><div class="card" style="margin-top:16px"><h3>Ausbildungsstand</h3>${visible.map(s=>`<div style="margin:15px 0"><div style="display:flex;justify-content:space-between"><b>${esc(s.firstName+' '+s.lastName)}</b><span>${pct(s)}%</span></div><div class="progress"><i style="width:${pct(s)}%"></i></div></div>`).join('')||'<div class="empty">Noch keine Daten.</div>'}</div>`}
 function showConflictOverlay(info){
  const old=document.getElementById('conflictOverlay');
  if(old) old.remove();
@@ -3876,7 +4015,8 @@ function dpInviteParams(){
  return {
    params,
    hashParams:hp,
-   tokenHash:params.get('token_hash')||hp.get('token_hash')||'',
+   tokenHash:params.get('token_hash')||hp.get('token_hash')||decodeURIComponent(params.get('token_hash')||hp.get('token_hash')||''),
+   accessToken:params.get('access_token')||hp.get('access_token')||'',
    type:params.get('type')||hp.get('type')||'',
    invite:params.get('invite')==='1'||hp.get('invite')==='1'
  };
@@ -3941,7 +4081,10 @@ async function dpLoadProfile(user){
  document.querySelectorAll('.dp-school-only').forEach(el=>el.style.display=isSchool?'':'none');
  document.querySelectorAll('.dp-role-school').forEach(el=>el.style.display=isSchool?'flex':'none');
  document.querySelectorAll('.dp-role-request').forEach(el=>el.style.display=(accountType==='student'||accountType==='instructor'||accountType==='school')?'flex':'none');
- if(!isSchool&&['instructors','settings','vehicles'].includes(state.page))state.page='dashboard';
+ if(accountType==='student'){
+   document.querySelectorAll('.nav button').forEach(el=>{const id=el.id||'';el.style.display=(id==='nav-dashboard'||id==='nav-requests')?'flex':'none'});
+   if(!['dashboard','requests'].includes(state.page))state.page='dashboard';
+ }else if(!isSchool&&['instructors','settings','vehicles'].includes(state.page)){state.page='dashboard';}
  window.dispatchEvent(new CustomEvent('drivepro:auth-ready'));
 }
 
@@ -4126,6 +4269,17 @@ async function dpInit(){
    if(inviteInfo.tokenHash){
      await dpVerifyInviteToken();
      return;
+   }
+
+   /* Older/default Supabase invite links may still arrive as an implicit
+      access-token hash. Let Supabase finish that flow before showing an
+      invalid-session message. This does not replace the safer TokenHash flow. */
+   if(inviteInfo.accessToken){
+     const implicit=await dpClient.auth.getSession();
+     if(implicit.data?.session){
+       await dpHandleSession(implicit.data.session);
+       return;
+     }
    }
 
    const r=await dpClient.auth.getSession();
