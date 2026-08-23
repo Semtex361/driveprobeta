@@ -2063,8 +2063,21 @@ function dpStaffName(p){return p?.display_name||[p?.first_name,p?.last_name].fil
 async function dpLoadSchoolInstructors(){
  const c=window.driveProAuth?.client,schoolId=dpCurrentSchoolId();
  if(!c||!schoolId)throw new Error('Keine Fahrschule für diesen Account hinterlegt.');
- const r=await c.from('profiles').select('id,first_name,last_name,display_name,role,account_type,school_id,is_active,created_at').eq('school_id',schoolId).eq('account_type','instructor').order('created_at',{ascending:true});
- if(r.error)throw r.error;return r.data||[];
+ /*
+  * Do not rely on account_type alone here. Existing DrivePro instructor
+  * profiles may legitimately be identified by role='fahrlehrer' while older
+  * profiles can have account_type unset. Both values are part of the current
+  * account model, so we accept either and filter only within this school.
+  */
+ const r=await c.from('profiles')
+   .select('id,first_name,last_name,display_name,role,account_type,school_id,is_active,created_at')
+   .eq('school_id',schoolId)
+   .order('created_at',{ascending:true});
+ if(r.error)throw r.error;
+ return (r.data||[]).filter(p=>
+   p &&
+   (p.account_type==='instructor' || p.role==='fahrlehrer')
+ );
 }
 async function instructorsPage(){
  if(!dpIsSchool()){document.getElementById('content').innerHTML='<div class="card empty">Dieser Bereich ist nur für das Fahrschulkonto verfügbar.</div>';return;}
