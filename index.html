@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V91.4</title>
+<title>DrivePro Beta V90.47</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -2290,9 +2290,9 @@ async function saveStudent(sid){
    }
    dpCloudMarkPending(sid);dpCloudMarkProgressPending(sid);for(const lesson of (s.lessons||[]))dpCloudMarkLessonPending(lesson.id,lesson);
    dpCloudBackupLocal();save();
+   let assignmentResult=null;
    if(dpCloudReady){
     await dpCloudUpsertStudent(s);
-    let assignmentResult=null;
     if(dpIsSchool())assignmentResult=await dpSaveStudentInstructorAssignments(sid,selectedInstructorIds);
     await dpCloudLoad();
    }else if(dpIsSchool())throw new Error('Cloud-Verbindung ist noch nicht bereit.');
@@ -2302,9 +2302,9 @@ async function saveStudent(sid){
   }else{
    const s={id:id(),...personal,schoolId:window.driveProAuth?.schoolId||null,instructorIds:dpIsSchool()?selectedInstructorIds:[],instructorId:dpIsSchool()?(selectedInstructorIds[0]||null):(dpAccountType()==='instructor'?window.driveProAuth?.user?.id:null),linkedUserId:null,areas:trainingAreasForNewStudent(),lessons:[],signature:null};
    students.push(s);dpCloudMarkPending(s.id);dpCloudBackupLocal();save();
+   let assignmentResult=null;
    if(dpCloudReady){
     await dpCloudUpsertStudent(s);
-    let assignmentResult=null;
     if(dpIsSchool())assignmentResult=await dpSaveStudentInstructorAssignments(s.id,selectedInstructorIds);
     await dpCloudLoad();
    }else if(dpIsSchool())throw new Error('Cloud-Verbindung ist noch nicht bereit.');
@@ -3501,13 +3501,15 @@ async function dpCloudDeleteStudent(sid,name){
   await dpCloudQueue(async()=>{
    let r=await client.rpc('drivepro_delete_student',{p_student_id:sid,p_student_name:name||''});
    if(r.error)throw r.error;
-   /* Verify by the same ownership model as the delete RPC: school_id.
-      user_id is the legacy creator/owner and is NOT the correct ownership
-      key for instructor accounts. */
-   const schoolId=window.driveProAuth?.schoolId||null;
-   let check=await client.from('students').select('id').eq('id',sid).eq('school_id',schoolId||'__none__').maybeSingle();
+   let check=await client.from('students').select('id').eq('id',sid).eq('user_id',uid).maybeSingle();
    if(check.error)throw check.error;
-   if(check.data)throw new Error('Supabase hat den Fahrschüler nach dem Löschen weiterhin gespeichert.');
+   if(check.data){
+    const fallback=await client.from('students').delete().eq('id',sid).eq('user_id',uid).select('id').maybeSingle();
+    if(fallback.error)throw fallback.error;
+    check=await client.from('students').select('id').eq('id',sid).eq('user_id',uid).maybeSingle();
+    if(check.error)throw check.error;
+    if(check.data)throw new Error('Supabase hat den Fahrschüler nach dem Löschen weiterhin gespeichert.');
+   }
   });
   dpCloudKnownStudentIds.delete(sid);dpCloudClearPending(sid);dpCloudStatus('ok','Fahrschüler dauerhaft aus der Cloud gelöscht.');
  }catch(e){dpCloudStatus('error',e?.message||'Fahrschüler konnte nicht gelöscht werden.');throw e}
