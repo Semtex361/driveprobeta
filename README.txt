@@ -1,13 +1,14 @@
-DrivePro V91.2 – Cloud-Synchronisation repariert
+DrivePro V91.4
 
-1. Supabase: supabase_v91_2_cloud_sync_repair.sql einmal im SQL Editor ausführen.
-2. Danach alle bisherigen GitHub-Dateien durch den Inhalt dieses Ordners ersetzen.
-3. GitHub Pages neu deployen lassen.
-4. Browser mit Strg+F5 bzw. im privaten Fenster öffnen.
+Dieses Gesamtupdate behebt die kontotypabhängige Fahrschüler-Löschung.
 
-Die Migration ist additiv/idempotent und löscht keine DrivePro-Daten.
-Die bestehende Einzelzuweisung students.instructor_id bleibt als Fallback erhalten.
+Wichtig:
+- index.html ins GitHub-Pages-Root legen.
+- Die Supabase-Funktion drivepro_delete_student wurde bereits im verbundenen Projekt korrigiert.
+- Die SQL-Datei ist als dokumentierte, wiederholbare Migration enthalten.
+- Keine bestehenden Fahrschülerdaten werden durch die Migration gelöscht.
 
-Bei einem echten Cloud-Fehler kann in der Browser-Konsole:
-window.driveProCloudDiagnostics()
-ausgeführt werden. Das Ergebnis zeigt nur technische Statuswerte der Cloud-Tabellen.
+Löschrechte:
+- Fahrschulkonto: Fahrschüler der eigenen Fahrschule.
+- Fahrlehrer: nur zugewiesene Fahrschüler der eigenen Fahrschule.
+- Fahrschüler: keine Löschberechtigung.
