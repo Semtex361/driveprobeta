@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V91.0</title>
+<title>DrivePro Beta V91.1</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -1724,7 +1724,7 @@ body.auth-locked #driveProAuth{display:flex}
 .trainingAreaMove:disabled{opacity:.35;cursor:default}
 </style>
 </head>
-<body class="auth-locked" data-drivepro-version="V91.0"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V91.1"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 
 <div id="driveProAuth" aria-label="DrivePro Anmeldung">
   <div class="dp-auth-card">
@@ -1804,7 +1804,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-vehicles" class="dp-role-school" onclick="page('vehicles')"><span>🚗</span>Fahrzeuge</button>
     <button id="nav-requests" class="dp-role-request" onclick="page('requests')"><span>📨</span>Anfragen</button>
   </nav>
-  <div class="sidefoot">V91.0 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V91.1 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -3310,6 +3310,7 @@ let dpCloudPendingProgressStudentIds=new Set();
 let dpCloudDeletingStudentIds=new Set();
 let dpCloudPendingStudentIds=new Set();
 let dpCloudPendingAssignmentStudentIds=new Set();
+let dpStudentInstructorRealtimeAvailable=false;
 let dpCloudWriteQueue=Promise.resolve();
 
 function dpCloudClient(){return window.driveProAuth?.client||null}
@@ -3948,6 +3949,23 @@ async function dpCloudRealtimeApplyProgress(p){
  },200);
  dpCloudProgressRenderTimers.set(sid,t);
 }
+async function dpCheckStudentInstructorTable(){
+ const c=dpCloudClient(),school=dpCurrentSchoolId();
+ if(!c||!school)return false;
+ try{
+  const r=await c.from('student_instructors').select('student_id').eq('school_id',school).limit(1);
+  if(r.error){
+   dpStudentInstructorRealtimeAvailable=false;
+   return false;
+  }
+  dpStudentInstructorRealtimeAvailable=true;
+  return true;
+ }catch(e){
+  dpStudentInstructorRealtimeAvailable=false;
+  return false;
+ }
+}
+
 async function dpCloudRealtimeStart(){
  const c=dpCloudClient(),uid=dpCloudUserId();
  if(!c||!uid||dpCloudRealtimeStarting||dpCloudRealtimeChannel||!dpCloudReady)return;
@@ -3999,13 +4017,16 @@ async function dpCloudRealtimeStart(){
     p=>dpCloudRealtimeApplySettings(p));
 
   if(schoolFilter){
-    /* Assignment changes are authoritative in student_instructors. INSERT and
-       DELETE are sufficient because the table uses (student_id,instructor_id)
-       as its primary key. */
-    ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'student_instructors',filter:schoolFilter},
-      p=>dpCloudRealtimeApplyStudent(p.new.student_id,p).catch(dpCloudRealtimeHandleError));
-    ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'student_instructors'},
-      p=>{const row=p.old||{};if(!row.student_id||!row.school_id||String(row.school_id)!==String(schoolId))return;dpCloudRealtimeApplyStudent(row.student_id,p).catch(dpCloudRealtimeHandleError)});
+    /* The assignment table is an optional migration. Never let a missing or
+       RLS-blocked student_instructors table break the main Cloud/Realtime
+       channel. If the table is available, live assignment changes are enabled. */
+    const assignmentTableAvailable=await dpCheckStudentInstructorTable();
+    if(assignmentTableAvailable){
+      ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'student_instructors',filter:schoolFilter},
+        p=>dpCloudRealtimeApplyStudent(p.new.student_id,p).catch(dpCloudRealtimeHandleError));
+      ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'student_instructors'},
+        p=>{const row=p.old||{};if(!row.student_id||!row.school_id||String(row.school_id)!==String(schoolId))return;dpCloudRealtimeApplyStudent(row.student_id,p).catch(dpCloudRealtimeHandleError)});
+    }
   }
 
 
@@ -4086,8 +4107,8 @@ function dpCloudHandleReady(){
      then use the same configuration on every device from the first render. */
   await dpCloudLoadSettings();
   await dpCloudLoad();
-  await dpCloudRetryPendingWrites();
   dpCloudInitialLoadDone=true;
+  dpCloudRetryPendingWrites().catch(e=>console.warn('DrivePro: ausstehende Cloud-Änderungen:',e));
   await dpCloudRealtimeStart();
  },0);
 }
@@ -4117,7 +4138,7 @@ function dpCloudHandleLogout(){
  dpCloudSettingsReady=false;dpCloudSettingsWriteSerial=0;dpCloudSettingsLastUpdatedAt='';
  dpCloudStopPolling();dpCloudReady=false;dpCloudBusy=false;dpCloudInitialLoadDone=false;
  dpCloudKnownStudentIds=new Set();dpCloudDeletingStudentIds=new Set();
- dpCloudPendingStudentIds=new Set();dpCloudPendingAssignmentStudentIds=new Set();dpCloudPendingLessonIds=new Set();
+ dpCloudPendingStudentIds=new Set();dpCloudPendingAssignmentStudentIds=new Set();dpStudentInstructorRealtimeAvailable=false;dpCloudPendingLessonIds=new Set();
  dpCloudPendingLessonSnapshots=new Map();dpCloudPendingProgressStudentIds=new Set();
  dpCloudStatus('','')
 }
