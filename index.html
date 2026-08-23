@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V91.6</title>
+<title>DrivePro Beta V91.8</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -1722,7 +1722,7 @@ body.auth-locked #driveProAuth{display:flex}
 .trainingAreaMove:disabled{opacity:.35;cursor:default}
 </style>
 </head>
-<body class="auth-locked" data-drivepro-version="V90.47"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V91.8"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 
 <div id="driveProAuth" aria-label="DrivePro Anmeldung">
   <div class="dp-auth-card">
@@ -1802,7 +1802,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-vehicles" class="dp-role-school" onclick="page('vehicles')"><span>🚗</span>Fahrzeuge</button>
     <button id="nav-requests" class="dp-role-request" onclick="page('requests')"><span>📨</span>Anfragen</button>
   </nav>
-  <div class="sidefoot">V90.47 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V91.8 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -2187,30 +2187,14 @@ async function dpSaveStudentInstructorAssignments(studentId,instructorIds){
  const c=dpCloudClient(),school=dpCurrentSchoolId();
  if(!c||!school||!studentId)throw new Error('Cloud-Verbindung oder Fahrschul-Zuordnung fehlt.');
  const ids=[...new Set((instructorIds||[]).map(String).filter(Boolean))];
- const existing=await c.from('student_instructors').select('instructor_id').eq('student_id',studentId).eq('school_id',school);
- if(existing.error){
-  if(dpStudentInstructorTableMissing(existing.error)){
-   if(ids.length<=1)return {ids,legacyOnly:true,setupMissing:true};
-   throw new Error(dpStudentInstructorSetupMessage());
-  }
-  throw existing.error;
+ const {data,error}=await c.rpc('drivepro_set_student_instructors',{p_student_id:studentId,p_instructor_ids:ids});
+ if(error)throw error;
+ const saved=[...new Set((Array.isArray(data)?data:[]).map(String).filter(Boolean))];
+ const wanted=[...ids].sort();
+ saved.sort();
+ if(saved.length!==wanted.length||saved.some((id,i)=>id!==wanted[i])){
+  throw new Error('Die Fahrlehrer-Zuweisungen konnten nicht vollständig bestätigt werden.');
  }
- const old=new Set((existing.data||[]).map(x=>String(x.instructor_id)));
- const wanted=new Set(ids);
- const remove=[...old].filter(id=>!wanted.has(id));
- const add=ids.filter(id=>!old.has(id));
- if(remove.length){
-  const r=await c.from('student_instructors').delete().eq('student_id',studentId).eq('school_id',school).in('instructor_id',remove);
-  if(r.error)throw r.error;
- }
- if(add.length){
-  const r=await c.from('student_instructors').insert(add.map(instructor_id=>({student_id:studentId,instructor_id,school_id:school})));
-  if(r.error)throw r.error;
- }
- const verify=await c.from('student_instructors').select('instructor_id').eq('student_id',studentId).eq('school_id',school);
- if(verify.error)throw verify.error;
- const saved=new Set((verify.data||[]).map(x=>String(x.instructor_id)));
- if(saved.size!==wanted.size||[...wanted].some(id=>!saved.has(id)))throw new Error('Die Fahrlehrer-Zuweisungen konnten nicht vollständig bestätigt werden.');
  return {ids,legacyOnly:false,setupMissing:false};
 }
 async function openStudentForm(studentId=''){
