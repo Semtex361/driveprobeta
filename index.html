@@ -3268,7 +3268,7 @@ function openModal(content){document.getElementById('modalBody').innerHTML=conte
 function closeModal(){document.getElementById('modal').classList.remove('open')}
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()})
 
-/* V90.13 – Stable Cloud Sync + Delete Race Fix
+/* V91.7 – Authoritative School-Scoped Student Deletion Registry
    - Cloud writes are serialized to prevent concurrent 409 conflicts.
    - Supabase Realtime is used for cross-account live updates; no background polling
      rebuilds the UI, so typing, focus and calendar position are preserved.
@@ -3470,49 +3470,32 @@ async function dpCloudDeleteLesson(lid){
   dpCloudClearLessonPending(lid);dpCloudStatus('ok','Fahrstunde dauerhaft aus der Cloud gelöscht.');
  }catch(e){dpCloudStatus('error',e?.message||'Fahrstunde konnte nicht gelöscht werden.');throw e}
 }
-async function dpCloudCreateDeleteTombstone(sid,name){
-/* IMPORTANT: activity_log's CHECK constraint accepts the normal action
-    'deleted', not the custom 'student_deleted' value. The student id is
-    stored in metadata so other devices can recognize the tombstone. */
- const payload={id:id(),user_id:uid,student_id:null,student_name:name||'',action:'deleted',details:`Fahrschüler gelöscht: ${name||sid}`,metadata:{deleted_student_id:sid,deleted_at:new Date().toISOString(),tombstone_type:'student'}};
- const r=await client.from('activity_log').insert(payload);
- if(r.error)throw r.error;
-}
+
 async function dpCloudGetDeletedIds(){
  const client=dpCloudClient(),uid=dpCloudUserId();
- /* activity_log only permits its normal action values (including 'deleted').
-    Student tombstones are therefore stored as a normal 'deleted' log entry,
-    with the deleted_student_id carried in metadata. We intentionally fetch
-    all deleted log entries and only treat rows with deleted_student_id as
-    student tombstones, so lesson deletions remain harmless. */
- const r=await client.from('activity_log').select('metadata,action,created_at').eq('user_id',uid).eq('action','deleted').order('created_at',{ascending:false});
+ if(!client||!uid)throw new Error('Cloud-Verbindung nicht verfügbar.');
+ /* Permanent school-scoped deletion registry. activity_log is audit-only. */
+ const r=await client.rpc('drivepro_get_deleted_student_ids');
  if(r.error)throw r.error;
- const set=new Set();
- for(const row of (r.data||[])){
-  const sid=row?.metadata?.deleted_student_id;
-  if(sid)set.add(String(sid));
- }
- return set;
+ return new Set((r.data||[]).map(x=>String(x)));
 }
 async function dpCloudDeleteStudent(sid,name){
- const client=dpCloudClient(),uid=dpCloudUserId();if(!client||!uid||!sid)return;
+ const client=dpCloudClient(),uid=dpCloudUserId();
+ if(!client||!uid||!sid)throw new Error('Cloud-Verbindung nicht verfügbar.');
+ if(!dpCloudReady)throw new Error('Die Cloud ist noch nicht vollständig synchronisiert. Bitte kurz warten und erneut versuchen.');
  dpCloudDeletingStudentIds.add(sid);dpCloudStatus('syncing','Fahrschüler wird dauerhaft gelöscht …');
  try{
   await dpCloudQueue(async()=>{
-   let r=await client.rpc('drivepro_delete_student',{p_student_id:sid,p_student_name:name||''});
+   const r=await client.rpc('drivepro_delete_student',{p_student_id:sid,p_student_name:name||''});
    if(r.error)throw r.error;
    const schoolId=window.driveProAuth?.schoolId||window.driveProAuth?.profile?.school_id||null;
    let check=client.from('students').select('id').eq('id',sid);
    if(schoolId)check=check.eq('school_id',schoolId);
    const checkResult=await check.maybeSingle();
    if(checkResult.error)throw checkResult.error;
-   if(checkResult.data){
-    /* The RPC is authoritative. A remaining row means the requested end
-       state was not reached; do not perform a legacy user_id-based fallback,
-       because that is wrong for instructor accounts and could leave a
-       misleading Cloud error. */
-    throw new Error('Supabase hat den Fahrschüler nach dem Löschen weiterhin gespeichert.');
-   }
+   if(checkResult.data)throw new Error('Supabase hat den Fahrschüler nach dem Löschen weiterhin gespeichert.');
+   const deletedIds=await dpCloudGetDeletedIds();
+   if(!deletedIds.has(String(sid)))throw new Error('Der Löschvermerk wurde nicht in der Cloud bestätigt.');
   });
   dpCloudKnownStudentIds.delete(sid);dpCloudClearPending(sid);dpCloudStatus('ok','Fahrschüler dauerhaft aus der Cloud gelöscht.');
  }catch(e){dpCloudStatus('error',e?.message||'Fahrschüler konnte nicht gelöscht werden.');throw e}
@@ -3597,12 +3580,15 @@ async function dpCloudLoad(){
   if(sr.error)throw new Error('students: '+(sr.error.message||'Lesefehler'));
 
   let deletedIds=new Set();
+  let deletionMarkersAvailable=false;
   try{
    const dr=await dpCloudGetDeletedIds();
-   if(dr instanceof Set)deletedIds=dr;
+   if(dr instanceof Set){deletedIds=dr;deletionMarkersAvailable=true;}
   }catch(e){
-   /* A problem in activity_log must not block the main student sync. */
-   console.warn('DrivePro: Löschvermerke konnten nicht geladen werden:',e);
+   /* Never migrate local records while the authoritative deletion registry
+      is unavailable. This prevents deleted students from being resurrected. */
+   console.error('DrivePro: Löschverzeichnis konnte nicht geladen werden:',e);
+   dpCloudStatus('error','Cloud-Löschschutz konnte nicht geladen werden. Es werden keine lokalen Schüler hochgeladen.');
   }
 
   let progressRows=[];
