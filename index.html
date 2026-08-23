@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V91.10</title>
+<title>DrivePro Beta V91.12</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -1722,7 +1722,7 @@ body.auth-locked #driveProAuth{display:flex}
 .trainingAreaMove:disabled{opacity:.35;cursor:default}
 </style>
 </head>
-<body class="auth-locked" data-drivepro-version="V91.10"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V91.12"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 
 <div id="driveProAuth" aria-label="DrivePro Anmeldung">
   <div class="dp-auth-card">
@@ -1802,7 +1802,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-vehicles" class="dp-role-school" onclick="page('vehicles')"><span>🚗</span>Fahrzeuge</button>
     <button id="nav-requests" class="dp-role-request" onclick="page('requests')"><span>📨</span>Anfragen</button>
   </nav>
-  <div class="sidefoot">V91.10 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V91.12 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -3786,9 +3786,36 @@ function dpCloudRealtimeScheduleRetry(){
 }
 async function dpCloudApplyStudentAssignmentChange(studentId,instructorId,instructorIds=null){
  const id=String(studentId),acct=dpAccountType(),uid=dpCloudUserId();
+ const ids=[...new Set((Array.isArray(instructorIds)?instructorIds:(instructorId?[instructorId]:[])).map(String).filter(Boolean))];
+ if(!id)return;
+
+ /* The assignment broadcast is the authoritative result of the just-finished
+    save. Do NOT immediately re-query student_instructors here: the broadcast
+    can arrive between the students UPDATE and the assignment RPC. A query at
+    that exact moment can still see the old assignment and therefore resurrect
+    the student on the instructor screen. */
+ if(acct==='instructor'){
+  const visible=ids.includes(String(uid));
+  const localIdx=students.findIndex(s=>String(s.id)===id);
+  if(!visible){
+   if(localIdx>=0){
+    students.splice(localIdx,1);
+    save();
+    if(['dashboard','students','archive','calendar','stats','logbook'].includes(state.page))render();
+   }
+   return;
+  }
+  await dpCloudRealtimeApplyStudent(id);
+  return;
+ }
  if(acct==='school'){
   const local=students.find(s=>String(s.id)===id);
-  if(local){local.instructorIds=instructorIds||((instructorId?[String(instructorId)]:[]));local.instructorId=local.instructorIds[0]||null;save();if(['dashboard','students','archive','calendar','stats','logbook'].includes(state.page))render()}
+  if(local){
+   local.instructorIds=ids;
+   local.instructorId=ids[0]||null;
+   save();
+   if(['dashboard','students','archive','calendar','stats','logbook'].includes(state.page))render();
+  }
   return;
  }
  await dpCloudRealtimeApplyStudent(id);

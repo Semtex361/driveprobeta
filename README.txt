@@ -1,14 +1,6 @@
-DrivePro V91.4
+DrivePro V91.12
 
-Dieses Gesamtupdate behebt die kontotypabhängige Fahrschüler-Löschung.
+Fix: Live-Synchronisation von Fahrlehrer-Zuweisungen. Der Realtime-Broadcast wird bei der Accountart Fahrlehrer jetzt als autoritativer Zuweisungszustand ausgewertet. Beim Entfernen des letzten Hakens wird der Fahrschüler dadurch sofort aus der offenen Fahrlehrer-Ansicht entfernt, ohne auf einen nachfolgenden Reload oder eine zeitgleiche REST-Abfrage zu warten.
 
-Wichtig:
-- index.html ins GitHub-Pages-Root legen.
-- Die Supabase-Funktion drivepro_delete_student wurde bereits im verbundenen Projekt korrigiert.
-- Die SQL-Datei ist als dokumentierte, wiederholbare Migration enthalten.
-- Keine bestehenden Fahrschülerdaten werden durch die Migration gelöscht.
-
-Löschrechte:
-- Fahrschulkonto: Fahrschüler der eigenen Fahrschule.
-- Fahrlehrer: nur zugewiesene Fahrschüler der eigenen Fahrschule.
-- Fahrschüler: keine Löschberechtigung.
+Supabase muss für diesen Frontend-Fix nicht erneut migriert werden.
+V91.8 bleibt der offizielle Backup-Stand.
