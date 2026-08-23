@@ -3127,8 +3127,9 @@ function closeModal(){document.getElementById('modal').classList.remove('open')}
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()})
 
 /* V90.13 – Stable Cloud Sync + Delete Race Fix
-   - No Supabase Realtime/WebSocket is used. Polling is the reliable fallback.
-   - All cloud writes are serialized to prevent concurrent 409 conflicts.
+   - Cloud writes are serialized to prevent concurrent 409 conflicts.
+   - Supabase Realtime is used for cross-account live updates; no background polling
+     rebuilds the UI, so typing, focus and calendar position are preserved.
    - training_progress is written with update-first / insert-fallback logic.
    - Deletions create a cloud tombstone in activity_log before the student row is removed.
    - A tombstoned student can never be resurrected by another device's local cache.
@@ -3611,13 +3612,34 @@ async function dpCloudRealtimeApplyStudent(id){
  const sr=await sq.maybeSingle();if(sr.error)throw sr.error;
  const idx=students.findIndex(s=>s.id===id);
  if(!sr.data){if(idx>=0){students.splice(idx,1);save();if(['calendar','dashboard','students','stats'].includes(state.page))render()}return}
- const pr=await c.from('training_progress').select('*').eq('user_id',uid).eq('student_id',id);if(pr.error)throw pr.error;
- const lr=await c.from('lessons').select('id,user_id,student_id,lesson_date,start_time,end_time,lesson_type,special_type,duration_minutes,kilometers,notes,color,signature').eq('user_id',uid).eq('student_id',id).order('lesson_date').order('start_time');if(lr.error)throw lr.error;
+ const pr=await c.from('training_progress').select('*').eq('school_id',schoolId||'__none__').eq('student_id',id);if(pr.error)throw pr.error;
+ const lr=await c.from('lessons').select('id,user_id,student_id,school_id,instructor_id,vehicle_id,lesson_date,start_time,end_time,lesson_type,special_type,duration_minutes,kilometers,notes,color,signature').eq('school_id',schoolId||'__none__').eq('student_id',id).order('lesson_date').order('start_time');if(lr.error)throw lr.error;
  const pm=new Map((pr.data||[]).map(x=>[x.area_name,x]));
  const old=idx>=0?students[idx]:null;
  const areaNames=old?.areas?.length?old.areas.map(a=>a.name).filter(Boolean):getTrainingAreas();
  const mergedAreaNames=[...areaNames,...(pr.data||[]).map(x=>x.area_name).filter(Boolean).filter(name=>!areaNames.includes(name))];
- const s={id,firstName:sr.data.first_name||'',lastName:sr.data.last_name||'',license:sr.data.license_class||'B',start:sr.data.training_start||'',birthDate:sr.data.birth_date||'',phone:sr.data.phone||'',email:sr.data.email||'',address:sr.data.address||'',visionAid:sr.data.vision_aid===true,theoryPassed:sr.data.theory_passed===true,practiceExamDate:sr.data.practice_exam_date||'',licenseReceivedDate:sr.data.license_received_date||'',notes:sr.data.notes||'',signature:old?.signature||null,areas:mergedAreaNames.map(name=>{const previous=(old?.areas||[]).find(a=>a.name===name);const x=pm.get(name);return{name,level:x?.level||previous?.level||'Offen',note:x?.note||previous?.note||''}}),lessons:(lr.data||[]).map(x=>({id:x.id,date:x.lesson_date,startTime:(x.start_time||'').slice(0,5),duration:Number(x.duration_minutes)||0,special:x.special_type||'',lessonType:x.lesson_type||'Fahrstunde',note:x.notes||'',kilometers:x.kilometers==null?'':x.kilometers,color:x.color||null,signature:x.signature||null}))};
+ const s={
+  id,
+  firstName:sr.data.first_name||'',lastName:sr.data.last_name||'',
+  userId:sr.data.user_id||null,schoolId:sr.data.school_id||schoolId||null,
+  instructorId:sr.data.instructor_id||null,linkedUserId:sr.data.linked_user_id||null,
+  license:sr.data.license_class||'B',start:sr.data.training_start||'',birthDate:sr.data.birth_date||'',
+  phone:sr.data.phone||'',email:sr.data.email||'',address:sr.data.address||'',
+  visionAid:sr.data.vision_aid===true,theoryPassed:sr.data.theory_passed===true,
+  practiceExamDate:sr.data.practice_exam_date||'',licenseReceivedDate:sr.data.license_received_date||'',notes:sr.data.notes||'',
+  signature:old?.signature||null,
+  areas:mergedAreaNames.map(name=>{
+    const previous=(old?.areas||[]).find(a=>a.name===name);
+    const x=pm.get(name);
+    return {name,level:x?.level||previous?.level||'Offen',note:x?.note||previous?.note||''};
+  }),
+  lessons:(lr.data||[]).map(x=>({
+    id:x.id,date:x.lesson_date,startTime:(x.start_time||'').slice(0,5),
+    duration:Number(x.duration_minutes)||0,special:x.special_type||'',lessonType:x.lesson_type||'Fahrstunde',
+    note:x.notes||'',kilometers:x.kilometers==null?'':x.kilometers,color:x.color||null,signature:x.signature||null,
+    vehicleId:x.vehicle_id||null,instructorId:x.instructor_id||null
+  }))
+ };
  if(idx>=0)students[idx]=s;else students.push(s);dpCloudKnownStudentIds.add(id);save();
  if(['calendar','dashboard','students','stats'].includes(state.page))render();
 }
@@ -3626,7 +3648,13 @@ async function dpCloudRealtimeApplyLesson(p){
  let sid=row.student_id;
  if(!sid){for(const s of students)if((s.lessons||[]).some(l=>l.id===lid)){sid=s.id;break}}
  if(!sid)return;
- const s=students.find(x=>x.id===sid);if(!s)return;
+ let s=students.find(x=>x.id===sid);
+ /* A lesson event can arrive before the corresponding student event. Load the
+    student once so the calendar never silently misses the lesson. */
+ if(!s && p.eventType!=='DELETE'){
+   try{await dpCloudRealtimeApplyStudent(sid);s=students.find(x=>x.id===sid)}catch(e){dpCloudRealtimeHandleError(e);return}
+ }
+ if(!s)return;
  if(p.eventType==='DELETE'){
   dpCloudClearLessonPending(lid);
   s.lessons=(s.lessons||[]).filter(l=>l.id!==lid);
@@ -3658,6 +3686,10 @@ let dpCloudProgressRenderTimers=new Map();
 async function dpCloudRealtimeApplyProgress(p){
  const row=p?.new||p?.old||{},sid=row.student_id,area=String(row.area_name||'').trim();
  if(!sid||!area||dpCloudPendingProgressStudentIds.has(sid))return;
+ /* Ignore progress events from another school. This is important because the
+    Realtime channel itself is account-specific while the data is school-scoped. */
+ const schoolId=window.driveProAuth?.schoolId;
+ if(schoolId && row.school_id && String(row.school_id)!==String(schoolId))return;
  const s=students.find(x=>x.id===sid);if(!s)return;
  const a=(s.areas||[]).find(x=>x.name===area);
  if(a){
@@ -3726,12 +3758,27 @@ async function dpCloudRealtimeStart(){
   ch.on('broadcast',{event:'SETTINGS_UPDATED'},
     p=>dpCloudRealtimeApplySettings(p));
 
-  ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'training_progress',filter:`user_id=eq.${uid}`},
-    p=>dpCloudRealtimeApplyProgress(p).catch(dpCloudRealtimeHandleError));
-  ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'training_progress',filter:`user_id=eq.${uid}`},
-    p=>dpCloudRealtimeApplyProgress(p).catch(dpCloudRealtimeHandleError));
-  ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'training_progress'},
-    p=>dpCloudRealtimeApplyProgress(p).catch(dpCloudRealtimeHandleError));
+  /* Lesson requests are school-scoped. A request/response must appear on an
+     already-open Anfragen page without requiring a manual reload. */
+  if(schoolFilter){
+    const refreshRequests=()=>{
+      if(state.page==='requests')requestsPage();
+    };
+    ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'lesson_requests',filter:schoolFilter},refreshRequests);
+    ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'lesson_requests',filter:schoolFilter},refreshRequests);
+    ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'lesson_requests',filter:schoolFilter},refreshRequests);
+  }
+
+  /* Training progress is school-scoped too. Filtering by the logged-in
+     user's id broke live progress updates for instructors and students. */
+  if(schoolFilter){
+    ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'training_progress',filter:schoolFilter},
+      p=>dpCloudRealtimeApplyProgress(p).catch(dpCloudRealtimeHandleError));
+    ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'training_progress',filter:schoolFilter},
+      p=>dpCloudRealtimeApplyProgress(p).catch(dpCloudRealtimeHandleError));
+    ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'training_progress',filter:schoolFilter},
+      p=>dpCloudRealtimeApplyProgress(p).catch(dpCloudRealtimeHandleError));
+  }
 
   ch.subscribe(status=>{
    if(status==='SUBSCRIBED'){
