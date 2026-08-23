@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V90.47</title>
+<title>DrivePro Beta V91.0</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -784,6 +784,8 @@ body{overflow-x:hidden}
 .dp-instructor-picker>button:hover{border-color:#9fc3e8;background:#fbfdff}
 .dp-instructor-picker.open>button{border-color:#5b9be0;box-shadow:0 0 0 3px rgba(47,128,237,.10)}
 .dp-instructor-picker .dp-picker-arrow{font-size:13px;color:#71839a;transition:transform .18s ease}
+.dp-instructor-option-inactive{opacity:.72}
+.dp-instructor-option-inactive small{color:#a26a00!important}
 .dp-instructor-picker.open .dp-picker-arrow{transform:rotate(180deg)}
 .dp-instructor-picker-panel{display:none;position:absolute;left:0;right:0;top:calc(100% + 7px);z-index:100;background:#fff;border:1px solid #d9e5f0;border-radius:14px;padding:8px;box-shadow:0 18px 42px rgba(20,58,100,.16);max-height:280px;overflow:auto}
 .dp-instructor-picker.open .dp-instructor-picker-panel{display:block}
@@ -1722,7 +1724,7 @@ body.auth-locked #driveProAuth{display:flex}
 .trainingAreaMove:disabled{opacity:.35;cursor:default}
 </style>
 </head>
-<body class="auth-locked" data-drivepro-version="V90.47"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V91.0"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 
 <div id="driveProAuth" aria-label="DrivePro Anmeldung">
   <div class="dp-auth-card">
@@ -1802,7 +1804,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-vehicles" class="dp-role-school" onclick="page('vehicles')"><span>🚗</span>Fahrzeuge</button>
     <button id="nav-requests" class="dp-role-request" onclick="page('requests')"><span>📨</span>Anfragen</button>
   </nav>
-  <div class="sidefoot">V90.47 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V91.0 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -2057,14 +2059,14 @@ function isArchivedStudent(s){return !!s?.licenseReceivedDate}
 function activeStudents(){
  const type=dpAccountType(),uid=dpCurrentUserId();
  let list=students.filter(s=>!isArchivedStudent(s));
- if(type==='instructor')list=list.filter(s=>String(s.instructorId||'')===String(uid||''));
+ if(type==='instructor')list=list.filter(s=>String(s.instructorId||'')===String(uid||'')||(Array.isArray(s.instructorIds)&&s.instructorIds.some(id=>String(id)===String(uid||''))));
  if(type==='student')list=list.filter(s=>s.linkedUserId===uid);
  return list;
 }
 function archivedStudents(){
  const type=dpAccountType(),uid=dpCurrentUserId();
  let list=students.filter(isArchivedStudent);
- if(type==='instructor')list=list.filter(s=>String(s.instructorId||'')===String(uid||''));
+ if(type==='instructor')list=list.filter(s=>String(s.instructorId||'')===String(uid||'')||(Array.isArray(s.instructorIds)&&s.instructorIds.some(id=>String(id)===String(uid||''))));
  if(type==='student')list=list.filter(s=>s.linkedUserId===uid);
  return list;
 }
@@ -2095,7 +2097,7 @@ async function dpLoadSchoolInstructors(){
  if(r.error)throw r.error;
  return (r.data||[]).filter(p=>
    p &&
-   (p.account_type==='instructor' || p.role==='fahrlehrer')
+   (String(p.account_type||'').toLowerCase()==='instructor' || ['fahrlehrer','instructor'].includes(String(p.role||'').toLowerCase()))
  );
 }
 async function instructorsPage(){
@@ -2168,9 +2170,13 @@ async function dpLoadStudentInstructorIds(studentId){
 }
 function dpToggleInstructorPicker(){
  const picker=document.getElementById('studentInstructorPicker');if(!picker)return;
- picker.classList.toggle('open');
+ const open=!picker.classList.contains('open');picker.classList.toggle('open',open);
+ picker.querySelector('button')?.setAttribute('aria-expanded',String(open));
 }
-function dpCloseInstructorPicker(){document.getElementById('studentInstructorPicker')?.classList.remove('open')}
+function dpCloseInstructorPicker(){
+ const picker=document.getElementById('studentInstructorPicker');if(!picker)return;
+ picker.classList.remove('open');picker.querySelector('button')?.setAttribute('aria-expanded','false');
+}
 function dpUpdateInstructorPickerSummary(){
  const picker=document.getElementById('studentInstructorPicker');if(!picker)return;
  const checks=[...picker.querySelectorAll('input[data-instructor-id]')].filter(x=>x.checked);
@@ -2186,32 +2192,29 @@ function dpGetSelectedInstructorIds(){
 async function dpSaveStudentInstructorAssignments(studentId,instructorIds){
  const c=dpCloudClient(),school=dpCurrentSchoolId();
  if(!c||!school||!studentId)throw new Error('Cloud-Verbindung oder Fahrschul-Zuordnung fehlt.');
- const ids=[...new Set((instructorIds||[]).map(String).filter(Boolean))];
- const existing=await c.from('student_instructors').select('instructor_id').eq('student_id',studentId).eq('school_id',school);
+ const id=String(studentId),ids=[...new Set((instructorIds||[]).map(String).filter(Boolean))];
+ dpCloudMarkAssignmentPending(id);
+ const work=async()=>{
+ const existing=await c.from('student_instructors').select('instructor_id').eq('student_id',id).eq('school_id',school);
  if(existing.error){
   if(dpStudentInstructorTableMissing(existing.error)){
-   if(ids.length<=1)return {ids,legacyOnly:true,setupMissing:true};
-   throw new Error(dpStudentInstructorSetupMessage());
+   if(ids.length<=1){dpCloudClearAssignmentPending(id);return {ids,legacyOnly:true,setupMissing:true};}
+   const err=new Error(dpStudentInstructorSetupMessage());err.code='DP_ASSIGNMENT_SETUP_MISSING';err.setupMissing=true;err.studentId=id;err.instructorIds=ids;throw err;
   }
   throw existing.error;
  }
  const old=new Set((existing.data||[]).map(x=>String(x.instructor_id)));
- const wanted=new Set(ids);
- const remove=[...old].filter(id=>!wanted.has(id));
- const add=ids.filter(id=>!old.has(id));
- if(remove.length){
-  const r=await c.from('student_instructors').delete().eq('student_id',studentId).eq('school_id',school).in('instructor_id',remove);
-  if(r.error)throw r.error;
- }
- if(add.length){
-  const r=await c.from('student_instructors').insert(add.map(instructor_id=>({student_id:studentId,instructor_id,school_id:school})));
-  if(r.error)throw r.error;
- }
- const verify=await c.from('student_instructors').select('instructor_id').eq('student_id',studentId).eq('school_id',school);
+ const wanted=new Set(ids),remove=[...old].filter(x=>!wanted.has(x)),add=ids.filter(x=>!old.has(x));
+ if(remove.length){const r=await c.from('student_instructors').delete().eq('student_id',id).eq('school_id',school).in('instructor_id',remove);if(r.error)throw r.error;}
+ if(add.length){const r=await c.from('student_instructors').insert(add.map(instructor_id=>({student_id:id,instructor_id,school_id:school})));if(r.error)throw r.error;}
+ const verify=await c.from('student_instructors').select('instructor_id').eq('student_id',id).eq('school_id',school);
  if(verify.error)throw verify.error;
  const saved=new Set((verify.data||[]).map(x=>String(x.instructor_id)));
- if(saved.size!==wanted.size||[...wanted].some(id=>!saved.has(id)))throw new Error('Die Fahrlehrer-Zuweisungen konnten nicht vollständig bestätigt werden.');
+ if(saved.size!==wanted.size||[...wanted].some(x=>!saved.has(x))){const err=new Error('Die Fahrlehrer-Zuweisungen konnten nicht vollständig bestätigt werden.');err.code='DP_ASSIGNMENT_VERIFY_FAILED';err.studentId=id;err.instructorIds=ids;throw err;}
+ dpCloudClearAssignmentPending(id);
  return {ids,legacyOnly:false,setupMissing:false};
+ };
+ return dpCloudQueue(work);
 }
 async function openStudentForm(studentId=''){
  let s=studentId?getStudent(studentId):null;
@@ -2230,9 +2233,9 @@ async function openStudentForm(studentId=''){
  const instructorField=dpIsSchool()?`<div class="field">
 <label>Fahrlehrer zuweisen</label>
 <div class="dp-instructor-picker" id="studentInstructorPicker">
-<button type="button" onclick="dpToggleInstructorPicker()"><span class="dp-instructor-picker-summary">${selectedInstructorIds.length?(selectedInstructorIds.length===1?(instructors.find(x=>String(x.id)===selectedInstructorIds[0])?.first_name||instructors.find(x=>String(x.id)===selectedInstructorIds[0])?.firstName||'1 Fahrlehrer'):`${selectedInstructorIds.length} Fahrlehrer ausgewählt`):'Keine Zuordnung'}</span><span class="dp-picker-arrow">▼</span></button>
-<div class="dp-instructor-picker-panel">
-${instructors.filter(p=>p.is_active!==false).sort((a,b)=>dpStaffName(a).localeCompare(dpStaffName(b),'de')).map(p=>{const pid=String(p.id),checked=selectedInstructorIds.includes(pid);return `<label class="dp-instructor-option"><input type="checkbox" data-instructor-id="${esc(pid)}" data-instructor-name="${esc(dpStaffName(p))}" ${checked?'checked':''} onchange="dpUpdateInstructorPickerSummary()"><span><b>${esc(dpStaffName(p))}</b><small>Fahrlehrer</small></span></label>`}).join('')||'<div class="dp-instructor-empty">Keine aktiven Fahrlehrer vorhanden.</div>'}
+<button type="button" aria-haspopup="listbox" aria-expanded="false" onclick="dpToggleInstructorPicker()"><span class="dp-instructor-picker-summary">${selectedInstructorIds.length?(selectedInstructorIds.length===1?dpStaffName(instructors.find(x=>String(x.id)===selectedInstructorIds[0])):`${selectedInstructorIds.length} Fahrlehrer ausgewählt`):'Keine Zuordnung'}</span><span class="dp-picker-arrow">▼</span></button>
+<div class="dp-instructor-picker-panel" role="listbox" aria-multiselectable="true">
+${instructors.filter(p=>p.is_active!==false||selectedInstructorIds.includes(String(p.id))).sort((a,b)=>dpStaffName(a).localeCompare(dpStaffName(b),'de')).map(p=>{const pid=String(p.id),checked=selectedInstructorIds.includes(pid),inactive=p.is_active===false;return `<label class="dp-instructor-option${inactive?' dp-instructor-option-inactive':''}"><input type="checkbox" data-instructor-id="${esc(pid)}" data-instructor-name="${esc(dpStaffName(p))}" ${checked?'checked':''} onchange="dpUpdateInstructorPickerSummary()"><span><b>${esc(dpStaffName(p))}</b><small>${inactive?'Deaktiviert':'Fahrlehrer'}</small></span></label>`}).join('')||'<div class="dp-instructor-empty">Keine Fahrlehrer vorhanden.</div>'}
 </div></div>
 <div class="muted" style="margin-top:6px">Dropdown öffnen und per Haken beliebig viele Fahrlehrer hinzufügen oder entfernen.</div>
 </div>`:'';
@@ -2273,11 +2276,11 @@ async function deleteStudent(sid,event){
  }
 }
 async function saveStudent(sid){
- const f=document.getElementById('sf').value.trim(),l=document.getElementById('sl').value.trim();
+ const f=document.getElementById('sf')?.value.trim(),l=document.getElementById('sl')?.value.trim();
  if(!f||!l){alert('Bitte Vor- und Nachnamen eingeben.');return}
  const saveButton=document.querySelector('.dialog .actions .primary');
  if(saveButton){saveButton.disabled=true;saveButton.textContent='Speichert …'}
- const personal={firstName:f,lastName:l,license:document.getElementById('sc').value,start:document.getElementById('sd').value,birthDate:document.getElementById('sb').value,phone:document.getElementById('sphone').value.trim(),email:document.getElementById('semail').value.trim(),address:document.getElementById('saddress').value.trim(),visionAid:document.getElementById('sv').checked,theoryPassed:document.getElementById('st').checked};
+ const personal={firstName:f,lastName:l,license:document.getElementById('sc')?.value||'B',start:document.getElementById('sd')?.value||'',birthDate:document.getElementById('sb')?.value||'',phone:document.getElementById('sphone')?.value.trim()||'',email:document.getElementById('semail')?.value.trim()||'',address:document.getElementById('saddress')?.value.trim()||'',visionAid:document.getElementById('sv')?.checked===true,theoryPassed:document.getElementById('st')?.checked===true};
  const selectedInstructorIds=dpIsSchool()?dpGetSelectedInstructorIds():null;
  try{
   if(sid){
@@ -2314,8 +2317,17 @@ async function saveStudent(sid){
   }
  }catch(e){
   console.error('DrivePro: Fahrschüler speichern',e);
-  dpCloudStatus('error',e?.message||'Speichern fehlgeschlagen.');
-  alert(`Der Fahrschüler konnte nicht vollständig gespeichert werden.\n\n${e?.message||'Unbekannter Fehler'}\n\nDie bestehenden Daten wurden nicht absichtlich verworfen.`);
+  const setupMissing=e?.setupMissing===true;
+  const transient=/network|fetch|timeout|timed out|failed to fetch|offline|abort/i.test(String(e?.message||''));
+  if(setupMissing){
+   dpCloudStatus('error','Fahrschüler gespeichert · Mehrfach-Zuweisung wartet auf Einrichtung');
+   alert(dpStudentInstructorSetupMessage());
+   if(saveButton){saveButton.disabled=false;saveButton.textContent='Speichern'}
+   return;
+  }
+  if(transient)dpCloudStatus('syncing','Fahrschüler gespeichert · Cloud-Zuweisung wird erneut versucht …');
+  else dpCloudStatus('error',e?.message||'Speichern fehlgeschlagen.');
+  alert(`Der Fahrschüler konnte nicht vollständig gespeichert werden.\n\n${e?.message||'Unbekannter Fehler'}\n\nDie bereits lokal gespeicherten Daten wurden nicht absichtlich verworfen.`);
   if(saveButton){saveButton.disabled=false;saveButton.textContent='Speichern'}
  }
 }
@@ -3297,6 +3309,7 @@ let dpCloudPendingLessonSnapshots=new Map();
 let dpCloudPendingProgressStudentIds=new Set();
 let dpCloudDeletingStudentIds=new Set();
 let dpCloudPendingStudentIds=new Set();
+let dpCloudPendingAssignmentStudentIds=new Set();
 let dpCloudWriteQueue=Promise.resolve();
 
 function dpCloudClient(){return window.driveProAuth?.client||null}
@@ -3306,8 +3319,10 @@ function dpCloudQueue(task){
  dpCloudWriteQueue=run.catch(()=>{});
  return run;
 }
-function dpCloudMarkPending(sid){if(sid)dpCloudPendingStudentIds.add(sid)}
-function dpCloudClearPending(sid){if(sid)dpCloudPendingStudentIds.delete(sid)}
+function dpCloudMarkPending(sid){if(sid)dpCloudPendingStudentIds.add(String(sid))}
+function dpCloudClearPending(sid){if(sid)dpCloudPendingStudentIds.delete(String(sid))}
+function dpCloudMarkAssignmentPending(sid){if(sid)dpCloudPendingAssignmentStudentIds.add(String(sid))}
+function dpCloudClearAssignmentPending(sid){if(sid)dpCloudPendingAssignmentStudentIds.delete(String(sid))}
 function dpCloudMarkLessonPending(lid,lesson){
  if(!lid)return;
  dpCloudPendingLessonIds.add(lid);
@@ -3424,16 +3439,6 @@ async function dpCloudUpsertStudent(s){
   });
   dpCloudReady=true;
   dpCloudClearPending(s.id);
-  try{
-    const schoolId=s.schoolId||window.driveProAuth?.schoolId;
-    if(dpCloudRealtimeChannel&&schoolId){
-      await dpCloudRealtimeChannel.send({
-        type:'broadcast',
-        event:'STUDENT_ASSIGNMENT_CHANGED',
-        payload:{student_id:s.id,school_id:schoolId,instructor_id:s.instructorId||null,instructor_ids:s.instructorIds||[]}
-      });
-    }
-  }catch(broadcastError){console.warn('DrivePro assignment broadcast:',broadcastError);}
   dpCloudStatus('ok','Fahrschüler und Ausbildungsstand sind in der Cloud gespeichert.');
  }catch(e){dpCloudStatus('error',e?.message||'Fahrschüler konnte nicht synchronisiert werden.');throw e}
 }
@@ -3550,8 +3555,10 @@ async function dpCloudStudentsQuery(client,uid){
   throw ar.error;
  }
  const ids=[...new Set((ar.data||[]).map(x=>x.student_id).filter(Boolean))];
- if(!ids.length)return {data:[],error:null};
- return q.eq('school_id',schoolId||'__none__').in('id',ids);
+ if(ids.length)return q.eq('school_id',schoolId||'__none__').in('id',ids);
+ /* Compatibility: if the new assignment table exists but legacy rows were
+    never migrated, keep the original single-instructor assignment working. */
+ return q.eq('school_id',schoolId||'__none__').eq('instructor_id',uid);
 }
 async function dpCloudMigrateLegacyInstructorAssignments(studentsRows){
  const c=dpCloudClient(),school=dpCurrentSchoolId();
@@ -3566,16 +3573,20 @@ async function dpCloudGetInstructorIdsForStudents(studentIds){
  const c=dpCloudClient(),school=dpCurrentSchoolId();
  if(!c||!school||!studentIds?.length)return new Map();
  const r=await c.from('student_instructors').select('student_id,instructor_id').eq('school_id',school).in('student_id',studentIds);
+ const map=new Map();
  if(r.error){
   if(!dpStudentInstructorTableMissing(r.error))throw r.error;
-  const legacy=await c.from('students').select('id,instructor_id').eq('school_id',school).in('id',studentIds);
-  if(legacy.error)throw legacy.error;
-  const fallback=new Map();
-  for(const row of (legacy.data||[])){if(row.instructor_id)fallback.set(String(row.id),[String(row.instructor_id)])}
-  return fallback;
+ }else{
+  for(const row of (r.data||[])){const sid=String(row.student_id);if(!map.has(sid))map.set(sid,[]);map.get(sid).push(String(row.instructor_id))}
  }
- const map=new Map();
- for(const row of (r.data||[])){const sid=String(row.student_id);if(!map.has(sid))map.set(sid,[]);map.get(sid).push(String(row.instructor_id))}
+ /* Always read the legacy column as a compatibility safety net. It is used
+    only when the new table has no assignment for that student. */
+ const missingIds=studentIds.filter(id=>!map.has(String(id)));
+ if(missingIds.length){
+  const legacy=await c.from('students').select('id,instructor_id').eq('school_id',school).in('id',missingIds);
+  if(legacy.error)throw legacy.error;
+  for(const row of (legacy.data||[])){if(row.instructor_id)map.set(String(row.id),[String(row.instructor_id)])}
+ }
  return map;
 }
 
@@ -3781,9 +3792,9 @@ async function dpCloudLoad(){
  }
 }
 
-function dpCloudForceSync(){
+async function dpCloudForceSync(){
  if(!dpCloudReady){dpCloudStatus('error','Cloud ist noch nicht bereit. Bitte kurz warten.');return}
- dpCloudLoad().catch(e=>console.error('DrivePro manueller Sync:',e));
+ try{await dpCloudLoad();await dpCloudRetryPendingWrites()}catch(e){console.error('DrivePro manueller Sync:',e)}
 }
 
 function dpCloudRealtimeStop(){
@@ -3795,15 +3806,6 @@ function dpCloudRealtimeScheduleRetry(){
  if(dpCloudRealtimeRetryTimer||!dpCloudReady)return;
  const delay=Math.min(30000,1000*Math.pow(2,dpCloudRealtimeRetryCount++));
  dpCloudRealtimeRetryTimer=setTimeout(()=>{dpCloudRealtimeRetryTimer=null;dpCloudRealtimeStart()},delay);
-}
-async function dpCloudApplyStudentAssignmentChange(studentId,instructorId,instructorIds=null){
- const id=String(studentId),acct=dpAccountType(),uid=dpCloudUserId();
- if(acct==='school'){
-  const local=students.find(s=>String(s.id)===id);
-  if(local){local.instructorIds=instructorIds||((instructorId?[String(instructorId)]:[]));local.instructorId=local.instructorIds[0]||null;save();if(['dashboard','students','archive','calendar','stats','logbook'].includes(state.page))render()}
-  return;
- }
- await dpCloudRealtimeApplyStudent(id);
 }
 
 function dpCloudRealtimeHandleError(err){console.warn('DrivePro Realtime:',err);dpCloudRealtimeScheduleRetry()}
@@ -3997,20 +3999,16 @@ async function dpCloudRealtimeStart(){
     p=>dpCloudRealtimeApplySettings(p));
 
   if(schoolFilter){
+    /* Assignment changes are authoritative in student_instructors. INSERT and
+       DELETE are sufficient because the table uses (student_id,instructor_id)
+       as its primary key. */
     ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'student_instructors',filter:schoolFilter},
       p=>dpCloudRealtimeApplyStudent(p.new.student_id,p).catch(dpCloudRealtimeHandleError));
     ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'student_instructors'},
       p=>{const row=p.old||{};if(!row.student_id||!row.school_id||String(row.school_id)!==String(schoolId))return;dpCloudRealtimeApplyStudent(row.student_id,p).catch(dpCloudRealtimeHandleError)});
   }
 
-  ch.on('broadcast',{event:'STUDENT_ASSIGNMENT_CHANGED'},async msg=>{
-    const payload=msg?.payload||{};
-    const schoolId=window.driveProAuth?.schoolId;
-    if(!payload.student_id || (schoolId && payload.school_id && String(payload.school_id)!==String(schoolId)))return;
-    try{
-      await dpCloudApplyStudentAssignmentChange(payload.student_id,payload.instructor_id||null,payload.instructor_ids||null);
-    }catch(e){dpCloudRealtimeHandleError(e);}
-  });
+
 
   /* Lesson requests are school-scoped. A request/response must appear on an
      already-open Anfragen page without requiring a manual reload. */
@@ -4088,6 +4086,7 @@ function dpCloudHandleReady(){
      then use the same configuration on every device from the first render. */
   await dpCloudLoadSettings();
   await dpCloudLoad();
+  await dpCloudRetryPendingWrites();
   dpCloudInitialLoadDone=true;
   await dpCloudRealtimeStart();
  },0);
@@ -4099,6 +4098,9 @@ async function dpCloudRetryPendingWrites(){
   if(dpCloudDeletingStudentIds.has(s.id))continue;
   if(dpCloudPendingStudentIds.has(s.id)){
    try{await dpCloudUpsertStudent(s);dpCloudClearPending(s.id)}catch(e){console.warn('DrivePro: pending Schüler-Änderung:',e)}
+  }
+  if(dpCloudPendingAssignmentStudentIds.has(String(s.id)) && dpAccountType()==='school'){
+   try{await dpSaveStudentInstructorAssignments(s.id,s.instructorIds||((s.instructorId?[String(s.instructorId)]:[])))}catch(e){console.warn('DrivePro: pending Fahrlehrer-Zuweisung:',e)}
   }
   if(dpCloudPendingProgressStudentIds.has(s.id)){
    try{await dpCloudSyncProgress(s);dpCloudClearProgressPending(s.id)}catch(e){console.warn('DrivePro: pending Ausbildungsstand:',e)}
@@ -4115,7 +4117,7 @@ function dpCloudHandleLogout(){
  dpCloudSettingsReady=false;dpCloudSettingsWriteSerial=0;dpCloudSettingsLastUpdatedAt='';
  dpCloudStopPolling();dpCloudReady=false;dpCloudBusy=false;dpCloudInitialLoadDone=false;
  dpCloudKnownStudentIds=new Set();dpCloudDeletingStudentIds=new Set();
- dpCloudPendingStudentIds=new Set();dpCloudPendingLessonIds=new Set();
+ dpCloudPendingStudentIds=new Set();dpCloudPendingAssignmentStudentIds=new Set();dpCloudPendingLessonIds=new Set();
  dpCloudPendingLessonSnapshots=new Map();dpCloudPendingProgressStudentIds=new Set();
  dpCloudStatus('','')
 }
