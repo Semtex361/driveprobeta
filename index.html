@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V90.43</title>
+<title>DrivePro Beta V90.44</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -2725,58 +2725,105 @@ async function saveInstructorAssignment(instructorId){
  }
 }
 
+function dpVehicleSchoolId(){
+  const id=dpCurrentSchoolId?.()||window.driveProAuth?.schoolId||window.driveProAuth?.profile?.school_id||null;
+  return id?String(id):null;
+}
+function dpVehicleErrorMessage(e){
+  const msg=String(e?.message||e?.details||e?.hint||e||'Unbekannter Fehler');
+  const code=String(e?.code||'');
+  if(code==='23505'||msg.includes('uq_vehicles_school_license_plate'))return 'Dieses Kennzeichen ist für diese Fahrschule bereits vergeben.';
+  if(code==='42501'||/row-level security|permission denied|not allowed/i.test(msg))return 'Keine Berechtigung für Fahrzeuge. Bitte die DrivePro-Fahrzeug-RLS aus der mitgelieferten SQL-Datei in Supabase ausführen.';
+  if(/relation .*vehicles.*does not exist|Could not find the table .*vehicles/i.test(msg))return 'Die Tabelle „vehicles“ fehlt in Supabase. Bitte die mitgelieferte SQL-Datei ausführen.';
+  if(/violates foreign key|foreign key/i.test(msg))return 'Die zugehörige Fahrschule wurde in Supabase nicht gefunden oder die school_id stimmt nicht.';
+  if(/null value.*school_id|school_id.*null/i.test(msg))return 'Für dein Fahrschulkonto ist keine school_id hinterlegt.';
+  return msg;
+}
+async function dpCheckVehicleBackend(){
+  const schoolId=dpVehicleSchoolId();
+  if(!schoolId)throw new Error('Für dein Fahrschulkonto ist keine school_id hinterlegt.');
+  const c=dpCloudClient();
+  if(!c)throw new Error('Supabase-Verbindung ist noch nicht bereit.');
+  const r=await c.from('vehicles').select('id').eq('school_id',schoolId).limit(1);
+  if(r.error)throw r.error;
+  return true;
+}
 function vehiclesPage(){
   if(dpAccountType()!=='school'){page('dashboard');return}
   const box=document.getElementById('content');
-  box.innerHTML=`<div class="toolbar"><div><b>Fahrzeuge</b><div class="dp-role-muted">Fahrzeuge der Fahrschule verwalten.</div></div><button class="primary" onclick="openVehicleModal()">+ Fahrzeug</button></div><div id="vehicleList" class="dp-vehicle-grid"><div class="card">Lade …</div></div>`;
+  box.innerHTML=`<div class="toolbar"><div><b>Fahrzeuge</b><div class="dp-role-muted">Fahrzeuge der Fahrschule verwalten.</div></div><button class="primary" onclick="openVehicleModal()">+ Fahrzeug</button></div><div id="vehicleBackendStatus" class="dp-role-muted" style="margin:-8px 0 14px"></div><div id="vehicleList" class="dp-vehicle-grid"><div class="card">Lade …</div></div>`;
   loadVehicles();
 }
 async function loadVehicles(){
   const list=document.getElementById('vehicleList');if(!list)return;
+  const schoolId=dpVehicleSchoolId();
+  if(!schoolId){list.innerHTML='<div class="card empty" style="grid-column:1/-1">Fahrzeuge können nicht geladen werden.<br><small>Für dein Fahrschulkonto ist keine school_id hinterlegt.</small></div>';return}
   try{
-    const r=await dpCloudClient().from('vehicles').select('*').eq('school_id',window.driveProAuth.schoolId).order('license_plate');
+    const c=dpCloudClient();
+    if(!c)throw new Error('Supabase-Verbindung ist noch nicht bereit.');
+    const r=await c.from('vehicles').select('id,school_id,license_plate,make,model,transmission,is_active,notes,created_at,updated_at').eq('school_id',schoolId).order('license_plate');
     if(r.error)throw r.error;
+    const status=document.getElementById('vehicleBackendStatus');
+    if(status){status.textContent='✓ Fahrzeugdatenbank verbunden';status.style.color='#24764f'}
     list.innerHTML=(r.data||[]).map(v=>`<div class="dp-vehicle-card"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(v.license_plate)}</b><button class="danger" onclick="deleteVehicle('${v.id}')">🗑</button></div><div style="font-size:15px;margin-top:7px">${esc(v.make)} ${esc(v.model)}</div><div class="dp-vehicle-meta"><span>${v.transmission==='automatic'?'Automatik':'Schaltung'}</span><span>${v.is_active?'Aktiv':'Inaktiv'}</span></div><div class="actions"><button class="secondary" onclick='openVehicleModal(${JSON.stringify(v)})'>Bearbeiten</button></div></div>`).join('')||'<div class="card empty" style="grid-column:1/-1">Noch keine Fahrzeuge.</div>';
-  }catch(e){list.innerHTML=`<div class="card empty" style="grid-column:1/-1">Fahrzeuge konnten nicht geladen werden.<br><small>${esc(e.message||'Fehler')}</small></div>`}
+  }catch(e){
+    console.error('DrivePro Fahrzeuge laden:',e);
+    const msg=dpVehicleErrorMessage(e);
+    const status=document.getElementById('vehicleBackendStatus');
+    if(status){status.textContent='⚠ '+msg;status.style.color='#b33b3b'}
+    list.innerHTML=`<div class="card empty" style="grid-column:1/-1">Fahrzeuge konnten nicht geladen werden.<br><small>${esc(msg)}</small></div>`;
+  }
 }
 function openVehicleModal(v=null){
-  openModal(`<h2>${v?'Fahrzeug bearbeiten':'Neues Fahrzeug'}</h2><div class="row"><div class="field"><label>Kennzeichen</label><input id="vf" value="${esc(v?.license_plate||'')}" oninput="clearVehicleFormMessage()"></div><div class="field"><label>Marke</label><input id="vmake" value="${esc(v?.make||'')}" oninput="clearVehicleFormMessage()"></div></div><div class="row"><div class="field"><label>Modell</label><input id="vmodel" value="${esc(v?.model||'')}" oninput="clearVehicleFormMessage()"></div><div class="field"><label>Getriebe</label><select id="vtrans" onchange="clearVehicleFormMessage()"><option value="manual" ${v?.transmission==='manual'?'selected':''}>Schaltung</option><option value="automatic" ${v?.transmission==='automatic'?'selected':''}>Automatik</option></select></div></div><div id="vehicleFormMessage" class="dp-auth-message" style="display:none;margin-top:10px"></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button id="vehicleSaveButton" class="primary" onclick="saveVehicle('${v?.id||''}')">Speichern</button></div>`);
+  openModal(`<h2>${v?'Fahrzeug bearbeiten':'Neues Fahrzeug'}</h2><div class="row"><div class="field"><label>Kennzeichen</label><input id="vf" value="${esc(v?.license_plate||'')}" autocomplete="off" oninput="clearVehicleFormMessage()"></div><div class="field"><label>Marke</label><input id="vmake" value="${esc(v?.make||'')}" oninput="clearVehicleFormMessage()"></div></div><div class="row"><div class="field"><label>Modell</label><input id="vmodel" value="${esc(v?.model||'')}" oninput="clearVehicleFormMessage()"></div><div class="field"><label>Getriebe</label><select id="vtrans" onchange="clearVehicleFormMessage()"><option value="manual" ${v?.transmission==='manual'?'selected':''}>Schaltung</option><option value="automatic" ${v?.transmission==='automatic'?'selected':''}>Automatik</option></select></div></div><div class="field"><label>Status</label><select id="vactive" onchange="clearVehicleFormMessage()"><option value="true" ${v?.is_active!==false?'selected':''}>Aktiv</option><option value="false" ${v?.is_active===false?'selected':''}>Inaktiv</option></select></div><div id="vehicleFormMessage" class="dp-auth-message" style="display:none;margin-top:10px"></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button id="vehicleSaveButton" class="primary" onclick="saveVehicle('${v?.id||''}')">Speichern</button></div>`);
 }
 function showVehicleFormMessage(text,type='error'){
   const el=document.getElementById('vehicleFormMessage');
   if(!el)return;
-  el.textContent=text;
-  el.className=`dp-auth-message ${type}`;
-  el.style.display='block';
+  el.textContent=text;el.className=`dp-auth-message ${type}`;el.style.display='block';
 }
 function clearVehicleFormMessage(){
   const el=document.getElementById('vehicleFormMessage');
   if(!el)return;
-  el.textContent='';
-  el.style.display='none';
+  el.textContent='';el.style.display='none';
 }
 async function saveVehicle(idv){
-  const payload={school_id:window.driveProAuth.schoolId,license_plate:document.getElementById('vf').value.trim().toUpperCase(),make:document.getElementById('vmake').value.trim(),model:document.getElementById('vmodel').value.trim(),transmission:document.getElementById('vtrans').value,is_active:true};
+  const schoolId=dpVehicleSchoolId();
+  const vf=document.getElementById('vf'),vmake=document.getElementById('vmake'),vmodel=document.getElementById('vmodel'),vtrans=document.getElementById('vtrans'),vactive=document.getElementById('vactive');
+  if(!schoolId){showVehicleFormMessage('Für dein Fahrschulkonto ist keine school_id hinterlegt.');return}
+  const payload={school_id:schoolId,license_plate:(vf?.value||'').trim().toUpperCase(),make:(vmake?.value||'').trim(),model:(vmodel?.value||'').trim(),transmission:vtrans?.value==='automatic'?'automatic':'manual',is_active:vactive?.value!=='false'};
   if(!payload.license_plate||!payload.make||!payload.model){showVehicleFormMessage('Bitte Kennzeichen, Marke und Modell ausfüllen.');return}
   const btn=document.getElementById('vehicleSaveButton');
   if(btn){btn.disabled=true;btn.textContent='Speichern …';}
   try{
-    const c=dpCloudClient(),r=idv?await c.from('vehicles').update(payload).eq('id',idv).eq('school_id',payload.school_id):await c.from('vehicles').insert(payload);
+    const c=dpCloudClient();if(!c)throw new Error('Supabase-Verbindung ist noch nicht bereit.');
+    let r;
+    if(idv){
+      r=await c.from('vehicles').update(payload).eq('id',idv).eq('school_id',schoolId).select('id').maybeSingle();
+    }else{
+      r=await c.from('vehicles').insert(payload).select('id').single();
+    }
     if(r.error)throw r.error;
-    closeModal();vehiclesPage();
+    if(!r.data)throw new Error('Das Fahrzeug wurde nicht zurückgegeben. Prüfe bitte die Supabase-RLS-Regeln.');
+    closeModal();
+    await vehiclesPage();
   }catch(e){
     console.error('DrivePro Fahrzeug speichern:',e);
-    const duplicate=e?.code==='23505' || String(e?.message||'').includes('uq_vehicles_school_license_plate');
-    showVehicleFormMessage(duplicate?'Dieses Kennzeichen ist bereits vergeben. Bitte ein anderes Kennzeichen eingeben.':'Das Fahrzeug konnte nicht gespeichert werden. Bitte versuche es erneut.');
-    const field=document.getElementById('vf');
-    if(duplicate&&field){field.focus();field.select();}
+    const msg=dpVehicleErrorMessage(e);
+    showVehicleFormMessage(msg);
     if(btn){btn.disabled=false;btn.textContent='Speichern';}
+    if(String(e?.code||'')==='23505'){vf?.focus();vf?.select();}
   }
 }
 async function deleteVehicle(idv){
   if(!confirm('Fahrzeug wirklich löschen?'))return;
-  const r=await dpCloudClient().from('vehicles').delete().eq('id',idv).eq('school_id',window.driveProAuth.schoolId);
-  if(r.error)alert(r.error.message);else vehiclesPage();
+  const schoolId=dpVehicleSchoolId();
+  if(!schoolId){alert('Für dein Fahrschulkonto ist keine school_id hinterlegt.');return}
+  try{
+    const r=await dpCloudClient().from('vehicles').delete().eq('id',idv).eq('school_id',schoolId).select('id').maybeSingle();
+    if(r.error)throw r.error;
+    await vehiclesPage();
+  }catch(e){alert('Fahrzeug konnte nicht gelöscht werden.\n\n'+dpVehicleErrorMessage(e));}
 }
 
 async function requestsPage(){
