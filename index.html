@@ -1688,6 +1688,56 @@ body.auth-locked #driveProAuth{display:flex}
 .dp-logout:hover{border-color:#b7c9df;background:var(--primary-soft)}
 @media(max-width:700px){.dp-cloud-status{display:none}.dp-auth-card{padding:27px 22px;border-radius:20px}.dp-user-info,.dp-admin-badge{display:none!important}.dp-logout{padding:8px 9px}}
 
+
+/* DrivePro: Fahrlehrer-Zuweisung – sichtbare Checkboxen */
+.dp-assignment-check{
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  width:22px!important;
+  min-width:22px!important;
+  max-width:22px!important;
+  height:22px!important;
+  min-height:22px!important;
+  margin:0!important;
+  padding:0!important;
+  border:2px solid #9aa9b8!important;
+  border-radius:6px!important;
+  background:#fff!important;
+  box-shadow:none!important;
+  cursor:pointer!important;
+  position:relative!important;
+  flex:0 0 22px!important;
+}
+.dp-assignment-check:checked{
+  background:#1769d2!important;
+  border-color:#1769d2!important;
+}
+.dp-assignment-check:checked::after{
+  content:"✓";
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-56%);
+  color:#fff;
+  font-size:15px;
+  line-height:1;
+  font-weight:800;
+}
+.dp-assignment-row{
+  display:flex!important;
+  align-items:center!important;
+  gap:14px!important;
+  padding:14px!important;
+  border:1px solid var(--line)!important;
+  border-radius:12px!important;
+  margin:8px 0!important;
+  cursor:pointer!important;
+  background:var(--card)!important;
+}
+.dp-assignment-row:hover{border-color:#77b9a0!important;background:#f8fcfa!important}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1769d2">
@@ -2642,50 +2692,121 @@ function resetDriveProData(){
 
 async function openInstructorAssignment(instructorId){
   const instructor=dpGetInstructor(instructorId);
+  const c=dpCloudClient(),school=dpCurrentSchoolId();
   if(!instructor){showToast('Fahrlehrer konnte nicht gefunden werden.','error');return;}
-  const schoolId=window.driveProAuth?.schoolId||'';
-  const rows=(students||[])
-    .filter(s=>!schoolId || String(s.schoolId||schoolId)===String(schoolId))
-    .sort((a,b)=>(`${a.lastName} ${a.firstName}`).localeCompare(`${b.lastName} ${b.firstName}`,'de'))
-    .map(s=>{
-      const checked=String(s.instructorId||'')===String(instructorId);
-      const other=s.instructorId && !checked ? dpGetInstructor(s.instructorId) : null;
-      return `<label class="dp-assignment-row" style="display:flex;align-items:center;gap:14px;padding:13px 10px;border:1px solid var(--line);border-radius:12px;margin:8px 0;cursor:pointer;background:var(--card);"><input type="checkbox" class="dp-instructor-student-check" data-student-id="${esc(s.id)}" ${checked?'checked':''} style="width:20px;height:20px;accent-color:var(--accent);cursor:pointer;flex:0 0 auto;"><span style="flex:1;min-width:0;"><strong>${esc(`${s.firstName} ${s.lastName}`)}</strong><span class="muted" style="display:block;margin-top:2px;">Klasse ${esc(s.license||'B')}${other ? ` · aktuell bei ${esc(`${other.firstName||''} ${other.lastName||''}`.trim() || 'anderem Fahrlehrer')}` : ''}</span></span></label>`;
+  if(!c||!school){showToast('Fahrschulkonto oder Cloud-Verbindung nicht verfügbar.','error');return;}
+
+  try{
+    const {data:rows,error}=await c
+      .from('students')
+      .select('id,first_name,last_name,instructor_id,license_class,school_id')
+      .eq('school_id',school)
+      .order('last_name')
+      .order('first_name');
+
+    if(error)throw error;
+
+    const list=(rows||[]).map(s=>{
+      const checked=String(s.instructor_id||'')===String(instructorId);
+      const other=s.instructor_id && !checked ? dpGetInstructor(s.instructor_id) : null;
+      const name=`${s.first_name||''} ${s.last_name||''}`.trim()||'Ohne Namen';
+
+      return `
+        <label class="dp-assignment-row">
+          <input
+            class="dp-assignment-check"
+            type="checkbox"
+            data-assign-student="${esc(s.id)}"
+            ${checked?'checked':''}
+            aria-label="${esc(name)} ${checked?'zugewiesen':'nicht zugewiesen'}"
+          >
+          <span class="grow" style="min-width:0">
+            <b>${esc(name)}</b>
+            <span class="muted" style="display:block;font-size:12px;margin-top:3px">
+              Klasse ${esc(s.license_class||'B')}
+              ${other ? ` · aktuell bei ${esc(`${other.firstName||''} ${other.lastName||''}`.trim()||'anderem Fahrlehrer')}` : ''}
+            </span>
+          </span>
+        </label>`;
     }).join('');
-  openModal(`<h2>Fahrschüler zuweisen</h2><p class="muted" style="margin-top:-4px;">Haken setzen = ${esc(`${instructor.firstName||''} ${instructor.lastName||''}`.trim())} zuweisen.<br>Haken entfernen = Zuordnung aufheben.</p><div style="max-height:55vh;overflow:auto;margin:18px 0;">${rows || '<div class="empty">Keine Fahrschüler vorhanden.</div>'}</div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveInstructorAssignment('${esc(instructorId)}')">Änderungen speichern</button></div>`);
+
+    openModal(`
+      <div class="eyebrow">FAHRLEHRER</div>
+      <h2>Fahrschüler zuweisen</h2>
+      <p class="muted">
+        Setze einen Haken, um den Fahrschüler <b>${esc(`${instructor.firstName||''} ${instructor.lastName||''}`.trim())}</b> zuzuweisen.
+        Entfernst du den Haken, wird die Zuordnung aufgehoben.
+      </p>
+      <div style="max-height:55vh;overflow:auto;margin:18px 0">
+        ${list || '<div class="card empty">Noch keine Fahrschüler vorhanden.</div>'}
+      </div>
+      <div class="actions">
+        <button class="secondary" onclick="closeModal()">Abbrechen</button>
+        <button id="saveInstructorAssignmentButton" class="primary"
+          onclick="saveInstructorAssignment('${esc(instructorId)}')"
+          ${rows?.length?'':'disabled'}>
+          Änderungen speichern
+        </button>
+      </div>
+    `);
+  }catch(e){
+    console.error('DrivePro Fahrlehrer-Zuweisung laden:',e);
+    showToast(e?.message||'Die Fahrschüler konnten nicht geladen werden.','error');
+  }
 }
 
 async function saveInstructorAssignment(instructorId){
- const c=dpCloudClient(),school=dpCurrentSchoolId(),msg=document.getElementById('instructorAssignmentMessage'),btn=document.getElementById('saveInstructorAssignmentButton');
- if(!c||!school){if(msg)msg.textContent='Fahrschulkonto oder Cloud-Verbindung nicht verfügbar.';return}
- const checks=[...document.querySelectorAll('[data-assign-student]')];
- if(!checks.length){closeModal();return}
- if(btn){btn.disabled=true;btn.textContent='Speichert …'}
- try{
-  const selected=new Set(checks.filter(x=>x.checked).map(x=>String(x.dataset.assignStudent)));
-  const ids=checks.map(x=>String(x.dataset.assignStudent));
-  const rr=await c.from('students').select('id,instructor_id').eq('school_id',school).in('id',ids);
-  if(rr.error)throw rr.error;
-  let changed=0;
-  for(const row of (rr.data||[])){
-   const want=selected.has(String(row.id))?instructorId:null;
-   const current=row.instructor_id==null?null:String(row.instructor_id),target=want==null?null:String(want);
-   if(current===target)continue;
-   const ur=await c.from('students').update({instructor_id:want}).eq('id',row.id).eq('school_id',school).select('id,instructor_id').single();
-   if(ur.error)throw ur.error;
-   const saved=ur.data?.instructor_id==null?null:String(ur.data.instructor_id);
-   if(saved!==target)throw new Error('Die Fahrlehrer-Zuweisung wurde nicht korrekt gespeichert.');
-   const local=getStudent(row.id);if(local)local.instructorId=want;
-   changed++;
+  const c=dpCloudClient(),school=dpCurrentSchoolId();
+  const btn=document.getElementById('saveInstructorAssignmentButton');
+  if(!c||!school){showToast('Fahrschulkonto oder Cloud-Verbindung nicht verfügbar.','error');return;}
+
+  const checks=[...document.querySelectorAll('.dp-assignment-check')];
+  if(!checks.length){closeModal();return;}
+
+  if(btn){btn.disabled=true;btn.textContent='Speichert …';}
+
+  try{
+    const selected=new Set(
+      checks.filter(x=>x.checked).map(x=>String(x.dataset.assignStudent))
+    );
+
+    // Jede Checkbox ist verbindlich: Haken = diese instructor_id,
+    // kein Haken = NULL. Es werden ausschließlich die betroffenen
+    // Fahrschüler dieser Schule aktualisiert.
+    for(const check of checks){
+      const studentId=String(check.dataset.assignStudent);
+      const target=check.checked?instructorId:null;
+
+      const {data,error}=await c
+        .from('students')
+        .update({instructor_id:target})
+        .eq('id',studentId)
+        .eq('school_id',school)
+        .select('id,instructor_id')
+        .single();
+
+      if(error)throw error;
+
+      const saved=data?.instructor_id==null?null:String(data.instructor_id);
+      const expected=target==null?null:String(target);
+      if(saved!==expected){
+        throw new Error('Die Fahrlehrer-Zuweisung wurde von der Datenbank nicht bestätigt.');
+      }
+
+      const local=getStudent(studentId);
+      if(local)local.instructorId=target;
+    }
+
+    save();
+    closeModal();
+    await dpCloudLoad();
+    render();
+    dpCloudStatus('ok','Fahrlehrer-Zuweisungen gespeichert.');
+  }catch(e){
+    console.error('DrivePro Fahrlehrer-Zuweisung speichern:',e);
+    if(btn){btn.disabled=false;btn.textContent='Änderungen speichern';}
+    showToast(e?.message||'Die Zuweisungen konnten nicht gespeichert werden.','error');
   }
-  save();closeModal();render();await dpCloudLoad();
-  dpCloudStatus('ok',changed?`${changed} Zuweisung${changed===1?'':'en'} gespeichert.`:'Keine Änderungen erforderlich.');
- }catch(e){
-  console.error('DrivePro Fahrlehrer-Zuweisung speichern:',e);
-  if(msg)msg.textContent=e?.message||'Die Zuweisungen konnten nicht gespeichert werden.';
-  dpCloudStatus('error',e?.message||'Zuweisungen konnten nicht gespeichert werden.');
-  if(btn){btn.disabled=false;btn.textContent='Speichern'}
- }
 }
 
 function vehiclesPage(){
