@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V91.17</title>
+<title>DrivePro Beta V91.18</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -1722,7 +1722,7 @@ body.auth-locked #driveProAuth{display:flex}
 .trainingAreaMove:disabled{opacity:.35;cursor:default}
 </style>
 </head>
-<body class="auth-locked" data-drivepro-version="V91.17"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V91.18"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 
 <div id="driveProAuth" aria-label="DrivePro Anmeldung">
   <div class="dp-auth-card">
@@ -1802,7 +1802,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-vehicles" class="dp-role-school" onclick="page('vehicles')"><span>🚗</span>Fahrzeuge</button>
     <button id="nav-requests" class="dp-role-request" onclick="page('requests')"><span>📨</span>Anfragen</button>
   </nav>
-  <div class="sidefoot">V91.17 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V91.18 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -3835,7 +3835,7 @@ async function dpCloudApplyStudentAssignmentChange(studentId,instructorId,instru
    }
    return;
   }
-  await dpCloudRealtimeApplyStudent(id);
+  await dpCloudRealtimeApplyStudent(id,{__drivepro_instructor_ids:ids});
   return;
  }
  if(acct==='school'){
@@ -3882,9 +3882,21 @@ async function dpCloudRealtimeApplyStudent(id,eventPayload=null){
    }
  }
 
- /* Fetch the canonical row using the same role/school scope as dpCloudLoad(). */
- const baseStudentsQuery=await dpCloudStudentsQuery(c,uid);
- const sr=baseStudentsQuery.eq('id',id).maybeSingle();
+ /* For an instructor assignment INSERT/BROADCAST, the assignment event itself
+    already proves visibility. Do NOT re-run dpCloudStudentsQuery() here: that
+    query starts with student_instructors and can observe the old snapshot for
+    a very short window while the realtime event is already being delivered.
+    That was the reason adding needed a manual reload while removing worked.
+    Fetch the student directly by school+id for this authoritative event. */
+ let sr;
+ const assignmentMakesVisible=acct==='instructor' && Array.isArray(eventPayload?.__drivepro_instructor_ids)
+   && eventPayload.__drivepro_instructor_ids.map(String).includes(String(uid));
+ if(assignmentMakesVisible){
+   sr=await c.from('students').select('*').eq('school_id',schoolId||'__none__').eq('id',id).maybeSingle();
+ }else{
+   const baseStudentsQuery=await dpCloudStudentsQuery(c,uid);
+   sr=baseStudentsQuery.eq('id',id).maybeSingle();
+ }
  if(sr.error)throw sr.error;
  if(acct==='instructor' && !sr.data){
    if(localIdx>=0){students.splice(localIdx,1);save();if(['dashboard','students','calendar','stats'].includes(state.page))render()}
