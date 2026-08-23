@@ -1,6 +1,5 @@
-DrivePro V91.12
+DrivePro V91.13 – Realtime School Channel Fix
 
-Fix: Live-Synchronisation von Fahrlehrer-Zuweisungen. Der Realtime-Broadcast wird bei der Accountart Fahrlehrer jetzt als autoritativer Zuweisungszustand ausgewertet. Beim Entfernen des letzten Hakens wird der Fahrschüler dadurch sofort aus der offenen Fahrlehrer-Ansicht entfernt, ohne auf einen nachfolgenden Reload oder eine zeitgleiche REST-Abfrage zu warten.
+Fix: Realtime assignment broadcasts now use one shared school-scoped channel instead of a user-scoped channel. This allows the school account and all instructor accounts in the same school to receive assignment changes live without reload.
 
-Supabase muss für diesen Frontend-Fix nicht erneut migriert werden.
-V91.8 bleibt der offizielle Backup-Stand.
+No Supabase SQL change is required for this frontend fix.

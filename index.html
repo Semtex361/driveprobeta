@@ -3965,7 +3965,12 @@ async function dpCloudRealtimeStart(){
  const c=dpCloudClient(),uid=dpCloudUserId();
  if(!c||!uid||dpCloudRealtimeStarting||dpCloudRealtimeChannel||!dpCloudReady)return;
  dpCloudRealtimeStarting=true;
- const topic='drivepro-live-'+uid;
+ const schoolId=window.driveProAuth?.schoolId;
+ if(!schoolId)throw new Error('Realtime: keine Fahrschul-Zuordnung');
+ /* All accounts of one driving school must share the same Realtime channel.
+    A user-specific channel prevents the school account from reaching the
+    instructor account, so assignment changes only became visible after reload. */
+ const topic='drivepro-live-school-'+schoolId;
  try{
   if(typeof c.getChannels==='function'){
    const stale=c.getChannels().filter(ch=>String(ch.topic||'')===('realtime:'+topic));
@@ -3981,7 +3986,6 @@ async function dpCloudRealtimeStart(){
 
   /* Students are owned by the school. Filtering by user_id here was wrong
      for instructor accounts because user_id is the school account's id. */
-  const schoolId=window.driveProAuth?.schoolId;
   const schoolFilter=schoolId?`school_id=eq.${schoolId}`:null;
   if(schoolFilter){
     ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'students',filter:schoolFilter},
