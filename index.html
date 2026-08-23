@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V91.2</title>
+<title>DrivePro Beta V91.0</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -1724,7 +1724,7 @@ body.auth-locked #driveProAuth{display:flex}
 .trainingAreaMove:disabled{opacity:.35;cursor:default}
 </style>
 </head>
-<body class="auth-locked" data-drivepro-version="V91.2"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V91.0"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 
 <div id="driveProAuth" aria-label="DrivePro Anmeldung">
   <div class="dp-auth-card">
@@ -1804,7 +1804,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-vehicles" class="dp-role-school" onclick="page('vehicles')"><span>🚗</span>Fahrzeuge</button>
     <button id="nav-requests" class="dp-role-request" onclick="page('requests')"><span>📨</span>Anfragen</button>
   </nav>
-  <div class="sidefoot">V91.2 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V91.0 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -3310,7 +3310,6 @@ let dpCloudPendingProgressStudentIds=new Set();
 let dpCloudDeletingStudentIds=new Set();
 let dpCloudPendingStudentIds=new Set();
 let dpCloudPendingAssignmentStudentIds=new Set();
-let dpStudentInstructorRealtimeAvailable=false;
 let dpCloudWriteQueue=Promise.resolve();
 
 function dpCloudClient(){return window.driveProAuth?.client||null}
@@ -3405,7 +3404,7 @@ async function dpCloudSyncProgress(s,alreadyQueued=false){
  const client=dpCloudClient(),uid=dpCloudUserId();
  if(!client||!uid||!s)return;
  const work=async()=>{
-  const q=await client.from('training_progress').select('id,area_name').eq('user_id',uid).eq('student_id',s.id);
+  const q=await client.from('training_progress').select('id,area_name').eq('school_id',dpCurrentSchoolId()||'__none__').eq('student_id',s.id);
   if(q.error)throw q.error;
   const existing=q.data||[];const wanted=new Set();
   for(const a of (s.areas||[])){
@@ -3415,7 +3414,7 @@ async function dpCloudSyncProgress(s,alreadyQueued=false){
   }
   for(const old of existing){
    if(!wanted.has(old.area_name)){
-    const r=await client.from('training_progress').delete().eq('id',old.id).eq('user_id',uid);
+    const r=await client.from('training_progress').delete().eq('id',old.id).eq('school_id',dpCurrentSchoolId()||'__none__');
     if(r.error)throw r.error;
    }
   }
@@ -3463,12 +3462,12 @@ async function dpCloudDeleteLesson(lid){
    if(r.error)throw r.error;
    /* Verify the authoritative cloud state. This prevents a successful-looking
       UI delete when the database row is still present. */
-   let check=await client.from('lessons').select('id').eq('id',lid).eq('user_id',uid).maybeSingle();
+   let check=await client.from('lessons').select('id').eq('id',lid).eq('school_id',dpCurrentSchoolId()||'__none__').maybeSingle();
    if(check.error)throw check.error;
    if(check.data){
-    const fallback=await client.from('lessons').delete().eq('id',lid).eq('user_id',uid).select('id').maybeSingle();
+    const fallback=await client.from('lessons').delete().eq('id',lid).eq('school_id',dpCurrentSchoolId()||'__none__').select('id').maybeSingle();
     if(fallback.error)throw fallback.error;
-    if(fallback.data) check=await client.from('lessons').select('id').eq('id',lid).eq('user_id',uid).maybeSingle();
+    if(fallback.data) check=await client.from('lessons').select('id').eq('id',lid).eq('school_id',dpCurrentSchoolId()||'__none__').maybeSingle();
     if(check.error)throw check.error;
     if(check.data)throw new Error('Supabase hat die Fahrstunde nach dem Löschen weiterhin gespeichert.');
    }
@@ -3491,7 +3490,10 @@ async function dpCloudGetDeletedIds(){
     with the deleted_student_id carried in metadata. We intentionally fetch
     all deleted log entries and only treat rows with deleted_student_id as
     student tombstones, so lesson deletions remain harmless. */
- const r=await client.from('activity_log').select('metadata,action,created_at').eq('user_id',uid).eq('action','deleted').order('created_at',{ascending:false});
+ const schoolId=dpCurrentSchoolId();
+ let r=client.from('activity_log').select('metadata,action,created_at,school_id').eq('action','deleted').order('created_at',{ascending:false});
+ if(schoolId)r=r.eq('school_id',schoolId);else r=r.eq('user_id',uid);
+ r=await r;
  if(r.error)throw r.error;
  const set=new Set();
  for(const row of (r.data||[])){
@@ -3507,12 +3509,12 @@ async function dpCloudDeleteStudent(sid,name){
   await dpCloudQueue(async()=>{
    let r=await client.rpc('drivepro_delete_student',{p_student_id:sid,p_student_name:name||''});
    if(r.error)throw r.error;
-   let check=await client.from('students').select('id').eq('id',sid).eq('user_id',uid).maybeSingle();
+   let check=await client.from('students').select('id').eq('id',sid).eq('school_id',dpCurrentSchoolId()||'__none__').maybeSingle();
    if(check.error)throw check.error;
    if(check.data){
-    const fallback=await client.from('students').delete().eq('id',sid).eq('user_id',uid).select('id').maybeSingle();
+    const fallback=await client.from('students').delete().eq('id',sid).eq('school_id',dpCurrentSchoolId()||'__none__').select('id').maybeSingle();
     if(fallback.error)throw fallback.error;
-    check=await client.from('students').select('id').eq('id',sid).eq('user_id',uid).maybeSingle();
+    check=await client.from('students').select('id').eq('id',sid).eq('school_id',dpCurrentSchoolId()||'__none__').maybeSingle();
     if(check.error)throw check.error;
     if(check.data)throw new Error('Supabase hat den Fahrschüler nach dem Löschen weiterhin gespeichert.');
    }
@@ -3781,11 +3783,9 @@ async function dpCloudLoad(){
    dpCloudStatus('ok',`${students.length} Fahrschüler synchronisiert.`);
   }
  }catch(err){
-  const code=String(err?.code||'');
-  const msg=err?.message||err?.details||err?.hint||'Unbekannter Cloud-Lesefehler';
-  const phase=code==='42P01'||code==='PGRST205'?'Datenbanktabelle fehlt':code==='42501'?'Berechtigung/RLS':/Failed to fetch|NetworkError|fetch/i.test(String(msg))?'Netzwerkverbindung':'Cloud-Synchronisation';
-  console.error('DrivePro Cloud-Sync:',{phase,code,message:msg,details:err?.details,hint:err?.hint},err);
-  dpCloudStatus('error',`${phase}: ${msg}${code?' · Code '+code:''}`);
+  const msg=err?.message||'Unbekannter Cloud-Lesefehler';
+  console.error('DrivePro Cloud-Sync:',msg,err);
+  dpCloudStatus('error','Cloud-Fehler: '+msg);
  }finally{
   dpCloudBusy=false;
   if(dpCloudLoadQueued){
@@ -3951,23 +3951,6 @@ async function dpCloudRealtimeApplyProgress(p){
  },200);
  dpCloudProgressRenderTimers.set(sid,t);
 }
-async function dpCheckStudentInstructorTable(){
- const c=dpCloudClient(),school=dpCurrentSchoolId();
- if(!c||!school)return false;
- try{
-  const r=await c.from('student_instructors').select('student_id').eq('school_id',school).limit(1);
-  if(r.error){
-   dpStudentInstructorRealtimeAvailable=false;
-   return false;
-  }
-  dpStudentInstructorRealtimeAvailable=true;
-  return true;
- }catch(e){
-  dpStudentInstructorRealtimeAvailable=false;
-  return false;
- }
-}
-
 async function dpCloudRealtimeStart(){
  const c=dpCloudClient(),uid=dpCloudUserId();
  if(!c||!uid||dpCloudRealtimeStarting||dpCloudRealtimeChannel||!dpCloudReady)return;
@@ -4019,16 +4002,13 @@ async function dpCloudRealtimeStart(){
     p=>dpCloudRealtimeApplySettings(p));
 
   if(schoolFilter){
-    /* The assignment table is an optional migration. Never let a missing or
-       RLS-blocked student_instructors table break the main Cloud/Realtime
-       channel. If the table is available, live assignment changes are enabled. */
-    const assignmentTableAvailable=await dpCheckStudentInstructorTable();
-    if(assignmentTableAvailable){
-      ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'student_instructors',filter:schoolFilter},
-        p=>dpCloudRealtimeApplyStudent(p.new.student_id,p).catch(dpCloudRealtimeHandleError));
-      ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'student_instructors'},
-        p=>{const row=p.old||{};if(!row.student_id||!row.school_id||String(row.school_id)!==String(schoolId))return;dpCloudRealtimeApplyStudent(row.student_id,p).catch(dpCloudRealtimeHandleError)});
-    }
+    /* Assignment changes are authoritative in student_instructors. INSERT and
+       DELETE are sufficient because the table uses (student_id,instructor_id)
+       as its primary key. */
+    ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'student_instructors',filter:schoolFilter},
+      p=>dpCloudRealtimeApplyStudent(p.new.student_id,p).catch(dpCloudRealtimeHandleError));
+    ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'student_instructors'},
+      p=>{const row=p.old||{};if(!row.student_id||!row.school_id||String(row.school_id)!==String(schoolId))return;dpCloudRealtimeApplyStudent(row.student_id,p).catch(dpCloudRealtimeHandleError)});
   }
 
 
@@ -4109,8 +4089,8 @@ function dpCloudHandleReady(){
      then use the same configuration on every device from the first render. */
   await dpCloudLoadSettings();
   await dpCloudLoad();
+  await dpCloudRetryPendingWrites();
   dpCloudInitialLoadDone=true;
-  dpCloudRetryPendingWrites().catch(e=>console.warn('DrivePro: ausstehende Cloud-Änderungen:',e));
   await dpCloudRealtimeStart();
  },0);
 }
@@ -4140,7 +4120,7 @@ function dpCloudHandleLogout(){
  dpCloudSettingsReady=false;dpCloudSettingsWriteSerial=0;dpCloudSettingsLastUpdatedAt='';
  dpCloudStopPolling();dpCloudReady=false;dpCloudBusy=false;dpCloudInitialLoadDone=false;
  dpCloudKnownStudentIds=new Set();dpCloudDeletingStudentIds=new Set();
- dpCloudPendingStudentIds=new Set();dpCloudPendingAssignmentStudentIds=new Set();dpStudentInstructorRealtimeAvailable=false;dpCloudPendingLessonIds=new Set();
+ dpCloudPendingStudentIds=new Set();dpCloudPendingAssignmentStudentIds=new Set();dpCloudPendingLessonIds=new Set();
  dpCloudPendingLessonSnapshots=new Map();dpCloudPendingProgressStudentIds=new Set();
  dpCloudStatus('','')
 }
@@ -4151,19 +4131,6 @@ window.driveProCloudSyncNow=async function(){
  if(!dpCloudReady)return {ok:false,error:'Cloud ist noch nicht bereit'};
  await dpCloudLoad();
  return {ok:true};
-};
-window.driveProCloudDiagnostics=async function(){
- const c=dpCloudClient(),uid=dpCloudUserId(),school=dpCurrentSchoolId(),acct=dpAccountType();
- if(!c||!uid)return {ok:false,error:'Nicht eingeloggt'};
- const out={ok:true,user_id:uid,school_id:school,account_type:acct};
- for(const t of ['profiles','students','student_instructors','training_progress','lessons','activity_log','drivepro_settings']){
-  try{
-   const r=await c.from(t).select('*',{count:'exact',head:true});
-   out[t]=r.error?{ok:false,code:r.error.code,message:r.error.message}:{ok:true,count:r.count};
-  }catch(e){out[t]={ok:false,message:e?.message||String(e)}}
- }
- console.table(out);
- return out;
 };
 
 
