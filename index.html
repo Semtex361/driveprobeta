@@ -2290,9 +2290,9 @@ async function saveStudent(sid){
    }
    dpCloudMarkPending(sid);dpCloudMarkProgressPending(sid);for(const lesson of (s.lessons||[]))dpCloudMarkLessonPending(lesson.id,lesson);
    dpCloudBackupLocal();save();
+   let assignmentResult=null;
    if(dpCloudReady){
     await dpCloudUpsertStudent(s);
-    let assignmentResult=null;
     if(dpIsSchool())assignmentResult=await dpSaveStudentInstructorAssignments(sid,selectedInstructorIds);
     await dpCloudLoad();
    }else if(dpIsSchool())throw new Error('Cloud-Verbindung ist noch nicht bereit.');
@@ -2302,9 +2302,9 @@ async function saveStudent(sid){
   }else{
    const s={id:id(),...personal,schoolId:window.driveProAuth?.schoolId||null,instructorIds:dpIsSchool()?selectedInstructorIds:[],instructorId:dpIsSchool()?(selectedInstructorIds[0]||null):(dpAccountType()==='instructor'?window.driveProAuth?.user?.id:null),linkedUserId:null,areas:trainingAreasForNewStudent(),lessons:[],signature:null};
    students.push(s);dpCloudMarkPending(s.id);dpCloudBackupLocal();save();
+   let assignmentResult=null;
    if(dpCloudReady){
     await dpCloudUpsertStudent(s);
-    let assignmentResult=null;
     if(dpIsSchool())assignmentResult=await dpSaveStudentInstructorAssignments(s.id,selectedInstructorIds);
     await dpCloudLoad();
    }else if(dpIsSchool())throw new Error('Cloud-Verbindung ist noch nicht bereit.');
