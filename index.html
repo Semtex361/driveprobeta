@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V90.45</title>
+<title>DrivePro Beta V90.47</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -778,7 +778,7 @@ body{overflow-x:hidden}
 
 
 
-/* V90.45 – Mehrfach-Zuweisung Fahrschüler ↔ Fahrlehrer */
+/* V90.46 – Mehrfach-Zuweisung Fahrschüler ↔ Fahrlehrer: robustes Fallback */
 .dp-instructor-picker{position:relative;width:100%}
 .dp-instructor-picker>button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;background:#fff;border:1px solid #dce5ef;border-radius:12px;padding:11px 12px;color:var(--text);min-height:44px}
 .dp-instructor-picker>button:hover{border-color:#9fc3e8;background:#fbfdff}
@@ -1722,7 +1722,7 @@ body.auth-locked #driveProAuth{display:flex}
 .trainingAreaMove:disabled{opacity:.35;cursor:default}
 </style>
 </head>
-<body class="auth-locked" data-drivepro-version="V90.45"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V90.47"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 
 <div id="driveProAuth" aria-label="DrivePro Anmeldung">
   <div class="dp-auth-card">
@@ -1802,7 +1802,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-vehicles" class="dp-role-school" onclick="page('vehicles')"><span>🚗</span>Fahrzeuge</button>
     <button id="nav-requests" class="dp-role-request" onclick="page('requests')"><span>📨</span>Anfragen</button>
   </nav>
-  <div class="sidefoot">V90.45 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V90.47 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -2148,12 +2148,20 @@ function studentsPage(){
 function archivedStudentRow(s){const received=s.licenseReceivedDate?fmtDate(s.licenseReceivedDate):'—';return `<div class="student archiveCard" style="padding:14px 0;border-bottom:1px solid var(--line)"><div class="avatar">${esc((s.firstName[0]||'')+(s.lastName[0]||''))}</div><div class="grow"><div class="studentHead"><b>${esc(s.firstName+' '+s.lastName)}</b><span class="archiveBadge">✓ Abgeschlossen</span></div><div class="studentMeta"><span>Klasse ${esc(s.license)}</span><span>${(s.lessons||[]).length} Fahrstunden</span><span>Führerschein erhalten: ${received}</span></div></div><div class="studentActions"><button class="secondary" onclick="openStudent('${s.id}')">Öffnen</button><button class="archiveRestoreBtn smallBtn" onclick="restoreStudent('${s.id}')">↩ Wiederherstellen</button></div></div>`}
 function archivePage(){const list=archivedStudents();document.getElementById('content').innerHTML=`<div class="toolbar"><div><b>Archiv</b><div class="muted">Abgeschlossene Fahrschüler werden hier dauerhaft aufbewahrt.</div></div><span class="archiveBadge">${list.length} ${list.length===1?'Fahrschüler':'Fahrschüler'}</span></div><div id="archiveList" class="students">${list.map(archivedStudentRow).join('')||'<div class="card archiveEmpty" style="grid-column:1/-1"><div style="font-size:34px;margin-bottom:10px">🗄️</div><b>Noch keine abgeschlossenen Fahrschüler</b><div style="margin-top:6px">Sobald du einen Fahrschüler abschließt, wird er automatisch hier abgelegt.</div></div>'}</div>`}
 function filterStudents(){let q=(document.getElementById('studentSearch')?.value||'').toLowerCase();let list=activeStudents().filter(s=>(s.firstName+' '+s.lastName+' '+s.license).toLowerCase().includes(q));document.getElementById('studentList').innerHTML=list.map(studentRow).join('')||'<div class="card empty" style="grid-column:1/-1">Keine Treffer.</div>'}
+function dpStudentInstructorTableMissing(err){
+ const code=String(err?.code||'').toUpperCase();
+ const m=String(err?.message||err?.details||err?.hint||'').toLowerCase();
+ return code==='42P01'||code==='PGRST205'||(m.includes('student_instructors')&&(m.includes('schema cache')||m.includes('relation')||m.includes('table')||m.includes('does not exist')||m.includes('could not find')));
+}
+function dpStudentInstructorSetupMessage(){
+ return 'Die Mehrfach-Zuweisung ist noch nicht eingerichtet. Die übrigen Fahrschülerdaten können trotzdem bearbeitet werden. Für mehrere Fahrlehrer muss die aktuelle DrivePro-SQL-Migration einmal in Supabase ausgeführt werden.';
+}
 async function dpLoadStudentInstructorIds(studentId){
  const c=dpCloudClient(),school=dpCurrentSchoolId();
  if(!studentId||!c||!school)return [];
  const r=await c.from('student_instructors').select('instructor_id').eq('student_id',studentId).eq('school_id',school);
  if(r.error){
-  if(String(r.error.message||'').toLowerCase().includes('student_instructors')) throw new Error('Die Mehrfach-Zuweisung ist in Supabase noch nicht eingerichtet. Bitte die aktuelle DrivePro-SQL-Migration einmal ausführen.');
+  if(dpStudentInstructorTableMissing(r.error))return [];
   throw r.error;
  }
  return (r.data||[]).map(x=>String(x.instructor_id)).filter(Boolean);
@@ -2180,7 +2188,13 @@ async function dpSaveStudentInstructorAssignments(studentId,instructorIds){
  if(!c||!school||!studentId)throw new Error('Cloud-Verbindung oder Fahrschul-Zuordnung fehlt.');
  const ids=[...new Set((instructorIds||[]).map(String).filter(Boolean))];
  const existing=await c.from('student_instructors').select('instructor_id').eq('student_id',studentId).eq('school_id',school);
- if(existing.error)throw existing.error;
+ if(existing.error){
+  if(dpStudentInstructorTableMissing(existing.error)){
+   if(ids.length<=1)return {ids,legacyOnly:true,setupMissing:true};
+   throw new Error(dpStudentInstructorSetupMessage());
+  }
+  throw existing.error;
+ }
  const old=new Set((existing.data||[]).map(x=>String(x.instructor_id)));
  const wanted=new Set(ids);
  const remove=[...old].filter(id=>!wanted.has(id));
@@ -2197,7 +2211,7 @@ async function dpSaveStudentInstructorAssignments(studentId,instructorIds){
  if(verify.error)throw verify.error;
  const saved=new Set((verify.data||[]).map(x=>String(x.instructor_id)));
  if(saved.size!==wanted.size||[...wanted].some(id=>!saved.has(id)))throw new Error('Die Fahrlehrer-Zuweisungen konnten nicht vollständig bestätigt werden.');
- return ids;
+ return {ids,legacyOnly:false,setupMissing:false};
 }
 async function openStudentForm(studentId=''){
  let s=studentId?getStudent(studentId):null;
@@ -2207,7 +2221,11 @@ async function openStudentForm(studentId=''){
    instructors=await dpLoadSchoolInstructors();
    if(studentId)selectedInstructorIds=await dpLoadStudentInstructorIds(studentId);
    if(studentId&&!selectedInstructorIds.length&&s?.instructorId)selectedInstructorIds=[String(s.instructorId)];
-  }catch(e){console.error('DrivePro: Fahrlehrer konnten nicht geladen werden',e);alert(e?.message||'Die Fahrlehrer konnten nicht geladen werden. Bitte Cloud-Verbindung prüfen.');return}
+  }catch(e){
+   console.error('DrivePro: Fahrlehrer konnten nicht geladen werden',e);
+   if(!dpStudentInstructorTableMissing(e)){alert(e?.message||'Die Fahrlehrer konnten nicht geladen werden. Bitte Cloud-Verbindung prüfen.');return}
+   try{instructors=await dpLoadSchoolInstructors();}catch(inner){console.error('DrivePro: Fahrlehrer-Fallback',inner);alert(inner?.message||'Die Fahrlehrer konnten nicht geladen werden.');return}
+ }
  }
  const instructorField=dpIsSchool()?`<div class="field">
 <label>Fahrlehrer zuweisen</label>
@@ -2274,19 +2292,25 @@ async function saveStudent(sid){
    dpCloudBackupLocal();save();
    if(dpCloudReady){
     await dpCloudUpsertStudent(s);
-    if(dpIsSchool())await dpSaveStudentInstructorAssignments(sid,selectedInstructorIds);
+    let assignmentResult=null;
+    if(dpIsSchool())assignmentResult=await dpSaveStudentInstructorAssignments(sid,selectedInstructorIds);
     await dpCloudLoad();
    }else if(dpIsSchool())throw new Error('Cloud-Verbindung ist noch nicht bereit.');
-   closeModal();render();dpCloudStatus('ok','Fahrschüler und Fahrlehrer-Zuweisungen gespeichert.');
+   closeModal();render();
+   if(assignmentResult?.setupMissing)dpCloudStatus('error',dpStudentInstructorSetupMessage());
+   else dpCloudStatus('ok','Fahrschüler und Fahrlehrer-Zuweisungen gespeichert.');
   }else{
    const s={id:id(),...personal,schoolId:window.driveProAuth?.schoolId||null,instructorIds:dpIsSchool()?selectedInstructorIds:[],instructorId:dpIsSchool()?(selectedInstructorIds[0]||null):(dpAccountType()==='instructor'?window.driveProAuth?.user?.id:null),linkedUserId:null,areas:trainingAreasForNewStudent(),lessons:[],signature:null};
    students.push(s);dpCloudMarkPending(s.id);dpCloudBackupLocal();save();
    if(dpCloudReady){
     await dpCloudUpsertStudent(s);
-    if(dpIsSchool())await dpSaveStudentInstructorAssignments(s.id,selectedInstructorIds);
+    let assignmentResult=null;
+    if(dpIsSchool())assignmentResult=await dpSaveStudentInstructorAssignments(s.id,selectedInstructorIds);
     await dpCloudLoad();
    }else if(dpIsSchool())throw new Error('Cloud-Verbindung ist noch nicht bereit.');
-   closeModal();render();dpCloudStatus('ok','Fahrschüler wurde gespeichert.');
+   closeModal();render();
+   if(assignmentResult?.setupMissing)dpCloudStatus('error',dpStudentInstructorSetupMessage());
+   else dpCloudStatus('ok','Fahrschüler wurde gespeichert.');
   }
  }catch(e){
   console.error('DrivePro: Fahrschüler speichern',e);
@@ -3521,7 +3545,10 @@ async function dpCloudStudentsQuery(client,uid){
  if(acct==='school')return q.eq('school_id',schoolId||'__none__');
  if(acct==='student')return q.eq('school_id',schoolId||'__none__').eq('linked_user_id',uid);
  const ar=await client.from('student_instructors').select('student_id').eq('school_id',schoolId||'__none__').eq('instructor_id',uid);
- if(ar.error)throw new Error(String(ar.error.message||'').toLowerCase().includes('student_instructors')?'Die Mehrfach-Zuweisung ist in Supabase noch nicht eingerichtet. Bitte die aktuelle DrivePro-SQL-Migration ausführen.':ar.error.message);
+ if(ar.error){
+  if(dpStudentInstructorTableMissing(ar.error))return q.eq('school_id',schoolId||'__none__').eq('instructor_id',uid);
+  throw ar.error;
+ }
  const ids=[...new Set((ar.data||[]).map(x=>x.student_id).filter(Boolean))];
  if(!ids.length)return {data:[],error:null};
  return q.eq('school_id',schoolId||'__none__').in('id',ids);
@@ -3533,13 +3560,20 @@ async function dpCloudMigrateLegacyInstructorAssignments(studentsRows){
  if(!rows.length)return;
  const payload=rows.map(s=>({student_id:s.id,instructor_id:s.instructor_id,school_id:school}));
  const r=await c.from('student_instructors').upsert(payload,{onConflict:'student_id,instructor_id'});
- if(r.error)throw r.error;
+ if(r.error){if(dpStudentInstructorTableMissing(r.error))return;throw r.error;}
 }
 async function dpCloudGetInstructorIdsForStudents(studentIds){
  const c=dpCloudClient(),school=dpCurrentSchoolId();
  if(!c||!school||!studentIds?.length)return new Map();
  const r=await c.from('student_instructors').select('student_id,instructor_id').eq('school_id',school).in('student_id',studentIds);
- if(r.error)throw r.error;
+ if(r.error){
+  if(!dpStudentInstructorTableMissing(r.error))throw r.error;
+  const legacy=await c.from('students').select('id,instructor_id').eq('school_id',school).in('id',studentIds);
+  if(legacy.error)throw legacy.error;
+  const fallback=new Map();
+  for(const row of (legacy.data||[])){if(row.instructor_id)fallback.set(String(row.id),[String(row.instructor_id)])}
+  return fallback;
+ }
  const map=new Map();
  for(const row of (r.data||[])){const sid=String(row.student_id);if(!map.has(sid))map.set(sid,[]);map.get(sid).push(String(row.instructor_id))}
  return map;
