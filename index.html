@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V91.16</title>
+<title>DrivePro Beta V91.17</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -1722,7 +1722,7 @@ body.auth-locked #driveProAuth{display:flex}
 .trainingAreaMove:disabled{opacity:.35;cursor:default}
 </style>
 </head>
-<body class="auth-locked" data-drivepro-version="V91.16"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V91.17"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 
 <div id="driveProAuth" aria-label="DrivePro Anmeldung">
   <div class="dp-auth-card">
@@ -1802,7 +1802,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-vehicles" class="dp-role-school" onclick="page('vehicles')"><span>🚗</span>Fahrzeuge</button>
     <button id="nav-requests" class="dp-role-request" onclick="page('requests')"><span>📨</span>Anfragen</button>
   </nav>
-  <div class="sidefoot">V91.16 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V91.17 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -4046,12 +4046,35 @@ async function dpCloudRealtimeStart(){
   ch.on('broadcast',{event:'SETTINGS_UPDATED'},
     p=>dpCloudRealtimeApplySettings(p));
 
-  if(schoolFilter){
-    ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'student_instructors',filter:schoolFilter},
-      p=>dpCloudRealtimeApplyStudent(p.new.student_id,p).catch(dpCloudRealtimeHandleError));
-    ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'student_instructors'},
-      p=>{const row=p.old||{};if(!row.student_id||!row.school_id||String(row.school_id)!==String(schoolId))return;dpCloudRealtimeApplyStudent(row.student_id,p).catch(dpCloudRealtimeHandleError)});
-  }
+  /* Assignment changes deliberately listen without a Postgres filter.
+     The table is already RLS-protected; filtering here caused INSERT events to
+     be missed for some instructor sessions even though DELETE events arrived.
+     We validate school_id in the handler and, for an INSERT addressed to the
+     current instructor, apply the assignment directly instead of waiting for a
+     second REST read to discover the new row. */
+  ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'student_instructors'},
+    p=>{
+      const row=p.new||{};
+      if(!row.student_id||!row.school_id||String(row.school_id)!==String(schoolId))return;
+      const currentUid=String(dpCloudUserId()||'');
+      if(acct==='instructor'){
+        if(String(row.instructor_id)!==currentUid)return;
+        dpCloudApplyStudentAssignmentChange(row.student_id,row.instructor_id,[row.instructor_id])
+          .catch(dpCloudRealtimeHandleError);
+      }else{
+        dpCloudRealtimeApplyStudent(row.student_id,p).catch(dpCloudRealtimeHandleError);
+      }
+    });
+  ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'student_instructors'},
+    p=>{
+      const row=p.old||{};
+      if(!row.student_id||!row.school_id||String(row.school_id)!==String(schoolId))return;
+      if(acct==='instructor'){
+        const currentUid=String(dpCloudUserId()||'');
+        if(String(row.instructor_id)!==currentUid)return;
+      }
+      dpCloudRealtimeApplyStudent(row.student_id,p).catch(dpCloudRealtimeHandleError);
+    });
 
   ch.on('broadcast',{event:'STUDENT_ASSIGNMENT_CHANGED'},async msg=>{
     const payload=msg?.payload||{};
