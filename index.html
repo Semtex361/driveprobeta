@@ -2665,7 +2665,7 @@ async function openInstructorAssignment(instructorId){
       const extra=otherAssigned?'<span class="muted" style="display:block;font-size:12px;margin-top:3px">Aktuell einem anderen Fahrlehrer zugewiesen</span>':'';
       return `<label class="card" style="display:flex;gap:12px;align-items:flex-start;cursor:pointer;padding:12px 14px"><input type="checkbox" data-assign-student="${esc(s.id)}" ${checked?'checked':''} style="margin-top:3px"><span class="grow"><b>${label}</b><span class="muted" style="display:block;font-size:12px;margin-top:3px">Klasse ${esc(s.license_class||'B')}</span>${extra}</span></label>`;
     }).join('');
-    openModal(`<div class="eyebrow">FAHRLEHRER</div><h2>Fahrschüler zuweisen</h2><p class="muted">Wähle aus, welche Fahrschüler diesem Fahrlehrer zugeordnet sein sollen. Eine Zuweisung ersetzt bei Bedarf die bisherige Fahrlehrer-Zuordnung.</p><div id="instructorAssignmentList" class="dp-role-list" style="max-height:55vh;overflow:auto">${list||'<div class="card empty">Noch keine Fahrschüler vorhanden.</div>'}</div><div id="instructorAssignmentMessage" class="dp-auth-message" style="margin-top:8px"></div><div class="actions"><button class="secondary" onclick="closeModal()">Abbrechen</button><button id="saveInstructorAssignmentButton" class="primary" onclick="saveInstructorAssignment('${esc(instructorId)}')" ${rows.length?'':'disabled'}>Speichern</button></div>`);
+    openModal(`<div class="eyebrow">FAHRLEHRER</div><h2>Fahrschüler zuweisen</h2><p class="muted">Setze einen Haken, um den Fahrschüler diesem Fahrlehrer zuzuweisen. Entfernst du den Haken wieder, wird die Zuordnung aufgehoben. Ein Fahrschüler kann dabei immer nur einem Fahrlehrer zugeordnet sein.</p><div id="instructorAssignmentList" class="dp-role-list" style="max-height:55vh;overflow:auto">${list||'<div class="card empty">Noch keine Fahrschüler vorhanden.</div>'}</div><div id="instructorAssignmentMessage" class="dp-auth-message" style="margin-top:8px"></div><div class="actions"><button class="secondary" onclick="closeModal()">Abbrechen</button><button id="saveInstructorAssignmentButton" class="primary" onclick="saveInstructorAssignment('${esc(instructorId)}')" ${rows.length?'':'disabled'}>Speichern</button></div>`);
   }catch(e){
     console.error('DrivePro Fahrlehrer-Zuweisung laden:',e);
     alert(e?.message||'Die Fahrschüler konnten nicht geladen werden.');
@@ -2683,35 +2683,40 @@ async function saveInstructorAssignment(instructorId){
     if(all.error)throw all.error;
     const changed=[];
     for(const row of (all.data||[])){
-      const shouldBe=selected.has(row.id)?instructorId:(row.instructor_id===instructorId?null:row.instructor_id);
-      if(row.instructor_id!==shouldBe){
-        const local=getStudent(row.id);
-        if(local){
-          local.instructorId=shouldBe;
-          dpCloudMarkPending(local.id);
-          dpCloudBackupLocal();
-          save();
-          changed.push(local);
-        }else{
-          /* The cloud row is authoritative if it is not currently present locally. */
-          const mapped={
-            id:row.id,firstName:row.first_name||'',lastName:row.last_name||'',userId:row.user_id||null,
-            schoolId:row.school_id||school,instructorId:shouldBe,linkedUserId:row.linked_user_id||null,
-            license:row.license_class||'B',start:row.training_start||'',birthDate:row.birth_date||'',phone:row.phone||'',
-            email:row.email||'',address:row.address||'',visionAid:row.vision_aid===true,theoryPassed:row.theory_passed===true,
-            practiceExamDate:row.practice_exam_date||'',licenseReceivedDate:row.license_received_date||'',notes:row.notes||'',
-            areas:trainingAreasForNewStudent(),lessons:[],signature:null
-          };
-          students.push(mapped);dpCloudMarkPending(mapped.id);changed.push(mapped);
-        }
+      const rowInstructor=row.instructor_id==null?'':String(row.instructor_id);
+      const targetInstructor=selected.has(String(row.id))?String(instructorId):
+        (rowInstructor===String(instructorId)?null:row.instructor_id);
+      const currentInstructor=row.instructor_id==null?null:String(row.instructor_id);
+      const normalizedTarget=targetInstructor==null||targetInstructor===''?null:String(targetInstructor);
+      if(currentInstructor===normalizedTarget)continue;
+
+      const local=getStudent(row.id);
+      if(local){
+        local.instructorId=normalizedTarget;
+        dpCloudMarkPending(local.id);
+        dpCloudBackupLocal();
+        save();
+        changed.push(local);
+      }else{
+        /* The cloud row is authoritative if it is not currently present locally. */
+        const mapped={
+          id:row.id,firstName:row.first_name||'',lastName:row.last_name||'',userId:row.user_id||null,
+          schoolId:row.school_id||school,instructorId:normalizedTarget,linkedUserId:row.linked_user_id||null,
+          license:row.license_class||'B',start:row.training_start||'',birthDate:row.birth_date||'',phone:row.phone||'',
+          email:row.email||'',address:row.address||'',visionAid:row.vision_aid===true,theoryPassed:row.theory_passed===true,
+          practiceExamDate:row.practice_exam_date||'',licenseReceivedDate:row.license_received_date||'',notes:row.notes||'',
+          areas:trainingAreasForNewStudent(),lessons:[],signature:null
+        };
+        students.push(mapped);dpCloudMarkPending(mapped.id);changed.push(mapped);
       }
     }
-    /* Use the same cloud upsert path as the normal student editor. This keeps
-       school_id/user_id and the assignment field together and avoids the
-       previous direct-update path that could fail RLS or get overwritten by
-       the next cloud refresh. */
+    /* Write only the assignment field. This makes removing a checkmark an
+       explicit instructor_id = NULL operation instead of relying on a full
+       student upsert, and keeps all other student data untouched. */
     for(const s of changed){
-      await dpCloudUpsertStudent(s);
+      const assignment = s.instructorId ? String(s.instructorId) : null;
+      const r=await c.from('students').update({instructor_id:assignment}).eq('id',s.id).eq('school_id',school);
+      if(r.error)throw r.error;
       dpCloudClearPending(s.id);
     }
     dpCloudBackupLocal();
