@@ -3599,8 +3599,16 @@ function dpCloudRealtimeScheduleRetry(){
 }
 function dpCloudRealtimeHandleError(err){console.warn('DrivePro Realtime:',err);dpCloudRealtimeScheduleRetry()}
 async function dpCloudRealtimeApplyStudent(id){
- const c=dpCloudClient(),uid=dpCloudUserId();if(!c||!uid||!id||dpCloudDeletingStudentIds.has(id)||dpCloudPendingStudentIds.has(id))return;
- const sr=await c.from('students').select('*').eq('user_id',uid).eq('id',id).maybeSingle();if(sr.error)throw sr.error;
+ const c=dpCloudClient(),uid=dpCloudUserId(),acct=dpAccountType(),schoolId=window.driveProAuth?.schoolId;
+ if(!c||!uid||!id||dpCloudDeletingStudentIds.has(id)||dpCloudPendingStudentIds.has(id))return;
+
+ /* Realtime rows belong to the school. Resolve the same scope used by
+    dpCloudLoad(), otherwise instructor assignment changes are missed. */
+ let sq=c.from('students').select('*').eq('id',id);
+ if(acct==='school')sq=sq.eq('school_id',schoolId||'__none__');
+ else if(acct==='instructor')sq=sq.eq('school_id',schoolId||'__none__').eq('instructor_id',uid);
+ else sq=sq.eq('school_id',schoolId||'__none__').eq('linked_user_id',uid);
+ const sr=await sq.maybeSingle();if(sr.error)throw sr.error;
  const idx=students.findIndex(s=>s.id===id);
  if(!sr.data){if(idx>=0){students.splice(idx,1);save();if(['calendar','dashboard','students','stats'].includes(state.page))render()}return}
  const pr=await c.from('training_progress').select('*').eq('user_id',uid).eq('student_id',id);if(pr.error)throw pr.error;
@@ -3686,10 +3694,16 @@ async function dpCloudRealtimeStart(){
   const ch=c.channel(topic,{config:{private:true,presence:{key:uid}}});
   dpCloudRealtimeChannel=ch;
 
-  ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'students',filter:`user_id=eq.${uid}`},
-    p=>dpCloudRealtimeApplyStudent(p.new.id).catch(dpCloudRealtimeHandleError));
-  ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'students',filter:`user_id=eq.${uid}`},
-    p=>dpCloudRealtimeApplyStudent(p.new.id).catch(dpCloudRealtimeHandleError));
+  /* Students are owned by the school. Filtering by user_id here was wrong
+     for instructor accounts because user_id is the school account's id. */
+  const schoolId=window.driveProAuth?.schoolId;
+  const schoolFilter=schoolId?`school_id=eq.${schoolId}`:null;
+  if(schoolFilter){
+    ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'students',filter:schoolFilter},
+      p=>dpCloudRealtimeApplyStudent(p.new.id).catch(dpCloudRealtimeHandleError));
+    ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'students',filter:schoolFilter},
+      p=>dpCloudRealtimeApplyStudent(p.new.id).catch(dpCloudRealtimeHandleError));
+  }
   ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'students'},
     p=>{
       const id=p.old?.id;if(!id)return;
@@ -3699,10 +3713,14 @@ async function dpCloudRealtimeStart(){
 
   /* Lesson INSERT/UPDATE keep using Postgres Changes. Lesson DELETE is
      deliberately handled through Database Broadcast below. */
-  ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'lessons',filter:`user_id=eq.${uid}`},
-    p=>dpCloudRealtimeApplyLesson(p).catch(dpCloudRealtimeHandleError));
-  ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'lessons',filter:`user_id=eq.${uid}`},
-    p=>dpCloudRealtimeApplyLesson(p).catch(dpCloudRealtimeHandleError));
+  /* Lessons are also scoped by school so instructor/student sessions receive
+     changes even when the lesson row was written by another account. */
+  if(schoolFilter){
+    ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'lessons',filter:schoolFilter},
+      p=>dpCloudRealtimeApplyLesson(p).catch(dpCloudRealtimeHandleError));
+    ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'lessons',filter:schoolFilter},
+      p=>dpCloudRealtimeApplyLesson(p).catch(dpCloudRealtimeHandleError));
+  }
   ch.on('broadcast',{event:'LESSON_DELETED'},
     p=>dpCloudRealtimeApplyLessonDeleted(p));
   ch.on('broadcast',{event:'SETTINGS_UPDATED'},
