@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V90.47</title>
+<title>DrivePro Beta V91.6</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -3501,14 +3501,17 @@ async function dpCloudDeleteStudent(sid,name){
   await dpCloudQueue(async()=>{
    let r=await client.rpc('drivepro_delete_student',{p_student_id:sid,p_student_name:name||''});
    if(r.error)throw r.error;
-   let check=await client.from('students').select('id').eq('id',sid).eq('user_id',uid).maybeSingle();
-   if(check.error)throw check.error;
-   if(check.data){
-    const fallback=await client.from('students').delete().eq('id',sid).eq('user_id',uid).select('id').maybeSingle();
-    if(fallback.error)throw fallback.error;
-    check=await client.from('students').select('id').eq('id',sid).eq('user_id',uid).maybeSingle();
-    if(check.error)throw check.error;
-    if(check.data)throw new Error('Supabase hat den Fahrschüler nach dem Löschen weiterhin gespeichert.');
+   const schoolId=window.driveProAuth?.schoolId||window.driveProAuth?.profile?.school_id||null;
+   let check=client.from('students').select('id').eq('id',sid);
+   if(schoolId)check=check.eq('school_id',schoolId);
+   const checkResult=await check.maybeSingle();
+   if(checkResult.error)throw checkResult.error;
+   if(checkResult.data){
+    /* The RPC is authoritative. A remaining row means the requested end
+       state was not reached; do not perform a legacy user_id-based fallback,
+       because that is wrong for instructor accounts and could leave a
+       misleading Cloud error. */
+    throw new Error('Supabase hat den Fahrschüler nach dem Löschen weiterhin gespeichert.');
    }
   });
   dpCloudKnownStudentIds.delete(sid);dpCloudClearPending(sid);dpCloudStatus('ok','Fahrschüler dauerhaft aus der Cloud gelöscht.');
