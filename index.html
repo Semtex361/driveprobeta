@@ -2057,14 +2057,22 @@ function isArchivedStudent(s){return !!s?.licenseReceivedDate}
 function activeStudents(){
  const type=dpAccountType(),uid=dpCurrentUserId();
  let list=students.filter(s=>!isArchivedStudent(s));
- if(type==='instructor')list=list.filter(s=>String(s.instructorId||'')===String(uid||''));
+ if(type==='instructor')list=list.filter(s=>{
+   const ids=Array.isArray(s.instructorIds)?s.instructorIds.map(String):[];
+   if(s.instructorId)ids.push(String(s.instructorId));
+   return ids.includes(String(uid||''));
+ });
  if(type==='student')list=list.filter(s=>s.linkedUserId===uid);
  return list;
 }
 function archivedStudents(){
  const type=dpAccountType(),uid=dpCurrentUserId();
  let list=students.filter(isArchivedStudent);
- if(type==='instructor')list=list.filter(s=>String(s.instructorId||'')===String(uid||''));
+ if(type==='instructor')list=list.filter(s=>{
+   const ids=Array.isArray(s.instructorIds)?s.instructorIds.map(String):[];
+   if(s.instructorId)ids.push(String(s.instructorId));
+   return ids.includes(String(uid||''));
+ });
  if(type==='student')list=list.filter(s=>s.linkedUserId===uid);
  return list;
 }
@@ -3718,11 +3726,18 @@ async function dpCloudLoad(){
 
   /* Keep local pending records visible if an individual write is still
      waiting. Never let a tombstoned/deleting record return. */
-  const stillLocal=(students||[]).filter(s=>
+  /* For school accounts, unsynced local records may legitimately be pending
+     uploads. Instructor/student accounts are read-only views of their cloud
+     scope: a record that is not returned by the authoritative role-scoped
+     query must NEVER be reintroduced from localStorage. Otherwise removing
+     the last instructor assignment leaves a stale local student visible and
+     the next reload resurrects it. */
+  const keepLocalPending=acct==='school';
+  const stillLocal=keepLocalPending ? (students||[]).filter(s=>
     !dpCloudDeletingStudentIds.has(s.id) &&
     !deletedIds.has(String(s.id)) &&
     !syncedIds.has(s.id)
-  );
+  ) : [];
 
   students=cloudMapped.concat(stillLocal);
   save();
