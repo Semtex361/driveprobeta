@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V91.12</title>
+<title>DrivePro Beta V91.14</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -1722,7 +1722,7 @@ body.auth-locked #driveProAuth{display:flex}
 .trainingAreaMove:disabled{opacity:.35;cursor:default}
 </style>
 </head>
-<body class="auth-locked" data-drivepro-version="V91.12"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V91.14"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 
 <div id="driveProAuth" aria-label="DrivePro Anmeldung">
   <div class="dp-auth-card">
@@ -1802,7 +1802,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-vehicles" class="dp-role-school" onclick="page('vehicles')"><span>🚗</span>Fahrzeuge</button>
     <button id="nav-requests" class="dp-role-request" onclick="page('requests')"><span>📨</span>Anfragen</button>
   </nav>
-  <div class="sidefoot">V91.12 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V91.14 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -2203,7 +2203,22 @@ async function dpSaveStudentInstructorAssignments(studentId,instructorIds){
  if(saved.length!==wanted.length||saved.some((id,i)=>id!==wanted[i])){
   throw new Error('Die Fahrlehrer-Zuweisungen konnten nicht vollständig bestätigt werden.');
  }
- return {ids,legacyOnly:false,setupMissing:false};
+ /* Broadcast only AFTER the atomic database RPC has committed. This is the
+    authoritative assignment state and avoids the old race where the student
+    UPDATE broadcast was sent before student_instructors was changed. */
+ try{
+  const ch=dpCloudRealtimeChannel;
+  if(ch&&String(ch.state||'').toUpperCase()==='SUBSCRIBED'){
+   await ch.send({
+    type:'broadcast',
+    event:'STUDENT_ASSIGNMENT_CHANGED',
+    payload:{student_id:studentId,school_id:school,instructor_id:saved[0]||null,instructor_ids:saved}
+   });
+  }
+ }catch(broadcastError){
+  console.warn('DrivePro assignment broadcast:',broadcastError);
+ }
+ return {ids:saved,legacyOnly:false,setupMissing:false};
 }
 async function openStudentForm(studentId=''){
  let s=studentId?getStudent(studentId):null;
@@ -3416,16 +3431,6 @@ async function dpCloudUpsertStudent(s){
   });
   dpCloudReady=true;
   dpCloudClearPending(s.id);
-  try{
-    const schoolId=s.schoolId||window.driveProAuth?.schoolId;
-    if(dpCloudRealtimeChannel&&schoolId){
-      await dpCloudRealtimeChannel.send({
-        type:'broadcast',
-        event:'STUDENT_ASSIGNMENT_CHANGED',
-        payload:{student_id:s.id,school_id:schoolId,instructor_id:s.instructorId||null,instructor_ids:s.instructorIds||[]}
-      });
-    }
-  }catch(broadcastError){console.warn('DrivePro assignment broadcast:',broadcastError);}
   dpCloudStatus('ok','Fahrschüler und Ausbildungsstand sind in der Cloud gespeichert.');
  }catch(e){dpCloudStatus('error',e?.message||'Fahrschüler konnte nicht synchronisiert werden.');throw e}
 }
@@ -4059,7 +4064,7 @@ async function dpCloudRealtimeStart(){
     dpCloudStatus('ok','Cloud gespeichert · Live-Sync aktiv');
    }else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){
     if(dpCloudRealtimeChannel===ch)dpCloudRealtimeChannel=null;
-    dpCloudRealtimeHandleError(new Error('Realtime '+status));
+    dpCloudRealtimeHandleError(new Error('Realtime '+status+' · Live-Sync ist nicht verbunden'));
    }else if(status==='CLOSED'){
     if(dpCloudRealtimeChannel===ch)dpCloudRealtimeChannel=null;
     dpCloudRealtimeScheduleRetry();
