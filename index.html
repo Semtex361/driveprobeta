@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V91.18</title>
+<title>DrivePro Beta V91.19</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -1661,7 +1661,7 @@ body.dp-instructor .dp-school-only{display:none!important}
 .staffHero p{margin:0;color:var(--muted);font-size:13px}
 @media(max-width:850px){.staffGrid{grid-template-columns:1fr}.staffHero{flex-direction:column}}
 
-/* V90.43 – Einladung / Kontoaktivierung */
+/* V91.19 – Direkte Kontenerstellung statt Einladungslinks */
 .dp-invite-badge{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:#eaf3ff;border:1px solid #cfe1fb;color:#245c9d;font-size:10px;font-weight:850;letter-spacing:.4px;margin-bottom:12px}
 .dp-invite-email{margin:-6px 0 18px;padding:11px 13px;border:1px solid var(--line);background:var(--surface2);border-radius:11px;font-size:13px;font-weight:750;word-break:break-word}
 [data-theme="dark"] .dp-invite-badge{background:#132844;border-color:#254c7d;color:#b9d7ff}
@@ -1722,7 +1722,7 @@ body.auth-locked #driveProAuth{display:flex}
 .trainingAreaMove:disabled{opacity:.35;cursor:default}
 </style>
 </head>
-<body class="auth-locked" data-drivepro-version="V91.18"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V91.19"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 
 <div id="driveProAuth" aria-label="DrivePro Anmeldung">
   <div class="dp-auth-card">
@@ -1755,24 +1755,7 @@ body.auth-locked #driveProAuth{display:flex}
       </form>
     </div>
 
-    <div id="dpInviteView" style="display:none">
-      <div class="dp-invite-badge">EINLADUNG</div>
-      <h1>Willkommen bei DrivePro</h1>
-      <p class="dp-auth-sub">Deine Einladung wurde erkannt. Lege jetzt dein persönliches Passwort fest, um dein Konto zu aktivieren.</p>
-      <div id="dpInviteEmail" class="dp-invite-email"></div>
-      <form id="driveProInviteForm" autocomplete="off">
-        <div class="dp-auth-field">
-          <label for="dpInvitePassword">Neues Passwort</label>
-          <input id="dpInvitePassword" type="password" autocomplete="new-password" minlength="8" placeholder="Mindestens 8 Zeichen" required>
-        </div>
-        <div class="dp-auth-field">
-          <label for="dpInvitePassword2">Passwort wiederholen</label>
-          <input id="dpInvitePassword2" type="password" autocomplete="new-password" minlength="8" placeholder="Passwort wiederholen" required>
-        </div>
-        <button id="dpInviteButton" class="primary dp-auth-submit" type="submit">Konto aktivieren</button>
-        <div id="dpInviteMessage" class="dp-auth-message" role="alert"></div>
-      </form>
-    </div>
+
   </div>
 </div>
 
@@ -1802,7 +1785,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-vehicles" class="dp-role-school" onclick="page('vehicles')"><span>🚗</span>Fahrzeuge</button>
     <button id="nav-requests" class="dp-role-request" onclick="page('requests')"><span>📨</span>Anfragen</button>
   </nav>
-  <div class="sidefoot">V91.18 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V91.19 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -2107,15 +2090,54 @@ async function dpLoadSchoolInstructors(){
  );
 }
 async function instructorsPage(){
- if(!dpIsSchool()){document.getElementById('content').innerHTML='<div class="card empty">Dieser Bereich ist nur für das Fahrschulkonto verfügbar.</div>';return;}
+ if(!dpIsSchool()){state.page='dashboard';render();return;}
  document.getElementById('content').innerHTML='<div class="card empty">Fahrlehrer werden geladen …</div>';
- try{const staff=await dpLoadSchoolInstructors();document.getElementById('content').innerHTML=`<div class="staffHero"><div><div class="eyebrow">FAHRSCHULKONTO</div><h2>Fahrlehrer</h2><p>Verwalte die Fahrlehrer deiner Fahrschule. Neue Konten erhalten eine Einladung per E-Mail.</p></div><button class="primary" onclick="openInstructorInvite()">＋ Fahrlehrer einladen</button></div><div class="card"><div class="section-title" style="margin-top:0"><div><h3>${staff.length} Fahrlehrer</h3><span class="muted">Nur Konten deiner Fahrschule werden angezeigt.</span></div></div><div class="staffGrid">${staff.map(dpStaffCard).join('')||'<div class="empty" style="grid-column:1/-1">Noch kein Fahrlehrer-Konto vorhanden.<br>Mit „Fahrlehrer einladen“ kannst du das erste Konto anlegen.</div>'}</div></div>`;}
- catch(e){console.error('DrivePro Fahrlehrer:',e);document.getElementById('content').innerHTML=`<div class="card"><div class="eyebrow">FAHRLEHRER</div><h2 style="margin:5px 0 8px">Fahrlehrer konnten nicht geladen werden</h2><p class="muted">${esc(e?.message||'Unbekannter Fehler')}</p><div class="actions"><button class="secondary" onclick="instructorsPage()">Erneut versuchen</button></div></div>`;}
+ try{
+  const staff=await dpLoadSchoolInstructors();
+  document.getElementById('content').innerHTML=`<div class="staffHero"><div><div class="eyebrow">FAHRSCHULKONTO</div><h2>Fahrlehrer</h2><p>Erstelle und verwalte die Fahrlehrer deiner Fahrschule direkt in DrivePro.</p></div><button class="primary" onclick="openInstructorCreate()">＋ Fahrlehrer erstellen</button></div><div class="card"><div class="section-title" style="margin-top:0"><div><h3>${staff.length} Fahrlehrer</h3><span class="muted">Nur aktive und zu deiner Fahrschule gehörende Konten werden angezeigt.</span></div></div><div class="staffGrid">${staff.map(dpStaffCard).join('')||'<div class="empty" style="grid-column:1/-1">Noch kein Fahrlehrer-Konto vorhanden.<br>Mit „Fahrlehrer erstellen“ kannst du das erste Konto anlegen.</div>'}</div></div>`;
+ }catch(e){console.error('DrivePro Fahrlehrer:',e);document.getElementById('content').innerHTML=`<div class="card"><div class="eyebrow">FAHRLEHRER</div><h2 style="margin:5px 0 8px">Fahrlehrer konnten nicht geladen werden</h2><p class="muted">${esc(e?.message||'Unbekannter Fehler')}</p><div class="actions"><button class="secondary" onclick="instructorsPage()">Erneut versuchen</button></div></div>`;}
 }
 function dpStaffCard(p){const name=dpStaffName(p),status=p.is_active===true;return `<div class="staffCard"><div class="staffAvatar">${esc(dpInitials(p))}</div><div class="grow"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><b>${esc(name)}</b><span class="staffStatus ${status?'':'off'}">${status?'Aktiv':'Deaktiviert'}</span></div><div class="staffMeta"><span>Fahrlehrer</span></div></div></div>`}
-function openInstructorInvite(){if(!dpIsSchool()){alert('Nur das Fahrschulkonto kann Fahrlehrer einladen.');return;}openModal(`<div class="eyebrow">FAHRLEHRERKONTO</div><h2>Fahrlehrer einladen</h2><p class="muted">Die Person erhält eine E-Mail mit einem Link zur Einrichtung ihres DrivePro-Kontos.</p><div class="row"><div class="field"><label for="inviteInstructorName">Name</label><input id="inviteInstructorName" type="text" autocomplete="name" placeholder="Vor- und Nachname" maxlength="120"></div><div class="field"><label for="inviteInstructorEmail">E-Mail-Adresse</label><input id="inviteInstructorEmail" type="email" autocomplete="email" placeholder="name@beispiel.de" maxlength="180"></div></div><div id="inviteInstructorMessage" class="dp-auth-message" style="margin-top:8px"></div><div class="actions"><button class="secondary" onclick="closeModal()">Abbrechen</button><button id="inviteInstructorButton" class="primary" onclick="submitInstructorInvite()">Einladung senden</button></div>`);setTimeout(()=>document.getElementById('inviteInstructorName')?.focus(),30);}
-async function submitInstructorInvite(){const c=window.driveProAuth?.client,schoolId=dpCurrentSchoolId(),name=(document.getElementById('inviteInstructorName')?.value||'').trim(),email=(document.getElementById('inviteInstructorEmail')?.value||'').trim().toLowerCase(),msg=document.getElementById('inviteInstructorMessage'),btn=document.getElementById('inviteInstructorButton');if(!c||!schoolId){if(msg)msg.textContent='Fahrschulkonto oder Cloud-Verbindung nicht verfügbar.';return;}if(!name){if(msg)msg.textContent='Bitte einen Namen eingeben.';document.getElementById('inviteInstructorName')?.focus();return;}if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){if(msg)msg.textContent='Bitte eine gültige E-Mail-Adresse eingeben.';document.getElementById('inviteInstructorEmail')?.focus();return;}btn.disabled=true;btn.textContent='Einladung wird gesendet …';try{const r=await c.functions.invoke('drivepro-invite-account',{body:{email,name,account_type:'instructor',school_id:schoolId,redirect_to:(window.DP_DRIVEPRO_URL||'https://semtex361.github.io/driveprobeta/')+'?invite=1'}});if(r.error)throw r.error;if(!r.data?.ok)throw new Error(r.data?.error||'Die Einladung konnte nicht erstellt werden.');closeModal();await instructorsPage();alert(`✓ Einladung an ${email} wurde erstellt.`);}catch(e){console.error('DrivePro Fahrlehrer-Einladung:',e);if(msg){msg.className='dp-auth-message';msg.textContent=e?.message||'Die Einladung konnte nicht gesendet werden.';}btn.disabled=false;btn.textContent='Einladung senden';}}
-
+function openInstructorCreate(){
+ if(!dpIsSchool()){alert('Nur das Fahrschulkonto kann Fahrlehrerkonten erstellen.');return;}
+ openModal(`<div class="eyebrow">FAHRLEHRERKONTO</div><h2>Fahrlehrer erstellen</h2><p class="muted">Das Konto wird sofort angelegt. Es wird kein Einladungslink verschickt.</p><div class="row"><div class="field"><label>Vorname</label><input id="createInstructorFirst" autocomplete="given-name" maxlength="80"></div><div class="field"><label>Nachname</label><input id="createInstructorLast" autocomplete="family-name" maxlength="80"></div></div><div class="field"><label>E-Mail-Adresse / Login</label><input id="createInstructorEmail" type="email" autocomplete="username" placeholder="name@beispiel.de" maxlength="180"></div><div class="row"><div class="field"><label>Passwort</label><input id="createInstructorPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Mindestens 8 Zeichen"></div><div class="field"><label>Passwort wiederholen</label><input id="createInstructorPassword2" type="password" autocomplete="new-password" minlength="8"></div></div><div id="createInstructorMessage" class="dp-auth-message" style="margin-top:8px"></div><div class="actions"><button class="secondary" onclick="closeModal()">Abbrechen</button><button id="createInstructorButton" class="primary" onclick="submitInstructorCreate()">Fahrlehrer erstellen</button></div>`);
+ setTimeout(()=>document.getElementById('createInstructorFirst')?.focus(),30);
+}
+async function submitInstructorCreate(){
+ const msg=document.getElementById('createInstructorMessage'),btn=document.getElementById('createInstructorButton');
+ const first=(document.getElementById('createInstructorFirst')?.value||'').trim(),last=(document.getElementById('createInstructorLast')?.value||'').trim(),email=(document.getElementById('createInstructorEmail')?.value||'').trim().toLowerCase(),p1=document.getElementById('createInstructorPassword')?.value||'',p2=document.getElementById('createInstructorPassword2')?.value||'';
+ if(!first||!last){if(msg)msg.textContent='Bitte Vor- und Nachnamen eingeben.';return;}
+ if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){if(msg)msg.textContent='Bitte eine gültige E-Mail-Adresse eingeben.';return;}
+ if(p1.length<8){if(msg)msg.textContent='Das Passwort muss mindestens 8 Zeichen lang sein.';return;}
+ if(p1!==p2){if(msg)msg.textContent='Die Passwörter stimmen nicht überein.';return;}
+ btn.disabled=true;btn.textContent='Konto wird erstellt …';
+ try{await dpCreateManagedAccount({account_type:'instructor',first_name:first,last_name:last,display_name:`${first} ${last}`,email,password:p1});closeModal();await instructorsPage();alert(`✓ Fahrlehrerkonto für ${first} ${last} wurde erstellt.`);}
+ catch(e){console.error('DrivePro Fahrlehrerkonto:',e);if(msg)msg.textContent=e?.message||'Das Fahrlehrerkonto konnte nicht erstellt werden.';btn.disabled=false;btn.textContent='Fahrlehrer erstellen';}
+}
+async function dpCreateManagedAccount(payload){
+ const c=window.driveProAuth?.client;
+ if(!c)throw new Error('Cloud-Verbindung nicht verfügbar.');
+ const r=await c.functions.invoke('drivepro-create-account',{body:{action:'create_account',...payload}});
+ if(r.error)throw r.error;
+ if(!r.data?.ok)throw new Error(r.data?.error||'Das Konto konnte nicht erstellt werden.');
+ return r.data;
+}
+function openSchoolCreateForm(){
+ if(!window.driveProAuth?.isAdmin){alert('Nur ein Admin darf Fahrschulkonten erstellen.');return;}
+ openModal(`<div class="eyebrow">ADMINISTRATOR</div><h2>Fahrschulkonto erstellen</h2><p class="muted">Das neue Fahrschulkonto wird direkt angelegt. Es wird kein Einladungslink verschickt.</p><div class="field"><label>Fahrschulname</label><input id="createSchoolName" maxlength="160" placeholder="z. B. Fahrschule Muster"></div><div class="row"><div class="field"><label>Vorname des Kontoinhabers</label><input id="createSchoolFirst" autocomplete="given-name" maxlength="80"></div><div class="field"><label>Nachname des Kontoinhabers</label><input id="createSchoolLast" autocomplete="family-name" maxlength="80"></div></div><div class="field"><label>E-Mail-Adresse / Login</label><input id="createSchoolEmail" type="email" autocomplete="username" placeholder="name@beispiel.de" maxlength="180"></div><div class="row"><div class="field"><label>Passwort</label><input id="createSchoolPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Mindestens 8 Zeichen"></div><div class="field"><label>Passwort wiederholen</label><input id="createSchoolPassword2" type="password" autocomplete="new-password" minlength="8"></div></div><div class="row"><div class="field"><label>Telefon (optional)</label><input id="createSchoolPhone" type="tel"></div><div class="field"><label>E-Mail der Fahrschule (optional)</label><input id="createSchoolContactEmail" type="email"></div></div><div class="field"><label>Adresse (optional)</label><input id="createSchoolAddress"></div><div id="createSchoolMessage" class="dp-auth-message" style="margin-top:8px"></div><div class="actions"><button class="secondary" onclick="closeModal()">Abbrechen</button><button id="createSchoolButton" class="primary" onclick="submitSchoolCreate()">Fahrschulkonto erstellen</button></div>`);
+ setTimeout(()=>document.getElementById('createSchoolName')?.focus(),30);
+}
+async function submitSchoolCreate(){
+ const msg=document.getElementById('createSchoolMessage'),btn=document.getElementById('createSchoolButton');
+ const schoolName=(document.getElementById('createSchoolName')?.value||'').trim(),first=(document.getElementById('createSchoolFirst')?.value||'').trim(),last=(document.getElementById('createSchoolLast')?.value||'').trim(),email=(document.getElementById('createSchoolEmail')?.value||'').trim().toLowerCase(),p1=document.getElementById('createSchoolPassword')?.value||'',p2=document.getElementById('createSchoolPassword2')?.value||'';
+ if(!schoolName||!first||!last){if(msg)msg.textContent='Bitte Fahrschulname sowie Vor- und Nachnamen eingeben.';return;}
+ if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){if(msg)msg.textContent='Bitte eine gültige E-Mail-Adresse eingeben.';return;}
+ if(p1.length<8){if(msg)msg.textContent='Das Passwort muss mindestens 8 Zeichen lang sein.';return;}
+ if(p1!==p2){if(msg)msg.textContent='Die Passwörter stimmen nicht überein.';return;}
+ btn.disabled=true;btn.textContent='Fahrschulkonto wird erstellt …';
+ try{await dpCreateManagedAccount({account_type:'school',school_name:schoolName,first_name:first,last_name:last,display_name:`${first} ${last}`,email,password:p1,school_phone:(document.getElementById('createSchoolPhone')?.value||'').trim(),school_email:(document.getElementById('createSchoolContactEmail')?.value||'').trim().toLowerCase(),school_address:(document.getElementById('createSchoolAddress')?.value||'').trim()});closeModal();alert(`✓ Fahrschulkonto „${schoolName}“ wurde erstellt.`);}
+ catch(e){console.error('DrivePro Fahrschulkonto:',e);if(msg)msg.textContent=e?.message||'Das Fahrschulkonto konnte nicht erstellt werden.';btn.disabled=false;btn.textContent='Fahrschulkonto erstellen';}
+}
 function dashboard(){
  const all=allLessons();
  const total=students.reduce((n,s)=>n+(s.lessons?.length||0),0);
@@ -2237,7 +2259,7 @@ ${instructors.filter(p=>p.is_active!==false).sort((a,b)=>dpStaffName(a).localeCo
 </div></div>
 <div class="muted" style="margin-top:6px">Dropdown öffnen und per Haken beliebig viele Fahrlehrer hinzufügen oder entfernen.</div>
 </div>`:'';
- openModal(`<h2>${s?'Fahrschüler bearbeiten':'Neuer Fahrschüler'}</h2><div class="row"><div class="field"><label>Vorname</label><input id="sf" value="${esc(s?.firstName||'')}"></div><div class="field"><label>Nachname</label><input id="sl" value="${esc(s?.lastName||'')}"></div></div><div class="row"><div class="field"><label>Klasse</label><select id="sc">${['B','B78','B197'].map(x=>`<option ${x===(s?.license||'B')?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Ausbildungsbeginn</label><input id="sd" type="date" value="${s?.start||new Date().toISOString().slice(0,10)}"></div></div>${instructorField}<div class="row"><div class="field"><label>Geburtsdatum</label><input id="sb" type="date" value="${s?.birthDate||''}"></div><div class="field"><label>Telefon</label><input id="sphone" type="tel" value="${esc(s?.phone||'')}" placeholder="z. B. 0176 12345678"></div></div><div class="row"><div class="field"><label>E-Mail</label><input id="semail" type="email" value="${esc(s?.email||'')}" placeholder="name@example.de"></div><div class="field"><label>Adresse</label><input id="saddress" value="${esc(s?.address||'')}" placeholder="Straße, Hausnummer, PLZ Ort"></div></div><div class="studentChecks"><label><input type="checkbox" id="sv" ${s?.visionAid===true?'checked':''}> Sehhilfe</label><label><input type="checkbox" id="st" ${s?.theoryPassed===true?'checked':''}> Theorie bestanden</label></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveStudent('${studentId}')">Speichern</button></div>`);
+ openModal(`<h2>${s?'Fahrschüler bearbeiten':'Neuer Fahrschüler'}</h2><div class="row"><div class="field"><label>Vorname</label><input id="sf" value="${esc(s?.firstName||'')}"></div><div class="field"><label>Nachname</label><input id="sl" value="${esc(s?.lastName||'')}"></div></div><div class="row"><div class="field"><label>Klasse</label><select id="sc">${['B','B78','B197'].map(x=>`<option ${x===(s?.license||'B')?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Ausbildungsbeginn</label><input id="sd" type="date" value="${s?.start||new Date().toISOString().slice(0,10)}"></div></div>${instructorField}<div class="row"><div class="field"><label>Geburtsdatum</label><input id="sb" type="date" value="${s?.birthDate||''}"></div><div class="field"><label>Telefon</label><input id="sphone" type="tel" value="${esc(s?.phone||'')}" placeholder="z. B. 0176 12345678"></div></div><div class="row"><div class="field"><label>E-Mail</label><input id="semail" type="email" value="${esc(s?.email||'')}" placeholder="name@example.de"></div><div class="field"><label>Adresse</label><input id="saddress" value="${esc(s?.address||'')}" placeholder="Straße, Hausnummer, PLZ Ort"></div></div>${(!s&&dpIsSchool())?`<div class="row"><div class="field"><label>Login-Passwort</label><input id="saccountPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Mindestens 8 Zeichen"></div><div class="field"><label>Passwort wiederholen</label><input id="saccountPassword2" type="password" autocomplete="new-password" minlength="8"></div></div><div class="muted" style="margin-top:-6px">Der Fahrschüler erhält sofort ein eigenes DrivePro-Konto. Es wird kein Einladungslink verschickt.</div>`:''}<div class="studentChecks"><label><input type="checkbox" id="sv" ${s?.visionAid===true?'checked':''}> Sehhilfe</label><label><input type="checkbox" id="st" ${s?.theoryPassed===true?'checked':''}> Theorie bestanden</label></div><div class="actions"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveStudent('${studentId}')">Speichern</button></div>`);
 }
 
 async function deleteStudent(sid,event){
@@ -2308,17 +2330,38 @@ async function saveStudent(sid){
    if(assignmentResult?.setupMissing)dpCloudStatus('error',dpStudentInstructorSetupMessage());
    else dpCloudStatus('ok','Fahrschüler und Fahrlehrer-Zuweisungen gespeichert.');
   }else{
+   const accountEmail=personal.email.toLowerCase();
+   const accountPassword=document.getElementById('saccountPassword')?.value||'';
+   const accountPassword2=document.getElementById('saccountPassword2')?.value||'';
+   if(dpIsSchool()){
+    if(!accountEmail||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountEmail))throw new Error('Für das Fahrschülerkonto wird eine gültige E-Mail-Adresse benötigt.');
+    if(accountPassword.length<8)throw new Error('Das Login-Passwort muss mindestens 8 Zeichen lang sein.');
+    if(accountPassword!==accountPassword2)throw new Error('Die Login-Passwörter stimmen nicht überein.');
+   }
    const s={id:id(),...personal,schoolId:window.driveProAuth?.schoolId||null,instructorIds:dpIsSchool()?selectedInstructorIds:[],instructorId:dpIsSchool()?(selectedInstructorIds[0]||null):(dpAccountType()==='instructor'?window.driveProAuth?.user?.id:null),linkedUserId:null,areas:trainingAreasForNewStudent(),lessons:[],signature:null};
    students.push(s);dpCloudMarkPending(s.id);dpCloudBackupLocal();save();
    let assignmentResult=null;
-   if(dpCloudReady){
-    await dpCloudUpsertStudent(s);
-    if(dpIsSchool())assignmentResult=await dpSaveStudentInstructorAssignments(s.id,selectedInstructorIds);
-    await dpCloudLoad();
-   }else if(dpIsSchool())throw new Error('Cloud-Verbindung ist noch nicht bereit.');
+   let createdAccount=null;
+   try{
+    if(dpCloudReady){
+     await dpCloudUpsertStudent(s);
+     if(dpIsSchool()){
+      createdAccount=await dpCreateManagedAccount({account_type:'student',first_name:f,last_name:l,display_name:`${f} ${l}`,email:accountEmail,password:accountPassword});
+      s.linkedUserId=createdAccount.user_id;
+      dpCloudMarkPending(s.id);
+      await dpCloudUpsertStudent(s);
+      assignmentResult=await dpSaveStudentInstructorAssignments(s.id,selectedInstructorIds);
+     }
+     await dpCloudLoad();
+    }else if(dpIsSchool())throw new Error('Cloud-Verbindung ist noch nicht bereit.');
+   }catch(inner){
+    if(dpCloudReady&&s.id){try{await dpCloudDeleteStudent(s.id,`${f} ${l}`);}catch(cleanErr){console.error('DrivePro: Rollback Fahrschülerkonto',cleanErr)}}
+    students=students.filter(x=>x.id!==s.id);save();
+    throw inner;
+   }
    closeModal();render();
    if(assignmentResult?.setupMissing)dpCloudStatus('error',dpStudentInstructorSetupMessage());
-   else dpCloudStatus('ok','Fahrschüler wurde gespeichert.');
+   else dpCloudStatus('ok','Fahrschüler und Konto wurden erstellt.');
   }
  }catch(e){
   console.error('DrivePro: Fahrschüler speichern',e);
@@ -2700,6 +2743,7 @@ function settingsPage(){
      <div class="settingsSaved" id="settingsSaved">✓ Automatisch gespeichert</div>
    </div>
    <div class="settingsGrid">
+   ${window.driveProAuth?.isAdmin?`<section class="card settingsCard"><div class="settingsCardHead"><div class="settingsIcon">👑</div><div><h3>Administration</h3><p>Erstelle neue Fahrschulkonten. Nur Admins haben Zugriff auf diese Funktion.</p></div></div><button class="primary settingsAction" onclick="openSchoolCreateForm()">＋ Fahrschulkonto erstellen</button><div class="settingsHint">Fahrschulkonten erstellen ihre Fahrlehrer- und Fahrschülerkonten anschließend selbst.</div></section>`:''}
     <section class="card settingsCard">
       <div class="settingsCardHead"><div class="settingsIcon">◐</div><div><h3>Erscheinungsbild</h3><p>Wähle, wie DrivePro aussehen soll.</p></div></div>
       <div class="themeOptions">
@@ -4312,92 +4356,15 @@ window.DP_DRIVEPRO_URL=DP_DRIVEPRO_URL;
 
 let dpClient=null;
 let dpProfile=null;
-let dpInviteFlow=false;
-let dpInviteFinalizing=false;
-let dpInviteVerifying=false;
-
-const $=id=>document.getElementById(id);
-
-function dpMessage(text,type='error'){
- const box=$('dpLoginMessage');
- if(!box)return;
- box.textContent=text||'';
- box.className='dp-auth-message'+(text?' '+type:'');
-}
-
-function dpInviteMessage(text,type='error'){
- const box=$('dpInviteMessage');
- if(!box)return;
- box.textContent=text||'';
- box.className='dp-auth-message'+(text?' '+type:'');
-}
-
-function dpBusy(busy){
- const b=$('dpLoginButton');
- if(!b)return;
- b.disabled=busy;
- b.textContent=busy?'Anmeldung läuft …':'Anmelden';
-}
-
-function dpInviteBusy(busy){
- const b=$('dpInviteButton');
- if(!b)return;
- b.disabled=busy;
- b.textContent=busy?'Konto wird aktiviert …':'Konto aktivieren';
-}
-
 function dpName(p,u){
  return p?.display_name||[p?.first_name,p?.last_name].filter(Boolean).join(' ')||u?.email||'DrivePro Benutzer';
 }
-
-function dpInviteParams(){
- const params=new URLSearchParams(location.search);
- const hash=(location.hash||'').replace(/^#/,'');
- const hp=new URLSearchParams(hash);
- return {
-   params,
-   hashParams:hp,
-   tokenHash:params.get('token_hash')||hp.get('token_hash')||'',
-   type:params.get('type')||hp.get('type')||'',
-   invite:params.get('invite')==='1'||hp.get('invite')==='1'
- };
-}
-
-function dpIsInviteUrl(){
- const x=dpInviteParams();
- return x.invite||x.type==='invite'||!!x.tokenHash||
-   (x.hashParams.has('access_token')&&x.type==='invite');
-}
-
-function dpCleanInviteUrl(){
- try{
-   window.history.replaceState({},document.title,DP_DRIVEPRO_URL);
- }catch(e){
-   console.warn('DrivePro Invite URL konnte nicht bereinigt werden:',e);
- }
-}
-
-function dpShowInviteView(user){
- const login=$('dpLoginView'),invite=$('dpInviteView');
- if(login)login.style.display='none';
- if(invite)invite.style.display='block';
- const email=$('dpInviteEmail');
- if(email)email.textContent=user?.email?`Eingeladenes Konto: ${user.email}`:'Eingeladenes DrivePro-Konto';
- document.body.classList.add('auth-locked');
- if(user) setTimeout(()=>$('dpInvitePassword')?.focus(),50);
-}
-
 function dpShowLoginView(){
- const login=$('dpLoginView'),invite=$('dpInviteView');
+ const login=$('dpLoginView');
  if(login)login.style.display='block';
- if(invite)invite.style.display='none';
 }
-
 async function dpLoadProfile(user){
- const r=await dpClient.from('profiles')
-   .select('id,first_name,last_name,display_name,role,account_type,school_id,is_active')
-   .eq('id',user.id)
-   .maybeSingle();
+ const r=await dpClient.from('profiles').select('id,first_name,last_name,display_name,role,account_type,school_id,is_active').eq('id',user.id).maybeSingle();
  if(r.error)throw r.error;
  if(!r.data)throw new Error('Für diesen Account wurde kein DrivePro-Profil gefunden.');
  if(r.data.is_active!==true)throw new Error('Dieser DrivePro-Account ist deaktiviert.');
@@ -4408,16 +4375,7 @@ async function dpLoadProfile(user){
  $('dpUserName').textContent=dpName(r.data,user);
  $('dpUserRole').textContent=isSchool?(r.data.role==='admin'?'Administrator':'Fahrschule'):(accountType==='student'?'Fahrschüler':'Fahrlehrer');
  $('dpAdminBadge').style.display=isSchool&&r.data.role==='admin'?'inline-flex':'none';
- window.driveProAuth={
-   client:dpClient,
-   user,
-   profile:r.data,
-   isAdmin:isSchool&&r.data.role==='admin',
-   isSchool,
-   accountType,
-   schoolId:r.data.school_id||null,
-   signOut:()=>dpClient.auth.signOut()
- };
+ window.driveProAuth={client:dpClient,user,profile:r.data,isAdmin:isSchool&&r.data.role==='admin',isSchool,accountType,schoolId:r.data.school_id||null,signOut:()=>dpClient.auth.signOut()};
  document.body.classList.remove('auth-locked');
  document.querySelectorAll('.dp-school-only').forEach(el=>el.style.display=isSchool?'':'none');
  document.querySelectorAll('.dp-role-school').forEach(el=>el.style.display=isSchool?'flex':'none');
@@ -4425,100 +4383,15 @@ async function dpLoadProfile(user){
  if(!isSchool&&['instructors','settings','vehicles'].includes(state.page))state.page='dashboard';
  window.dispatchEvent(new CustomEvent('drivepro:auth-ready'));
 }
-
-async function dpVerifyInviteToken(){
- if(!dpClient||dpInviteVerifying)return null;
- const x=dpInviteParams();
- if(!x.tokenHash)return null;
- if(x.type&&x.type!=='invite'){
-   throw new Error('Ungültiger Einladungslink.');
- }
- dpInviteVerifying=true;
- dpInviteFlow=true;
- dpShowInviteView(null);
- dpInviteMessage('Einladung wird sicher geprüft …','info');
- try{
-   const r=await dpClient.auth.verifyOtp({
-     token_hash:x.tokenHash,
-     type:'invite'
-   });
-   if(r.error)throw r.error;
-   if(!r.data?.session?.user)throw new Error('Die Einladung konnte nicht bestätigt werden.');
-   dpCleanInviteUrl();
-   await dpHandleSession(r.data.session);
-   return r.data.session;
- }finally{
-   dpInviteVerifying=false;
- }
-}
-
 async function dpHandleSession(session){
  if(!session?.user){
-  dpProfile=null;
-  window.driveProAuth=null;
-  document.body.classList.add('auth-locked');
-  if(dpInviteFlow){
-   dpShowInviteView(null);
-  }else{
-   dpShowLoginView();
-  }
-  return;
+  dpProfile=null;window.driveProAuth=null;document.body.classList.add('auth-locked');dpShowLoginView();return;
  }
- try{
-  await dpLoadProfile(session.user);
-  if(dpInviteFlow){
-   document.body.classList.add('auth-locked');
-   dpShowInviteView(session.user);
-   dpInviteMessage('Deine Einladung ist gültig. Lege jetzt dein persönliches Passwort fest.','info');
-  }
- }catch(err){
+ try{await dpLoadProfile(session.user);}
+ catch(err){
   console.error('DrivePro Profilfehler:',err);
-  if(dpInviteFlow){
-   document.body.classList.add('auth-locked');
-   dpShowInviteView(session.user);
-   dpInviteMessage(err?.message||'Das DrivePro-Profil konnte nicht geladen werden.','error');
-   return;
-  }
   await dpClient.auth.signOut();
-  document.body.classList.add('auth-locked');
-  dpShowLoginView();
-  dpMessage(err?.message||'Das DrivePro-Profil konnte nicht geladen werden.');
- }
-}
-
-async function dpFinalizeInvite(e){
- e?.preventDefault();
- if(dpInviteFinalizing)return;
- const sessionResult=await dpClient.auth.getSession();
- const session=sessionResult.data?.session;
- if(sessionResult.error||!session?.user){
-  dpInviteMessage('Die Einladungssitzung ist nicht mehr gültig. Bitte öffne den aktuellen Einladungslink aus der E-Mail erneut.','error');
-  return;
- }
- const p1=$('dpInvitePassword')?.value||'';
- const p2=$('dpInvitePassword2')?.value||'';
- if(p1.length<8){dpInviteMessage('Das Passwort muss mindestens 8 Zeichen lang sein.');$('dpInvitePassword')?.focus();return;}
- if(p1!==p2){dpInviteMessage('Die beiden Passwörter stimmen nicht überein.');$('dpInvitePassword2')?.focus();return;}
- dpInviteFinalizing=true;
- dpInviteBusy(true);
- dpInviteMessage('Konto wird aktiviert …','info');
- try{
-  const r=await dpClient.auth.updateUser({password:p1});
-  if(r.error)throw r.error;
-  const user=r.data?.user||session.user;
-  await dpLoadProfile(user);
-  dpInviteFlow=false;
-  dpCleanInviteUrl();
-  document.body.classList.remove('auth-locked');
-  dpShowLoginView();
-  if(typeof render==='function')render();
-  dpMessage('Konto erfolgreich aktiviert. Du bist jetzt angemeldet.','success');
- }catch(err){
-  console.error('DrivePro Einladung aktivieren:',err);
-  dpInviteMessage(err?.message||'Das Passwort konnte nicht gesetzt werden.');
- }finally{
-  dpInviteFinalizing=false;
-  dpInviteBusy(false);
+  document.body.classList.add('auth-locked');dpShowLoginView();dpMessage(err?.message||'Das DrivePro-Profil konnte nicht geladen werden.');
  }
 }
 
@@ -4542,15 +4415,12 @@ async function dpLogout(){
  try{await dpClient.auth.signOut();}catch(err){console.error(err);}
  dpProfile=null;
  window.driveProAuth=null;
- dpInviteFlow=false;
  document.body.classList.remove('dp-instructor');
  document.querySelectorAll('.dp-school-only').forEach(el=>el.style.display='');
  document.body.classList.add('auth-locked');
  dpShowLoginView();
  dpMessage('','info');
- dpInviteMessage('','info');
  $('driveProLoginForm')?.reset();
- $('driveProInviteForm')?.reset();
 }
 
 async function dpInit(){
@@ -4558,23 +4428,11 @@ async function dpInit(){
   dpMessage('Die Verbindungskomponente konnte nicht geladen werden. Bitte Seite neu laden.');
   return;
  }
-
- const inviteInfo=dpInviteParams();
- dpInviteFlow=dpIsInviteUrl();
-
  dpClient=window.supabase.createClient(
    DP_SUPABASE_URL,
    DP_SUPABASE_PUBLISHABLE_KEY,
-   {
-     auth:{
-       persistSession:true,
-       autoRefreshToken:true,
-       detectSessionInUrl:true,
-       flowType:'implicit'
-     }
-   }
+   {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'implicit'}}
  );
-
  $('driveProLoginForm')?.addEventListener('submit',e=>{
   e.preventDefault();
   const email=$('dpLoginEmail')?.value||'';
@@ -4582,49 +4440,22 @@ async function dpInit(){
   if(!email||!password){dpMessage('Bitte E-Mail-Adresse und Passwort eingeben.');return;}
   dpLogin(email,password);
  });
-
- $('driveProInviteForm')?.addEventListener('submit',dpFinalizeInvite);
  $('dpLogoutButton')?.addEventListener('click',dpLogout);
-
  dpClient.auth.onAuthStateChange((event,session)=>{
   setTimeout(async()=>{
    try{
-    if(event==='SIGNED_IN'&&dpInviteFlow)dpInviteFlow=true;
     await dpHandleSession(session);
-    if(session?.access_token&&dpClient.realtime?.setAuth){
-      try{await dpClient.realtime.setAuth(session.access_token);}catch(e){}
-    }
-   }catch(err){
-    console.error('DrivePro Auth-State:',err);
-   }
+    if(session?.access_token&&dpClient.realtime?.setAuth){try{await dpClient.realtime.setAuth(session.access_token);}catch(e){}}
+   }catch(err){console.error('DrivePro Auth-State:',err);}
   },0);
  });
-
  try{
-   // TokenHash-Invite: Der Link aus der E-Mail führt nur zu unserer Seite.
-   // Erst hier wird der einmalige Token per POST an Supabase verifiziert.
-   // Dadurch kann ein Mail-Scanner den Token nicht vorher verbrauchen.
-   if(inviteInfo.tokenHash){
-     await dpVerifyInviteToken();
-     return;
-   }
-
    const r=await dpClient.auth.getSession();
    if(r.error)throw r.error;
    await dpHandleSession(r.data.session);
-
-   if(dpInviteFlow&&!r.data.session){
-     dpShowInviteView(null);
-     dpInviteMessage('Einladungslink erkannt. Bitte öffne den aktuellen Link aus der E-Mail.','info');
-   }
  }catch(err){
   console.error('DrivePro Session:',err);
-  if(dpInviteFlow){
-   dpShowInviteView(null);
-   dpInviteMessage(err?.message||'Die Einladung konnte nicht geprüft werden. Bitte einen neuen Einladungslink anfordern.','error');
-  }else{
-   dpMessage('Die Anmeldung konnte nicht geprüft werden. Bitte Seite neu laden.');
-  }
+  dpMessage('Die Anmeldung konnte nicht geprüft werden. Bitte Seite neu laden.');
  }
 }
 
