@@ -1,16 +1,20 @@
-DrivePro V91.20.0
+DrivePro V91.21.0
 
-Basis: V91.19.2
-Backup: V91.18
+Berechtigungs- und Rollenupdate
 
-Changes:
-- Plattform-Admin und Fahrschulkonto werden über is_platform_admin unterschieden.
-- Bestehende Fahrschulkonten sind keine Plattform-Admins.
-- Direkte Kontoerstellung bleibt über drivepro-create-account.
-- Keine Einladungsfunktion im Frontend.
-- Keine Änderung an der funktionierenden Realtime-Zuweisung.
-- Supabase handle_new_user wurde serverseitig auf account_type/school_id umgestellt.
-- Supabase Account-Creation-Berechtigung verwendet is_platform_admin.
+Rollen:
+- Plattform-Admin: Fahrschulen erstellen, ansehen, bearbeiten, löschen.
+- Fahrschule: Fahrlehrer/Fahrschüler/Fahrzeuge verwalten, Zuweisungen, Kalender mit Fahrlehrerfilter.
+- Fahrlehrer: nur zugewiesene Fahrschüler, Bearbeitung des Ausbildungs-/Prüfungsstands, eigener Kalender, Logbuch, Anfragen.
+- Fahrschüler: eigener Leistungsstand nur lesbar, eigener Kalender, Terminanfragen für zugewiesene Fahrlehrer.
 
-Supabase Edge Function: drivepro-create-account v3
-Supabase migration: drivepro_direct_account_creation_roles_v3
+Supabase:
+- Rollen-RLS für profiles, students, training_progress, lessons, vehicles und lesson_requests gehärtet.
+- Fahrzeuge können einem aktiven Fahrlehrer der eigenen Fahrschule zugewiesen werden.
+- Neue RPCs für sichere Terminanfragen und Annahme/Ablehnung.
+- Neue Edge Function: drivepro-manage-account für Bearbeiten/Löschen verwalteter Konten.
+- drivepro-create-account V4 bleibt für die funktionierende direkte Kontoerstellung bestehen.
+
+Wichtig:
+- V91.18 bleibt der bekannte Realtime-Backupstand.
+- index.html ersetzt die bisherige index.html.
