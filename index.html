@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DrivePro Beta V91.19.2</title>
+<title>DrivePro Beta V91.20.0</title>
 <style>
 :root{
  --primary:#1769d2;--primary2:#2f80ed;--primary-soft:#eaf3ff;
@@ -1661,7 +1661,7 @@ body.dp-instructor .dp-school-only{display:none!important}
 .staffHero p{margin:0;color:var(--muted);font-size:13px}
 @media(max-width:850px){.staffGrid{grid-template-columns:1fr}.staffHero{flex-direction:column}}
 
-/* V91.19.2 – Direkte Kontenerstellung statt Einladungslinks */
+/* V91.20.0 – Direkte Kontenerstellung statt Einladungslinks */
 .dp-invite-badge{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:#eaf3ff;border:1px solid #cfe1fb;color:#245c9d;font-size:10px;font-weight:850;letter-spacing:.4px;margin-bottom:12px}
 .dp-invite-email{margin:-6px 0 18px;padding:11px 13px;border:1px solid var(--line);background:var(--surface2);border-radius:11px;font-size:13px;font-weight:750;word-break:break-word}
 [data-theme="dark"] .dp-invite-badge{background:#132844;border-color:#254c7d;color:#b9d7ff}
@@ -1722,7 +1722,7 @@ body.auth-locked #driveProAuth{display:flex}
 .trainingAreaMove:disabled{opacity:.35;cursor:default}
 </style>
 </head>
-<body class="auth-locked" data-drivepro-version="V91.19.2"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
+<body class="auth-locked" data-drivepro-version="V91.20.0"><div id="mobileMenuShade" class="mobileMenuShade" style="display:none" onclick="closeMobileMenu()"></div><div id="mobileSwipeHint" class="mobileSwipeHint"></div>
 
 <div id="driveProAuth" aria-label="DrivePro Anmeldung">
   <div class="dp-auth-card">
@@ -1785,7 +1785,7 @@ body.auth-locked #driveProAuth{display:flex}
     <button id="nav-vehicles" class="dp-role-school" onclick="page('vehicles')"><span>🚗</span>Fahrzeuge</button>
     <button id="nav-requests" class="dp-role-request" onclick="page('requests')"><span>📨</span>Anfragen</button>
   </nav>
-  <div class="sidefoot">V91.19.2 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
+  <div class="sidefoot">V91.20.0 · Fahrschulverwaltung aktiv<br>Fahrschüler verwalten & löschen<br>Automatische Synchronisation</div>
 </aside>
 <main class="main">
 <header class="top">
@@ -4377,18 +4377,19 @@ function dpShowLoginView(){
  if(login)login.style.display='block';
 }
 async function dpLoadProfile(user){
- const r=await dpClient.from('profiles').select('id,first_name,last_name,display_name,role,account_type,school_id,is_active').eq('id',user.id).maybeSingle();
+ const r=await dpClient.from('profiles').select('id,first_name,last_name,display_name,role,account_type,school_id,is_active,is_platform_admin').eq('id',user.id).maybeSingle();
  if(r.error)throw r.error;
  if(!r.data)throw new Error('Für diesen Account wurde kein DrivePro-Profil gefunden.');
  if(r.data.is_active!==true)throw new Error('Dieser DrivePro-Account ist deaktiviert.');
  dpProfile=r.data;
  const accountType=r.data.account_type||'school';
  const isSchool=accountType==='school';
+ const isPlatformAdmin=r.data.is_platform_admin===true;
  document.body.classList.toggle('dp-instructor',!isSchool);
  $('dpUserName').textContent=dpName(r.data,user);
- $('dpUserRole').textContent=isSchool?(r.data.role==='admin'?'Administrator':'Fahrschule'):(accountType==='student'?'Fahrschüler':'Fahrlehrer');
- $('dpAdminBadge').style.display=isSchool&&r.data.role==='admin'?'inline-flex':'none';
- window.driveProAuth={client:dpClient,user,profile:r.data,isAdmin:isSchool&&r.data.role==='admin',isSchool,accountType,schoolId:r.data.school_id||null,signOut:()=>dpClient.auth.signOut()};
+ $('dpUserRole').textContent=isSchool?(isPlatformAdmin?'Administrator':'Fahrschule'):(accountType==='student'?'Fahrschüler':'Fahrlehrer');
+ $('dpAdminBadge').style.display=isPlatformAdmin?'inline-flex':'none';
+ window.driveProAuth={client:dpClient,user,profile:r.data,isAdmin:isPlatformAdmin,isPlatformAdmin,isSchool,accountType,schoolId:r.data.school_id||null,signOut:()=>dpClient.auth.signOut()};
  document.body.classList.remove('auth-locked');
  document.querySelectorAll('.dp-school-only').forEach(el=>el.style.display=isSchool?'':'none');
  document.querySelectorAll('.dp-role-school').forEach(el=>el.style.display=isSchool?'flex':'none');
